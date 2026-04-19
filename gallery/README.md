@@ -54,11 +54,6 @@ never seen, judged by an LLM judge) live in
 [`data/eval/llm_judge_report.md`](../data/eval/llm_judge_report.md). That's the
 un-tuned generalization metric; this gallery is the qualitative companion.
 
-I'm flagging this because (a) it's true, and (b) without disclosure a skeptical
-reader would reasonably suspect the WIN cards were engineered. They weren't —
-the prompt changes between v3 and v3.1 were a generic *default-include* rule and
-a generic *demotion* rule, not per-case fixes — but the cleanest way to say so
-is to just say it.
 
 ## What I'd like from you
 
