@@ -36,13 +36,17 @@ working on AI for formal math.
 
 ## Three ways to look at this repo
 
-### 1. I just want to see what it produces
+### 1. See what it produces (gallery)
 
-Open the gallery: [gallery/README.md](gallery/README.md). 10 cards, one per
-currently-open mathlib4 PR, each running the tool in **LLM mode** (the
-default) and showing the output next to what the human reviewer actually
-wrote. A few are clean hits, more are adjacent-but-plausible, a couple are
-honest failures. Failures are in there on purpose.
+I coupled the search index with an LLM (GPT-5) and tried it on currently-open
+mathlib4 PRs to see if it'd actually help anyone there. Surprisingly it worked
+on some, on others it didn't. The gallery ([gallery/README.md](gallery/README.md))
+is 10 of those runs side-by-side with what the human reviewer actually wrote.
+
+I'd really like your read on how well it worked — I'm early in learning Lean,
+so my own WIN / PARTIAL / MISS calls on each card are best-effort guesses. If
+you know mathlib and any of them feel wrong, that's exactly the feedback I'm
+looking for.
 
 ### 2. I want to try it on my own hunk
 
