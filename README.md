@@ -38,29 +38,11 @@ working on AI for formal math.
 
 ### 1. I just want to see what it produces
 
-Open the gallery: [gallery/README.md](gallery/README.md).
-
-**What it is.** A small set of worked examples — 10 cards, one per
-currently-open mathlib4 PR. Each card runs the tool in **LLM mode** (the
-default — retrieval + GPT-5 deciding which past comments apply) on a fresh
-hunk from that PR, then sets the tool's output side-by-side with what the
-human reviewer actually wrote. The point is to let you judge "is what this
-thing says useful?" on cases where there's a real reviewer comment to
-compare against — not on handpicked easy wins.
-
-**Why it exists.** Numbers (`Hit@K`, judge labels — see section 3) tell you
-*how often* retrieval lands something relevant; they don't tell you *what
-the output looks like* or *whether the LLM-on-top-of-retrieval actually
-adds something*. The gallery is the qualitative companion: real hunks,
-real comments, with my own best-effort grading.
-
-**Sneak peek of the result.** Out of 10 cards: a few times the tool
-surfaced the same concern the human did (or one the human missed but is
-real), more often it surfaced *adjacent* advice that's still plausibly
-useful, once it correctly stayed silent, and a few times it confidently
-pointed at the wrong thing or stayed silent when it shouldn't have. The
-failure-mode cards are in the gallery on purpose — a gallery that hides
-its failures isn't worth reading.
+Open the gallery: [gallery/README.md](gallery/README.md). 10 cards, one per
+currently-open mathlib4 PR, each running the tool in **LLM mode** (the
+default) and showing the output next to what the human reviewer actually
+wrote. A few are clean hits, more are adjacent-but-plausible, a couple are
+honest failures. Failures are in there on purpose.
 
 ### 2. I want to try it on my own hunk
 
