@@ -55,6 +55,12 @@ class Hit:
     comment_text: str
     embedding_text: str
     created_at: str
+    # PR-level acceptance signal (optional — present iff the corpus parquet
+    # was built with build_rag_index_data.py >= v0.2). None when unknown.
+    # `pr_accepted=False` means the past PR was closed without acceptance
+    # into mathlib (proxied via `accepted_proxy` in the curated PR data).
+    pr_accepted: bool | None = None
+    merged_by: str = ""
 
     def as_dict(self) -> dict:
         return {
@@ -71,6 +77,8 @@ class Hit:
             "comment_text": self.comment_text,
             "embedding_text": self.embedding_text,
             "created_at": self.created_at,
+            "pr_accepted": self.pr_accepted,
+            "merged_by": self.merged_by,
         }
 
 
@@ -173,11 +181,19 @@ class Retriever:
         else:
             selected = pool_idx[:k].tolist()
 
+        has_pr_accepted = "pr_accepted" in self.df.columns
+        has_merged_by = "merged_by" in self.df.columns
+
         hits: list[Hit] = []
         for rank, idx in enumerate(selected, 1):
             if np.isinf(masked_sims[idx]):
                 continue
             row = self.df.iloc[int(idx)]
+            pr_accepted: bool | None = None
+            if has_pr_accepted:
+                v = row.pr_accepted
+                pr_accepted = None if pd.isna(v) else bool(v)
+            merged_by = str(row.merged_by) if has_merged_by and pd.notna(row.merged_by) else ""
             hits.append(
                 Hit(
                     rank=rank,
@@ -193,6 +209,8 @@ class Retriever:
                     comment_text=str(row.comment_text),
                     embedding_text=str(row.embedding_text),
                     created_at=str(row.created_at),
+                    pr_accepted=pr_accepted,
+                    merged_by=merged_by,
                 )
             )
         return hits

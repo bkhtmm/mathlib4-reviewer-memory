@@ -560,6 +560,24 @@ class ReviewSuggestion:
     extras: dict | None = None  # for v3's new_hunk_plausible_concerns etc.
 
 
+@dataclass
+class SearchResult:
+    """Output of the no-LLM search mode.
+
+    Pure retrieval: every field comes verbatim from the index, with no LLM
+    rephrasing or judgment. The windowed hunks are slices of the original
+    diffs, never paraphrases. `pr_accepted=False` flags hits whose past PR
+    was closed without acceptance into mathlib (proxy for "reviewers wanted
+    changes the author didn't make"); `True` means it was accepted; `None`
+    means unknown (older corpus parquet).
+    """
+    hits: list[dict]
+    new_hunk_window: str
+    n_total: int
+    n_not_accepted: int
+    n_accepted: int
+
+
 class ReviewAssistant:
     def __init__(
         self,
@@ -579,19 +597,86 @@ class ReviewAssistant:
             raise ValueError(f"provider must be 'openai'|'gemini', got {provider!r}")
         self.provider = provider
         self.model = gemini_model if provider == "gemini" else openai_model
-        if provider == "openai":
+        # LLM clients are constructed lazily on first review_hunk() call so
+        # that the no-LLM `.search()` mode doesn't require an API key.
+        self.client: OpenAI | None = None
+        self._gemini = None
+
+    def _ensure_llm_client(self) -> None:
+        if self.provider == "openai" and self.client is None:
             api_key = os.environ.get("OPENAI_API_KEY")
             if not api_key:
-                raise RuntimeError("OPENAI_API_KEY must be set")
+                raise RuntimeError("OPENAI_API_KEY must be set for LLM mode")
             self.client = OpenAI(api_key=api_key)
-            self._gemini = None
-        else:
+        elif self.provider == "gemini" and self._gemini is None:
             api_key = os.environ.get("GEMINI_API_KEY")
             if not api_key:
-                raise RuntimeError("GEMINI_API_KEY must be set")
-            from google import genai  # lazy: only import if needed
+                raise RuntimeError("GEMINI_API_KEY must be set for LLM mode")
+            from google import genai
             self._gemini = genai.Client(api_key=api_key)
-            self.client = None
+
+    def search(
+        self,
+        hunk_text: str,
+        top_k: int = 20,
+        max_per_pr: int = 2,
+        date_before: str | None = None,
+        precomputed_hits: list | None = None,
+        comment_line: float | int | None = None,
+        new_window_before: int = 40,
+        new_window_after: int = 40,
+        cand_window_before: int = 12,
+        cand_window_after: int = 12,
+        not_accepted_only: bool = False,
+    ) -> SearchResult:
+        """Pure-retrieval mode: no LLM call, no possibility of hallucination.
+
+        Returns the top-K most similar past (code, reviewer-comment) pairs
+        from the index, exactly as they were written. No model decides which
+        ones "apply"; the caller does.
+
+        `not_accepted_only=True` filters down to hits whose past PR was closed
+        without acceptance into mathlib — useful for "is anything like my code
+        already in a PR that didn't make it?".
+        """
+        if precomputed_hits is not None:
+            hits = precomputed_hits
+        else:
+            query_vec = self.R.embed_text(hunk_text)
+            hits = self.R.search(
+                query_vec,
+                k=top_k,
+                max_per_pr=max_per_pr,
+                date_before=date_before,
+            )
+
+        if not_accepted_only:
+            hits = [h for h in hits if getattr(h, "pr_accepted", None) is False]
+
+        n_accepted = sum(1 for h in hits if getattr(h, "pr_accepted", None) is True)
+        n_not_accepted = sum(1 for h in hits if getattr(h, "pr_accepted", None) is False)
+
+        new_window = _hunk_window(
+            hunk_text, comment_line,
+            before=new_window_before, after=new_window_after,
+        )
+
+        out_hits: list[dict] = []
+        for h in hits:
+            d = h.as_dict() if hasattr(h, "as_dict") else dict(h)
+            d["embedding_text_window"] = _hunk_window(
+                h.embedding_text, h.line,
+                before=cand_window_before, after=cand_window_after,
+            )
+            out_hits.append(d)
+
+        return SearchResult(
+            hits=out_hits,
+            new_hunk_window=new_window,
+            n_total=len(out_hits),
+            n_accepted=n_accepted,
+            n_not_accepted=n_not_accepted,
+        )
 
     def review_hunk(
         self,
@@ -656,6 +741,8 @@ class ReviewAssistant:
             "v3": SYSTEM_PROMPT_V3,
             "v3.1": SYSTEM_PROMPT_V3_1,
         }[self.prompt_version]
+
+        self._ensure_llm_client()
 
         if self.provider == "openai":
             resp = self.client.chat.completions.create(

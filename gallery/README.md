@@ -16,7 +16,7 @@ case the gallery shows, side by side:
 
 - It is **not an "AI reviewer"**. It cannot replace any of the mathlib maintainers
   or reviewers. The held-out evaluation makes that clear (see the `eval/` link below).
-- It is a **memory** over ~158k past reviewer comments on ~35k closed mathlib4 PRs.
+- It is a **memory** over ~97k filtered reviewer comments from ~15k closed mathlib4 PRs (raw scrape: ~158k / ~35k before filtering bots, self-comments, and trivial comments).
   Given a new hunk, it tries to find past reviewer comments that would plausibly
   apply, and asks an LLM (GPT-5) to ground each suggestion in a specific past
   comment quote — explicitly allowed to say "no relevant past reviews found".
@@ -566,7 +566,7 @@ Human linked two existing similar definitions and asked to unify. Tool's plausib
 - **Per-case prompt + completion transcripts** for inspection: `data/eval/transcripts/openpr_*.txt`
 - **Held-out closed-PR evaluation** (LLM-judge report): `data/eval/llm_judge_report.md`
 - **Prompt-engineering ablation** (v1 vs v2, with cost numbers): `data/eval/prompt_ablation_report.md`
-- **The retrieval index itself** (≈35k closed PRs, ≈158k review comments): `data/curated/mathlib4/*.parquet`
+- **The retrieval index itself** (≈15k closed PRs / ≈97k filtered review comments at query time; ≈35k / ≈158k in the underlying curated parquets): `data/curated/mathlib4/*.parquet`
 
 ## Caveats worth saying out loud
 

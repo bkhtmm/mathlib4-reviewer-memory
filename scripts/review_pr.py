@@ -1,17 +1,26 @@
 #!/usr/bin/env python3
-"""CLI for the v1 review assistant.
+"""CLI for the review assistant.
 
 Usage:
-  # From a file:
-  python scripts/review_pr.py --hunk-file path/to/hunk.diff --file Mathlib/X.lean
-
-  # From stdin:
+  # LLM mode (default): retrieves + asks GPT-5 which past comments apply.
   cat hunk.diff | python scripts/review_pr.py --file Mathlib/X.lean
 
-  # Pull a real held-out hunk (smoke test):
+  # Search mode: pure retrieval, no LLM call, no possibility of hallucination.
+  # Returns the top-K most similar past (code, reviewer-comment) pairs verbatim.
+  cat hunk.diff | python scripts/review_pr.py --search --file Mathlib/X.lean
+
+  # Search mode + filter to past PRs that were NOT accepted into mathlib —
+  # useful for "is this code similar to anything that already got rejected?".
+  cat hunk.diff | python scripts/review_pr.py --search --not-accepted-only \\
+                --file Mathlib/X.lean
+
+  # Smoke test on a held-out query (no need to prepare a hunk):
   python scripts/review_pr.py --self-test
 
-Output: human-readable report. Pass --json to get the raw structured output.
+LLM mode requires OPENAI_API_KEY (or GEMINI_API_KEY with --provider gemini).
+Search mode only requires VOYAGE_API_KEY (used to embed the query hunk).
+
+Output: human-readable report by default; pass --json for structured output.
 """
 from __future__ import annotations
 
@@ -42,6 +51,63 @@ def fmt(text: str, *, color: str) -> str:
     if not sys.stdout.isatty():
         return text
     return f"{COLORS.get(color, '')}{text}{COLORS['reset']}"
+
+
+def print_search_report(result, no_color: bool = False) -> None:
+    """Render the no-LLM search-mode output."""
+    if no_color:
+        for k in COLORS:
+            COLORS[k] = ""
+
+    n = result.n_total
+    print(fmt(f"\n=== Search mode (no LLM) — {n} hit{'s' if n != 1 else ''} ===", color="bold"))
+    if n == 0:
+        print(fmt("No matching past comments in the index.", color="dim"))
+        return
+
+    print(fmt(
+        f"  ✓ {result.n_accepted} from accepted PRs   "
+        f"✗ {result.n_not_accepted} from PRs NOT accepted into mathlib",
+        color="dim",
+    ))
+    print()
+
+    for h in result.hits:
+        sim = h.get("sim", 0.0)
+        pr = h.get("pr_number", "?")
+        title = (h.get("pr_title") or "").strip()
+        title_short = (title[:80] + "…") if len(title) > 80 else title
+        path = h.get("file_path", "?")
+        line = h.get("line")
+        line_str = f"  line {int(line)}" if isinstance(line, (int, float)) and line == int(line) else ""
+        reviewer = h.get("reviewer", "?")
+        accepted = h.get("pr_accepted")
+
+        if accepted is True:
+            badge = fmt("✓ ACCEPTED", color="dim")
+        elif accepted is False:
+            badge = fmt("✗ NOT ACCEPTED into mathlib", color="medium")
+        else:
+            badge = fmt("? acceptance unknown", color="dim")
+
+        rank = h.get("rank", "?")
+        print(fmt(
+            f"[{rank}] sim={sim:.3f}   PR #{pr}  —  {title_short}",
+            color="cyan",
+        ))
+        print(f"    file: {path}{line_str}")
+        print(f"    reviewer: @{reviewer}   status: {badge}")
+        comment = (h.get("comment_text") or "").strip()
+        for ln in comment.splitlines():
+            print(f"    > {ln}")
+        print()
+
+    print(fmt(
+        "Note: 'NOT ACCEPTED' is a proxy — a closed PR can mean rejected, "
+        "abandoned, superseded, or broken into smaller PRs. Click the past PR "
+        "to read the discussion before drawing conclusions.",
+        color="dim",
+    ))
 
 
 def print_report(suggestion, no_color: bool = False) -> None:
@@ -107,6 +173,13 @@ def main() -> None:
     ap.add_argument("--no-color", action="store_true")
     ap.add_argument("--self-test", action="store_true",
                     help="run on a held-out query from data/eval/heldout_retrieval.jsonl")
+    ap.add_argument("--search", action="store_true",
+                    help="no-LLM mode: pure retrieval, no possibility of hallucination. "
+                         "Returns top-K most similar past (code, comment) pairs verbatim.")
+    ap.add_argument("--not-accepted-only", action="store_true",
+                    help="(search mode) keep only hits whose past PR was NOT accepted "
+                         "into mathlib — useful for 'is my code similar to anything that "
+                         "got rejected/abandoned?'.")
     args = ap.parse_args()
 
     assistant = ReviewAssistant()
@@ -124,6 +197,30 @@ def main() -> None:
 
     if not hunk.strip():
         print("ERROR: empty hunk", file=sys.stderr)
+        sys.exit(2)
+
+    if args.search:
+        result = assistant.search(
+            hunk_text=hunk,
+            top_k=args.top_k,
+            max_per_pr=args.max_per_pr,
+            date_before=args.date_before,
+            not_accepted_only=args.not_accepted_only,
+        )
+        if args.json:
+            print(json.dumps({
+                "mode": "search",
+                "n_total": result.n_total,
+                "n_accepted": result.n_accepted,
+                "n_not_accepted": result.n_not_accepted,
+                "hits": result.hits,
+            }, indent=2, default=str))
+        else:
+            print_search_report(result, no_color=args.no_color)
+        return
+
+    if args.not_accepted_only:
+        print("ERROR: --not-accepted-only only makes sense with --search", file=sys.stderr)
         sys.exit(2)
 
     sug = assistant.review_hunk(

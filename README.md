@@ -2,12 +2,21 @@
 
 A retrieval-grounded "reviewer memory" tool for `leanprover-community/mathlib4`.
 
-Given a hunk from a new mathlib4 PR, it searches an index of **~158k past
-reviewer comments across ~35k closed PRs**, retrieves the most similar
-`(past code, past comment)` pairs, and asks an LLM (GPT-5) to identify which
-of those past reviewer comments would also apply to the new hunk — grounded
-in a specific past PR, file, and verbatim comment quote, with an explicit
-"none of these apply" output when the retrieved pool is unrelated.
+Given a hunk from a new mathlib4 PR, it searches an index of **~97k filtered
+reviewer comments from ~15k closed PRs** (drawn from a raw scrape of ~158k
+comments across ~35k closed PRs — bots, self-comments, and trivial comments
+are filtered out before indexing) for the most similar `(past code, past
+comment)` pairs. There are two ways to use the result:
+
+- **LLM mode** (default): GPT-5 reads the retrieved pairs and identifies
+  which past comments would also apply to your hunk — grounded in a specific
+  past PR + verbatim quote, allowed to say "none apply." This is what the
+  gallery below is built from.
+- **Search mode** (`--search`): no LLM in the loop, no possibility of
+  hallucination. Returns the retrieved pairs verbatim, each tagged ✓ ACCEPTED
+  / ✗ NOT ACCEPTED depending on whether the past PR was integrated into
+  mathlib. Useful as a transparent index lookup — and as a check against
+  "is my code similar to anything that already got rejected?".
 
 ## A note on context
 
@@ -40,16 +49,46 @@ as well as right.
 
 ```bash
 uv sync                                          # or: pip install -e .
-export OPENAI_API_KEY=sk-...
+export OPENAI_API_KEY=sk-...                     # for the LLM mode (default)
+export VOYAGE_API_KEY=pa-...                     # for query embedding
 cat my_hunk.diff | python scripts/review_pr.py --file Mathlib/Path/To/File.lean
 ```
 
-To use Gemini instead of GPT-5: `pip install -e '.[gemini]'`, set
-`GEMINI_API_KEY`, and pass `--provider gemini` to the relevant scripts.
+There are two modes:
+
+**LLM mode (default).** Retrieves the top-K most similar past
+`(code, reviewer-comment)` pairs from the index and asks GPT-5 to identify
+which past comments would also apply to your new hunk — grounded in
+specific past PR + verbatim quote, with explicit refusal allowed.
+
+**Search mode (`--search`).** Pure retrieval, no LLM call, no possibility
+of hallucination. Returns the top-K most similar past
+`(code, reviewer-comment)` pairs verbatim — you decide which apply.
+Each hit is tagged ✓ ACCEPTED or ✗ NOT ACCEPTED based on whether the past
+PR was integrated into mathlib (proxy for "reviewers wanted changes the
+author didn't make"). Add `--not-accepted-only` to filter to just hits from
+PRs that didn't make it — useful for *"is my code similar to anything that
+already got rejected/abandoned?"*. Search mode only needs `VOYAGE_API_KEY`
+(no OpenAI/Gemini key, no API costs except the embedding).
+
+```bash
+# LLM judgment on top of retrieval (the gallery is built from this mode):
+cat my_hunk.diff | python scripts/review_pr.py --file Mathlib/X.lean
+
+# Pure retrieval, no LLM, no hallucination:
+cat my_hunk.diff | python scripts/review_pr.py --search --file Mathlib/X.lean
+
+# Only show hits from past PRs that were NOT accepted into mathlib:
+cat my_hunk.diff | python scripts/review_pr.py --search --not-accepted-only \
+                                                --file Mathlib/X.lean
+```
+
+To use Gemini instead of GPT-5 in LLM mode: `pip install -e '.[gemini]'`,
+set `GEMINI_API_KEY`, and pass `--provider gemini`.
 
 Or `python scripts/review_pr.py --self-test` to run on a held-out query
-without preparing a hunk yourself. Output is human-readable; pass `--json`
-for the raw structured output.
+without preparing a hunk yourself. Pass `--json` for raw structured output
+in either mode.
 
 > **Heads up:** this requires the embedding index
 > (`data/index/rag_vectors.npz` and `data/curated/mathlib4/*.parquet`),
