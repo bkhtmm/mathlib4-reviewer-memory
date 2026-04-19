@@ -75,7 +75,7 @@ for the raw structured output.
   — comparison of two prompt versions (v1 vs v2) on 6 cases, with token
   usage, cost numbers, and per-case win/loss notes.
 
-> **On methodology honesty.** The v3.1 prompt used in the gallery was
+> The v3.1 prompt used in the gallery was
 > iterated by observing failures of v3 on the same 20 open PRs the gallery
 > is drawn from, so the gallery is a "best-current-prompt on tuned-for PRs"
 > artifact, not a clean held-out test. The held-out generalization number
