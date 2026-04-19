@@ -1,0 +1,608 @@
+====================================================================================================
+CASE J  PR #36698  (open-pr, v2 prompt)
+file: Mathlib/Combinatorics/Enumerative/LatinSquare.lean  line: 257.0
+reviewer: @vlad902  on 2026-03-17T07:34:52Z
+advice_kind: refactor (suggestion block)
+prompt_tokens: 6189  completion_tokens: 2662
+HUMAN reviewer (ground truth):
+  > ```suggestion
+  >   once_per_row i' :=
+  >     h.bijective.comp (A.once_per_row (f.symm i') |>.comp g.symm.bijective)
+  > ```
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Compared to a naive matcher you must do TWO extra things, because the answer is often only derivable by combining evidence:
+
+A. STRUCTURAL PATTERN EXTRACTION. Past comments often contain `suggestion` code blocks (```suggestion ... ```) or inline code-shape rewrites. These suggested code snippets ARE concrete advice, not just commentary. Treat them as first-class evidence about preferred Lean/mathlib idioms (e.g.: term-mode constructor `:= ⟨_, _, _⟩` vs `by use _; exact _`, `instance` vs `theorem` for class-membership statements, `refine ⟨..., ?_⟩` vs `use ...; constructor`, `@[simp]` / `@[to_additive]` attributes, naming conventions, docstring phrasing, etc.).
+
+B. CROSS-CANDIDATE SYNTHESIS. The applicable advice for the new hunk may require combining evidence from multiple candidates. Example: candidate X's context tells you that an identifier in the new hunk is a `class`; candidate Y shows the term-mode `instance ... := ⟨...⟩` template for proving class membership. Together they support the conclusion: "the new theorem proving class membership should be rewritten as an `instance` with a term-mode constructor". List supporting PRs for any synthesised finding.
+
+Reasoning protocol (do this internally before producing JSON):
+
+  1. STRUCTURAL FEATURES OF THE NEW HUNK. Identify each: tactic-mode vs term-mode? Uses `by use ...; exact ...`? Uses `use ...; constructor`? Declares an `instance` / a `theorem` / a `lemma` / a `def` / a `class`? Has `@[simp]`, `@[to_additive]`, `@[deprecated]`? Uses anonymous functions `fun x =>` vs `↦`? Has a docstring `/-- ... -/` of any specific shape?
+
+  2. PATTERN INVENTORY FROM CANDIDATES. For each candidate, note any concrete pattern shown in its suggested-code or comment (term-mode template, attribute recommendation, naming convention, idiomatic rewrite, terminology preference, etc.). Also note which candidates' past hunks define or use identifiers that appear in the new hunk (these are clues about whether something is a class, an instance, an alias, etc.).
+
+  3. APPLICABILITY CHECK. For each pattern from step 2, ask: does the new hunk's structure (step 1) instantiate the same shape that this pattern was applied to? If yes, that's a STRONG match. If two patterns combine to support a finding, list both supporting PRs.
+
+  4. STRICT REFUSAL. If after this analysis no candidate (alone or in combination) gives concrete, well-grounded advice for the specific code in the new hunk, output an empty `strong_matches` list. Do not paper over with generic advice. Generic style observations belong in `weak_observations`, clearly marked. Do not invent advice that isn't traceable to specific past PRs in the retrieval pool.
+
+Confidence:
+  - "high"  — at least one strong match is grounded in concrete suggested-code or explicit prose from a candidate, and the new hunk clearly fits the same shape
+  - "medium" — at least one strong match exists but requires synthesis or adaptation; OR a single candidate gives related but not identical advice
+  - "low"   — only loose stylistic patterns; nothing actionable
+  - "none"  — retrieved pool is unrelated; do not press an answer
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Be precise about which PR(s) support each finding via supporting_past_prs.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #36698 (file: Mathlib/Combinatorics/Enumerative/LatinSquare.lean):
+```
+@@ -0,0 +1,933 @@
++/-
++Copyright (c) 2026 Christopher J. R. Lloyd and George H. Seelinger. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Christopher J. R. Lloyd, George H. Seelinger
++-/
++module
++
++public import Mathlib.Algebra.BigOperators.Fin
++public import Mathlib.Data.Finset.Image
++public import Mathlib.Data.Finset.Card
++public import Mathlib.Data.Finset.Defs
++public import Mathlib.Data.Fintype.Basic
++public import Mathlib.Tactic.Group
++public import Mathlib.Algebra.Group.Defs
++public import Mathlib.Data.ZMod.Basic
++public import Mathlib.GroupTheory.SpecificGroups.Cyclic
++public import Mathlib.Algebra.Group.Fin.Basic
++public import Mathlib.Combinatorics.Hall.Basic
++public import Mathlib.LinearAlgebra.Matrix.Defs
++public import Mathlib.Logic.Equiv.Embedding
++
++/-!
++# LatinSquare
++
++A Latin rectangle is an $m \times n$ matrix filled with $n$ different
++symbols such that each symbol occurs exactly once in each row and
++occurs at most once in each column.  When $m = n$, the column
++condition forces each symbol to occur exactly once in each column.
++This special case is called a Latin Square and their discovery is
++attributed to Leohnard Euler in 1782 [euler1782].
++
++Basic examples include the multiplication table of any finite group or
++any completely solved Sudoku puzzle. Additionally, Latin squares are a
++special case and motivating example of combinatorial designs.  Like
++with a Sudoku puzzle, an interestnig question is when a "partially
++filled" Latin square can be completed to a Latin square.  In general,
++it is an open question to figure out the number of distinct $n \times
++n$ Latin squares, up to equivalence, although bounds exist.
++
++A classical result in combinatorics, **Hall's Marriage Theorem**, can be
++used to show that any Latin rectangle can be extended to a Latin
++square; this theorem is formalized as
++`latin_rectangle_extends_to_latin_square`.
++
++## Main results
++
++- `group_to_cayley_table`: every finite group `G` yields a `LatinSquare G G`.
++- `latin_rectangle_extends_one_row`: a (non-square) `LatinRectangle` extends to a `LatinRectangle`
++   with one more row. This is an application of **Hall's Marriage Theorem**,
++   `hallMatchingsOn.nonempty`.
++- `latin_rectangle_extends_to_latin_square`:  a `LatinRectangle` extends to a `LatinSquare`.
++
++## Notation
++
++- `≃` : The type of equivalences between `LatinRectangle`s.
++
++## TODO
++
++* [DONE] Add theorem that a k-1 × n Latin r
+... [truncated]
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.662, past_pr=#10834, file=NatNumberCategories) ---
+PAST HUNK:
+```
+@@ -0,0 +1,416 @@
++/-
++Copyright (c) 2024 Colin Jones. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Author: Colin Jones
++-/
++import Mathlib
+```
+PAST COMMENT (from reviewer):
+This file is supposed to be part of Mathlib, it can't import mathlib without creating an infinite loop. Just import the files you need:
+```suggestion
+import Mathlib.Algebra.GeomSum
+import Mathlib.NumberTheory.Divisors
+import Mathlib.Tactic.NormNum.Prime
+import Mathlib.Analysis.Normed.Field.Basic
+```
+
+--- candidate 2 (sim=0.648, past_pr=#2960, file=Mathlib/Data/Matrix/Basic.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,2829 @@
++/-
++Copyright (c) 2018 Ellen Arlt. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Ellen Arlt, Blair Shi, Sean Leather, Mario Carneiro, Johan Commelin, Lu-Ming Zhang
++
++! This file was ported from Lean 3 source module data.matrix.basic
++! leanprover-community/mathlib commit 3e068ece210655b7b9a9477c3aff38a492400aa1
++! Please do not edit these lines, except to modify the commit id
++! if you have ported upstream changes.
++-/
++import Mathlib.Algebra.Algebra.Pi
++import Mathlib.Algebra.BigOperators.Pi
++import Mathlib.Algebra.BigOperators.Ring
++import Mathlib.Algebra.BigOperators.RingEquiv
++import Mathlib.Algebra.Module.LinearMap
++import Mathlib.Algebra.Module.Pi
++import Mathlib.Algebra.Star.BigOperators
++import Mathlib.Algebra.Star.Module
++import Mathlib.Algebra.Star.Pi
++import Mathlib.Data.Fintype.BigOperators
++
++/-!
++# Matrices
++
++This file defines basic properties of matrices.
++
++Matrices with rows indexed by `m`, columns indexed by `n`, and entries of type `α` are represented
++with `Matrix m n α`. For the typical approach of counting rows and columns,
++`Matrix (fin m) (fin n) α` can be used.
++
++## Notation
++
++The locale `Matrix` gives the following notation:
++
++* `⬝ᵥ` for `Matrix.dotProduct`
++* `⬝` for `Matrix.mul`
++* `ᵀ` for `Matrix.transpose`
++* `ᴴ` for `Matrix.conjTranspose`
++
++## Implementation notes
++
++For convenience, `Matrix m n α` is defined as `m → n → α`, as this allows elements of the matrix
++to be accessed with `A i j`. However, it is not advisable to _construct_ matrices using 
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+Whoops, this one was probably meant to say something else. That's out of scope here though.
+
+--- candidate 3 (sim=0.647, past_pr=#28708, file=Mathlib/Data/Matrix/Stochastic.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,250 @@
++/-
++Copyright (c) 2025 Steven Herbert. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Steven Herbert
++-/
++
++import Mathlib.Data.Matrix.Basic
+```
+PAST COMMENT (from reviewer):
+```suggestion
+import Mathlib.Data.Matrix.Basic
+import Mathlib.Data.Matrix.Mul
+```
+
+--- candidate 4 (sim=0.641, past_pr=#1874, file=Mathlib/GroupTheory/Coset.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,891 @@
++/-
++Copyright (c) 2018 Mitchell Rowett. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Mitchell Rowett, Scott Morrison
++
++! This file was ported from Lean 3 source module group_theory.coset
++! leanprover-community/mathlib commit f7fc89d5d5ff1db2d1242c7bb0e9062ce47ef47c
++! Please do not edit these lines, except to modify the commit id
++! if you have ported upstream changes.
++-/
++import Mathlib.Algebra.Quotient
++import Mathlib.Data.Fintype.Prod
++import Mathlib.GroupTheory.GroupAction.Basic
++import Mathlib.GroupTheory.Subgroup.MulOpposite
++
++/-!
++# Cosets
++
++This file develops the basic theory of left and right cosets.
++
++## Main definitions
++
++* `leftCoset a s`: the left coset `a * s` for an element `a : α` and a subset `s ⊆ α`, for an
++  `AddGroup` this is `leftAddCoset a s`.
++* `rightCoset s a`: the right coset `s * a` for an element `a : α` and a subset `s ⊆ α`, for an
++  `AddGroup` this is `rightAddCoset s a`.
++* `QuotientGroup.quotient s`: the quotient type representing the left cosets with respect to a
++  subgroup `s`, for an `AddGroup` this is `QuotientAddGroup.quotient s`.
++* `QuotientGroup.mk`: the canonical map from `α` to `α/s` for a subgroup `s` of `α`, for an
++  `AddGroup` this is `QuotientAddGroup.mk`.
++* `Subgroup.leftCosetEquivSubgroup`: the natural bijection between a left coset and the subgroup,
++  for an `AddGroup` this is `AddSubgroup.leftCosetEquivAddSubgroup`.
++
++## Notation
++
++* `a *l s`: for `leftCoset a s`.
++* `a +l s`: for `leftAddCoset a s`.
++* `s *r a`: for `righ
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+noncomputable def preimageMkEquivSubgroupProdSet (s : Subgroup α) (t : Set (α ⧸ s)) :
+```
+
+--- candidate 5 (sim=0.640, past_pr=#1874, file=Mathlib/GroupTheory/Coset.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,891 @@
++/-
++Copyright (c) 2018 Mitchell Rowett. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Mitchell Rowett, Scott Morrison
++
++! This file was ported from Lean 3 source module group_theory.coset
++! leanprover-community/mathlib commit f7fc89d5d5ff1db2d1242c7bb0e9062ce47ef47c
++! Please do not edit these lines, except to modify the commit id
++! if you have ported upstream changes.
++-/
++import Mathlib.Algebra.Quotient
++import Mathlib.Data.Fintype.Prod
++import Mathlib.GroupTheory.GroupAction.Basic
++import Mathlib.GroupTheory.Subgroup.MulOpposite
++
++/-!
++# Cosets
++
++This file develops the basic theory of left and right cosets.
++
++## Main definitions
++
++* `leftCoset a s`: the left coset `a * s` for an element `a : α` and a subset `s ⊆ α`, for an
++  `AddGroup` this is `leftAddCoset a s`.
++* `rightCoset s a`: the right coset `s * a` for an element `a : α` and a subset `s ⊆ α`, for an
++  `AddGroup` this is `rightAddCoset s a`.
++* `QuotientGroup.quotient s`: the quotient type representing the left cosets with respect to a
++  subgroup `s`, for an `AddGroup` this is `QuotientAddGroup.quotient s`.
++* `QuotientGroup.mk`: the canonical map from `α` to `α/s` for a subgroup `s` of `α`, for an
++  `AddGroup` this is `QuotientAddGroup.mk`.
++* `Subgroup.leftCosetEquivSubgroup`: the natural bijection between a left coset and the subgroup,
++  for an `AddGroup` this is `AddSubgroup.leftCosetEquivAddSubgroup`.
++
++## Notation
++
++* `a *l s`: for `leftCoset a s`.
++* `a +l s`: for `leftAddCoset a s`.
++* `s *r a`: for `righ
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+#align quotient_group.preimage_mk_equiv_subgroup_times_set QuotientGroup.preimageMkEquivSubgroupProdSet
+#align quotient_add_group.preimage_mk_equiv_add_subgroup_times_set QuotientAddGroup.preimageMkEquivAddSubgroupProdSet
+```
+
+--- candidate 6 (sim=0.640, past_pr=#21148, file=Mathlib/RingTheory/MatrixAlgebra.lean) ---
+PAST HUNK:
+```
+@@ -4,23 +4,90 @@ Released under Apache 2.0 license as described in the file LICENSE.
+ Authors: Kim Morrison, Eric Wieser
+ -/
+ import Mathlib.Data.Matrix.Basis
++import Mathlib.Data.Matrix.Composition
+```
+PAST COMMENT (from reviewer):
+maybe open a new file just to make the large import happy?
+
+--- candidate 7 (sim=0.640, past_pr=#21148, file=Mathlib/RingTheory/MatrixAlgebra.lean) ---
+PAST HUNK:
+```
+@@ -4,23 +4,90 @@ Released under Apache 2.0 license as described in the file LICENSE.
+ Authors: Kim Morrison, Eric Wieser
+ -/
+ import Mathlib.Data.Matrix.Basis
++import Mathlib.Data.Matrix.Composition
+```
+PAST COMMENT (from reviewer):
+I wouldn't mind it so much if it was just this file and `PolynomialAlgebra`, but it does bump the imports of `Localization.Algebra` and its downstream files by quite a bit too. I wouldn't expect those to even know about matrices.
+
+Maybe we should be flipping the import direction `MatrixAlgebra -> PolynomialAlgebra`?
+
+--- candidate 8 (sim=0.637, past_pr=#6526, file=Mathlib/Algebra/Ring/UnitEquivs.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,69 @@
++/-
++Copyright (c) 2021 Johan Commelin. All rights reserved.
+```
+PAST COMMENT (from reviewer):
+Is this a copy-paste error?
+```suggestion
+Copyright (c) 2023 Eric Rodriguez. All rights reserved.
+```
+Same remark for `Authors` field on line 4, though maybe this is co-authored?
+
+--- candidate 9 (sim=0.635, past_pr=#28100, file=Mathlib/LinearAlgebra/Matrix/GeneralLinearGroup/Basic.lean) ---
+PAST HUNK:
+```
+@@ -14,6 +15,79 @@ see `LinearAlgebra/Matrix/GeneralLinearGroup/Defs.lean`.
+ 
+ namespace Matrix
+ 
++open Matrix LinearMap
++
++variable {R n : Type*} [Fintype n]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+variable {R V : Type*} [AddCommGroup V]
+```
+
+--- candidate 10 (sim=0.635, past_pr=#35467, file=Mathlib/Combinatorics/Quiver/Schreier.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,771 @@
++/-
++Copyright (c) 2025 Runtian Zhou. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Runtian Zhou
++-/
++module
++
++public import Mathlib.Combinatorics.Quiver.Basic
++public import Mathlib.Combinatorics.Quiver.SingleObj
++public import Mathlib.Combinatorics.Quiver.Covering
++public import Mathlib.Combinatorics.Quiver.Symmetric
++public import Mathlib.Combinatorics.Quiver.ConnectedComponent
++public import Mathlib.GroupTheory.GroupAction.Quotient
++public import Mathlib.GroupTheory.QuotientGroup.Basic
++public import Mathlib.Algebra.Group.Subgroup.Basic
++public import Mathlib.GroupTheory.FreeGroup.Basic
++public import Mathlib.Tactic.Group
+```
+PAST COMMENT (from reviewer):
+Can you use `#min_imports` at the bottom of the file and replace these with what it suggests?
+(these aren't minimized, e.g. `Quiver.SingleObj` imports `Quiver.Symmetric`)
+
+--- candidate 11 (sim=0.634, past_pr=#9428, file=Mathlib/AlgebraicTopology/SingularSet.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,71 @@
++/-
++Copyright (c) 2024 Johan Commelin. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Johan Commelin, Scott Morrison, Adam Topaz
+```
+PAST COMMENT (from reviewer):
+Ah, I guess [we've argued this before](https://leanprover.zulipchat.com/#narrow/stream/113488-general/topic/Copyright.20header/near/280420005). I always take it to be the year the oldest definition/lemma of the file was created.
+
+--- candidate 12 (sim=0.634, past_pr=#9428, file=Mathlib/AlgebraicTopology/SingularSet.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,71 @@
++/-
++Copyright (c) 2024 Johan Commelin. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Johan Commelin, Scott Morrison, Adam Topaz
+```
+PAST COMMENT (from reviewer):
+Can you make sure the year is correct?
+
+--- candidate 13 (sim=0.630, past_pr=#6205, file=Mathlib/Algebra/Order/LatticeGroup.lean) ---
+PAST HUNK:
+```
+@@ -59,12 +61,10 @@ lattices.
+ lattice, ordered, group
+ -/
+ 
+-
+--- Needed for squares
+ -- Needed for squares
+```
+PAST COMMENT (from reviewer):
+What does this comment mean?
+
+--- candidate 14 (sim=0.629, past_pr=#7385, file=Mathlib/MeasureTheory/Measure/Trim.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,136 @@
++/-
++Copyright (c) 2023 Rémy Degenne. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Rémy Degenne
++-/
+```
+PAST COMMENT (from reviewer):
+Is this correct? I thought we've had `trim` for much longer than 9 months
+
+--- candidate 15 (sim=0.628, past_pr=#11667, file=Mathlib/Combinatorics/SimpleGraph/Matching.lean) ---
+PAST HUNK:
+```
+@@ -36,45 +36,42 @@ one edge, and the edges of the subgraph represent the paired vertices.
+ 
+ * Tutte's Theorem
+ 
+-* Hall's Marriage Theorem (see combinatorics.hall)
++* Hall's Marriage Theorem (see `Combinatorics.Hall.Basic`)
+```
+PAST COMMENT (from reviewer):
+```suggestion
+* Hall's Marriage Theorem (see Combinatorics.Hall.Basic)
+```
+I *think* this is the correct syntax for the linkifier to work
+
+--- candidate 16 (sim=0.627, past_pr=#9511, file=Mathlib/Algebra/Ring/Ext.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,528 @@
++/-
++Copyright (c) 2024 Raghuram Sundararajan. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Raghuram Sundararajan
++-/
++import Mathlib.Algebra.Ring.Defs
++import Mathlib.Algebra.Group.Ext
++-- import Mathlib
+```
+PAST COMMENT (from reviewer):
+A commented-out line that is no longer needed can be safely deleted (we can always check the commits to get it back).
+```suggestion
+```
+
+--- candidate 17 (sim=0.626, past_pr=#13401, file=Mathlib/GroupTheory/Congruence/BigOperators.lean) ---
+PAST HUNK:
+```
+@@ -6,24 +6,42 @@ Authors: Amelia Livingston
+ 
+ import Mathlib.GroupTheory.Congruence.Basic
+ import Mathlib.Algebra.BigOperators.Group.Finset
++import Mathlib.Algebra.BigOperators.Group.Multiset
++import Mathlib.Algebra.BigOperators.Group.List
+```
+PAST COMMENT (from reviewer):
+The first imports the other two
+```suggestion
+import Mathlib.Algebra.BigOperators.Group.Finset
+```
+
+--- candidate 18 (sim=0.626, past_pr=#14623, file=Mathlib/Combinatorics/SimpleGraph/Connectivity.lean) ---
+PAST HUNK:
+```
+@@ -3,7 +3,10 @@ Copyright (c) 2021 Kyle Miller. All rights reserved.
+ Released under Apache 2.0 license as described in the file LICENSE.
+ Authors: Kyle Miller
+ -/
++import Mathlib.Algebra.Order.Ring.Nat
+ import Mathlib.Combinatorics.SimpleGraph.Subgraph
++import Mathlib.Data.Fintype.Card
++import Mathlib.Order.ConditionallyCompleteLattice.Basic
+```
+PAST COMMENT (from reviewer):
+That is quite some new imports in an already long file. Maybe put the new lemmas (and any already existing related lemmas) in a new file?
+
+I also don't see how the new imports are actually used in the new lemmas?
+
+--- candidate 19 (sim=0.626, past_pr=#30047, file=Mathlib/Combinatorics/SimpleGraph/EdgeLabelling.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,227 @@
++/-
++Copyright (c) 2023 Bhavik Mehta. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Bhavik Mehta, Olivia Röhrig
++-/
++import Mathlib.Combinatorics.SimpleGraph.Maps
++import Mathlib.Combinatorics.SimpleGraph.Finite
++import Mathlib.Data.Fintype.BigOperators
++import Mathlib.Data.ZMod.Defs
+```
+PAST COMMENT (from reviewer):
+I think we shouldn't need this import
+
+--- candidate 20 (sim=0.626, past_pr=#30047, file=Mathlib/Combinatorics/SimpleGraph/EdgeLabelling.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,227 @@
++/-
++Copyright (c) 2023 Bhavik Mehta. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Bhavik Mehta, Olivia Röhrig
++-/
++import Mathlib.Combinatorics.SimpleGraph.Maps
++import Mathlib.Combinatorics.SimpleGraph.Finite
++import Mathlib.Data.Fintype.BigOperators
++import Mathlib.Data.ZMod.Defs
+```
+PAST COMMENT (from reviewer):
+(to be clear, I mean just the very last line - github doesn't let me select just one line to comment on!)
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "summary": "The new file's long list of public imports should be minimized; use #min_imports and remove redundant imports.",
+  "confidence": "high",
+  "strong_matches": [
+    {
+      "past_pr": 35467,
+      "past_file": "Mathlib/Combinatorics/Quiver/Schreier.lean",
+      "past_comment_excerpt": "Can you use `#min_imports` ... these aren't minimized",
+      "applies_because": "This new file begins with many `public import` lines; as in the past PR, these likely include redundancies and can be reduced.",
+      "suggested_adaptation": "Run `#min_imports` at the bottom and replace the current `public import` block with the minimal set it suggests.",
+      "supporting_past_prs": [
+        35467
+      ]
+    },
+    {
+      "past_pr": 13401,
+      "past_file": "Mathlib/GroupTheory/Congruence/BigOperators.lean",
+      "past_comment_excerpt": "The first imports the other two",
+      "applies_because": "There are multiple closely related Finset/BigOperators imports; as in the past, some are implied by others and can be removed.",
+      "suggested_adaptation": "Audit the Finset/BigOperators (and similar) imports and drop those transitively imported by a higher-level module.",
+      "supporting_past_prs": [
+        13401,
+        35467
+      ]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "Consider adding a docstring cross-reference like “see Combinatorics.Hall.Basic” so the linkifier works for Hall’s theorem.",
+      "supporting_past_prs": [
+        11667
+      ]
+    },
+    {
+      "observation": "Double-check whether `Mathlib.Data.ZMod.Basic` is needed; if not, it can be dropped.",
+      "supporting_past_prs": [
+        30047
+      ]
+    },
+    {
+      "observation": "Verify the copyright header year/authors are correct.",
+      "supporting_past_prs": [
+        9428
+      ]
+    }
+  ]
+}

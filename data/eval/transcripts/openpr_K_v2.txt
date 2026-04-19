@@ -1,0 +1,655 @@
+====================================================================================================
+CASE K  PR #33664  (open-pr, v2 prompt)
+file: Mathlib/Geometry/Convex/Cone/Pointed/Face/Basic.lean  line: 44.0
+reviewer: @eric-wieser  on 2026-01-06T13:06:18Z
+advice_kind: docstring suggestion
+prompt_tokens: 7852  completion_tokens: 2740
+HUMAN reviewer (ground truth):
+  > ```suggestion
+  > for all `x, y` in `C` and positive scalars `a`, then `x` is also in `F`. -/
+  > ```
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Compared to a naive matcher you must do TWO extra things, because the answer is often only derivable by combining evidence:
+
+A. STRUCTURAL PATTERN EXTRACTION. Past comments often contain `suggestion` code blocks (```suggestion ... ```) or inline code-shape rewrites. These suggested code snippets ARE concrete advice, not just commentary. Treat them as first-class evidence about preferred Lean/mathlib idioms (e.g.: term-mode constructor `:= ⟨_, _, _⟩` vs `by use _; exact _`, `instance` vs `theorem` for class-membership statements, `refine ⟨..., ?_⟩` vs `use ...; constructor`, `@[simp]` / `@[to_additive]` attributes, naming conventions, docstring phrasing, etc.).
+
+B. CROSS-CANDIDATE SYNTHESIS. The applicable advice for the new hunk may require combining evidence from multiple candidates. Example: candidate X's context tells you that an identifier in the new hunk is a `class`; candidate Y shows the term-mode `instance ... := ⟨...⟩` template for proving class membership. Together they support the conclusion: "the new theorem proving class membership should be rewritten as an `instance` with a term-mode constructor". List supporting PRs for any synthesised finding.
+
+Reasoning protocol (do this internally before producing JSON):
+
+  1. STRUCTURAL FEATURES OF THE NEW HUNK. Identify each: tactic-mode vs term-mode? Uses `by use ...; exact ...`? Uses `use ...; constructor`? Declares an `instance` / a `theorem` / a `lemma` / a `def` / a `class`? Has `@[simp]`, `@[to_additive]`, `@[deprecated]`? Uses anonymous functions `fun x =>` vs `↦`? Has a docstring `/-- ... -/` of any specific shape?
+
+  2. PATTERN INVENTORY FROM CANDIDATES. For each candidate, note any concrete pattern shown in its suggested-code or comment (term-mode template, attribute recommendation, naming convention, idiomatic rewrite, terminology preference, etc.). Also note which candidates' past hunks define or use identifiers that appear in the new hunk (these are clues about whether something is a class, an instance, an alias, etc.).
+
+  3. APPLICABILITY CHECK. For each pattern from step 2, ask: does the new hunk's structure (step 1) instantiate the same shape that this pattern was applied to? If yes, that's a STRONG match. If two patterns combine to support a finding, list both supporting PRs.
+
+  4. STRICT REFUSAL. If after this analysis no candidate (alone or in combination) gives concrete, well-grounded advice for the specific code in the new hunk, output an empty `strong_matches` list. Do not paper over with generic advice. Generic style observations belong in `weak_observations`, clearly marked. Do not invent advice that isn't traceable to specific past PRs in the retrieval pool.
+
+Confidence:
+  - "high"  — at least one strong match is grounded in concrete suggested-code or explicit prose from a candidate, and the new hunk clearly fits the same shape
+  - "medium" — at least one strong match exists but requires synthesis or adaptation; OR a single candidate gives related but not identical advice
+  - "low"   — only loose stylistic patterns; nothing actionable
+  - "none"  — retrieved pool is unrelated; do not press an answer
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Be precise about which PR(s) support each finding via supporting_past_prs.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #33664 (file: Mathlib/Geometry/Convex/Cone/Pointed/Face/Basic.lean):
+```
+@@ -0,0 +1,276 @@
++/-
++Copyright (c) 2025 Olivia Röhrig. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Olivia Röhrig
++-/
++module
++
++public import Mathlib.Analysis.Convex.Extreme
++public import Mathlib.Geometry.Convex.Cone.Pointed.Basic
++
++/-!
++# Faces of pointed cones
++
++This file defines what it means for a pointed cone to be a face of another pointed cone and
++establishes basic properties of this relation.
++A subcone `F` of a cone `C` is a face if any two points in `C` that have a positive combination
++in `F` are also in `F`.
++
++## Main declarations
++
++* `IsFaceOf F C`: States that the pointed cone `F` is a face of the pointed cone `C`.
++
++## Implementation notes
++
++* We prove that every face is an extreme set of its cone. We do not use `IsExtreme` as a
++  definition because this is an affine notion and does not allow the flexibility necessary to
++  deal wth cones over general rings. E.g. the cone of positive integers has no proper subset that
++  are extreme.
++* Most results proven over a field hold more generally over an Archimedean ring. In particular,
++  `iff_mem_of_add_mem` holds whenever for every `x ∈ R` there is a `y ∈ R` with `1 ≤ x * y`.
++
++-/
++
++open Submodule
++
++@[expose] public section
++
++namespace PointedCone
++
++variable {R M N : Type*}
++
++variable [Semiring R] [PartialOrder R] [IsOrderedRing R] [AddCommGroup M] [Module R M] in
++/-- A pointed cone `F` is a face of another pointed cone `C` if `F ≤ C` and if `a • x + y` is in `F`
++for all `x, y` in `C` and positive scalars `a`, then `x` ist also in `F`. -/
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.773, past_pr=#6437, file=Mathlib/Analysis/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,265 @@
++/-
++Copyright (c) 2022 Apurva Nakade All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Apurva Nakade
++-/
++import Mathlib.Analysis.Convex.Cone.Dual
++import Mathlib.Algebra.Order.Nonneg.Ring
++import Mathlib.Algebra.Module.Submodule.Basic
++
++
++/-!
++# Pointed cones
++
++We define pointed cone as a convex cone which contains `0`. This is a bundled version of
+```
+PAST COMMENT (from reviewer):
+```suggestion
+A *pointed cone* is defined to be a convex cone which contains `0`. This is a bundled version of
+```
+
+--- candidate 2 (sim=0.771, past_pr=#6437, file=Mathlib/Analysis/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,260 @@
++/-
++Copyright (c) 2022 Apurva Nakade All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Apurva Nakade
++-/
++import Mathlib.Analysis.Convex.Cone.Dual
++import Mathlib.Algebra.Order.Nonneg.Ring
++import Mathlib.Algebra.Module.Submodule.Basic
++
++
++/-!
++# Pointed cones
++
++We define a pointed cones as convex cones which contain `0`. This is a bundled version of
+```
+PAST COMMENT (from reviewer):
+That still doesn't read right 🤔
+
+--- candidate 3 (sim=0.765, past_pr=#28140, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -34,7 +34,7 @@ open Function
+ section Definitions
+ 
+ variable [Semiring R] [PartialOrder R] [IsOrderedRing R] [AddCommMonoid E] [Module R E]
+-  {C C₁ C₂ : PointedCone R E} {x : E} {r : R}
++  {C C₁ C₂ : PointedCone R E} {S : Set E} {x : E} {r : R}
+```
+PAST COMMENT (from reviewer):
+I think the variable name `S` is quite confusing here because you have `R` as well, which has a very different meaning! What do you think about `s` (as used in Cone/Dual)?
+
+--- candidate 4 (sim=0.741, past_pr=#33780, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -287,6 +290,44 @@ lemma to_isOrderedModule (C : PointedCone R E) (h : ∀ x y : E, x ≤ y ↔ y -
+ 
+ end OrderedAddCommGroup
+ 
++section Lineal
++
++open Pointwise
++
++variable [Ring R] [LinearOrder R] [IsOrderedRing R] [AddCommGroup E] [Module R E]
++
++/-- The lineality space of a cone `C` is the submodule given by `C ⊓ -C`. -/
++def lineal (C : PointedCone R E) : Submodule R E where
++  __ := C.toAddSubmonoid.support
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  __ := C.support
+```
+
+--- candidate 5 (sim=0.741, past_pr=#33780, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -287,6 +290,45 @@ lemma to_isOrderedModule (C : PointedCone R E) (h : ∀ x y : E, x ≤ y ↔ y -
+ 
+ end OrderedAddCommGroup
+ 
++section Lineal
++
++open Pointwise
++
++variable [Ring R] [LinearOrder R] [IsOrderedRing R] [AddCommGroup E] [Module R E]
++
++/-- The lineality space of a cone `C` is the submodule given by `C ⊓ -C`. -/
++@[simps!]
++def lineal (C : PointedCone R E) : Submodule R E where
++  __ := C.support
++  smul_mem' r _ hx := by
++    by_cases hr : 0 ≤ r
++    · simpa using And.intro (C.smul_mem hr hx.1) (C.smul_mem hr hx.2)
++    · have hr := le_of_lt <| neg_pos_of_neg <| lt_of_not_ge hr
++      simpa using And.intro (C.smul_mem hr hx.2) (C.smul_mem hr hx.1)
++@[simp]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+
+@[simp]
+```
+
+--- candidate 6 (sim=0.741, past_pr=#27578, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -105,6 +112,16 @@ abbrev span (s : Set E) : PointedCone R E := Submodule.span R≥0 s
+ 
+ lemma subset_span {s : Set E} : s ⊆ PointedCone.span R s := Submodule.subset_span
+ 
++/-- Elements of PointedCone.span R s are expressible as conical combination of elements from s. -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- Elements of the cone hull are expressible as conical combination of elements from s. -/
+```
+
+
+--- candidate 7 (sim=0.734, past_pr=#25204, file=Mathlib/Analysis/Convex/Cone/Proper.lean) ---
+PAST HUNK:
+```
+@@ -30,77 +32,107 @@ The next steps are:
+ 
+ -/
+ 
+-open ContinuousLinearMap Filter Set
++open ContinuousLinearMap Filter Function Set
+ 
+-/-- A proper cone is a pointed cone `K` that is closed. Proper cones have the nice property that
++variable {R E F G : Type*} [Semiring R] [PartialOrder R] [IsOrderedRing R]
++variable [AddCommMonoid E] [TopologicalSpace E] [Module R E]
++variable [AddCommMonoid F] [TopologicalSpace F] [Module R F]
++variable [AddCommMonoid G] [TopologicalSpace G] [Module R G]
++
++local notation "R≥0" => {r : R // 0 ≤ r}
++
++variable (R E) in
++/-- A proper cone is a pointed cone `C` that is closed. Proper cones have the nice property that
+ they are equal to their double dual, see `ProperCone.dual_dual`.
+ This makes them useful for defining cone programs and proving duality theorems. -/
+-structure ProperCone (𝕜 : Type*) (E : Type*)
+-    [Semiring 𝕜] [PartialOrder 𝕜] [IsOrderedRing 𝕜] [AddCommMonoid E]
+-    [TopologicalSpace E] [Module 𝕜 E] extends Submodule {c : 𝕜 // 0 ≤ c} E where
+-  isClosed' : IsClosed (carrier : Set E)
++abbrev ProperCone := ClosedSubmodule R≥0 E
+ 
+ namespace ProperCone
+ section Module
++variable {C C₁ C₂ : ProperCone R E} {r : R} {x : E}
+ 
+-variable {𝕜 : Type*} [Semiring 𝕜] [PartialOrder 𝕜] [IsOrderedRing 𝕜]
+-variable {E : Type*} [AddCommMonoid E] [TopologicalSpace E] [Module 𝕜 E]
++/-- Alias of `ClosedSubmodule.toSubmodule` for convenience and discoverability. -/
++@[coe] abbrev toPointedCone (C : ProperCone R E) : PointedCone R E := C.toSubmodule
+ 
+-/-- A `PointedCone` is defined as an alias of submodule. We replicate the abbrevia
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+`mem_coe` makes more sense as the name for this, since in the infoview it'll get printed as a coercion (this is also consistent with the old way)
+
+--- candidate 8 (sim=0.734, past_pr=#25204, file=Mathlib/Analysis/Convex/Cone/Proper.lean) ---
+PAST HUNK:
+```
+@@ -30,77 +32,107 @@ The next steps are:
+ 
+ -/
+ 
+-open ContinuousLinearMap Filter Set
++open ContinuousLinearMap Filter Function Set
+ 
+-/-- A proper cone is a pointed cone `K` that is closed. Proper cones have the nice property that
++variable {R E F G : Type*} [Semiring R] [PartialOrder R] [IsOrderedRing R]
++variable [AddCommMonoid E] [TopologicalSpace E] [Module R E]
++variable [AddCommMonoid F] [TopologicalSpace F] [Module R F]
++variable [AddCommMonoid G] [TopologicalSpace G] [Module R G]
++
++local notation "R≥0" => {r : R // 0 ≤ r}
++
++variable (R E) in
++/-- A proper cone is a pointed cone `C` that is closed. Proper cones have the nice property that
+ they are equal to their double dual, see `ProperCone.dual_dual`.
+ This makes them useful for defining cone programs and proving duality theorems. -/
+-structure ProperCone (𝕜 : Type*) (E : Type*)
+-    [Semiring 𝕜] [PartialOrder 𝕜] [IsOrderedRing 𝕜] [AddCommMonoid E]
+-    [TopologicalSpace E] [Module 𝕜 E] extends Submodule {c : 𝕜 // 0 ≤ c} E where
+-  isClosed' : IsClosed (carrier : Set E)
++abbrev ProperCone := ClosedSubmodule R≥0 E
+ 
+ namespace ProperCone
+ section Module
++variable {C C₁ C₂ : ProperCone R E} {r : R} {x : E}
+ 
+-variable {𝕜 : Type*} [Semiring 𝕜] [PartialOrder 𝕜] [IsOrderedRing 𝕜]
+-variable {E : Type*} [AddCommMonoid E] [TopologicalSpace E] [Module 𝕜 E]
++/-- Alias of `ClosedSubmodule.toSubmodule` for convenience and discoverability. -/
++@[coe] abbrev toPointedCone (C : ProperCone R E) : PointedCone R E := C.toSubmodule
+ 
+-/-- A `PointedCone` is defined as an alias of submodule. We replicate the abbrevia
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+that's a good enough reason. don't forget to deprecate though
+
+--- candidate 9 (sim=0.733, past_pr=#29950, file=Mathlib/Analysis/Convex/Extreme.lean) ---
+PAST HUNK:
+```
+@@ -49,32 +49,37 @@ variable (𝕜) [Semiring 𝕜] [PartialOrder 𝕜] [AddCommMonoid E] [SMul 𝕜
+ 
+ /-- A set `B` is an extreme subset of `A` if `B ⊆ A` and all points of `B` only belong to open
+ segments whose ends are in `B`. -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- A set `B` is an extreme subset of `A` if `B ⊆ A` and all points of `B` only belong to open
+segments whose ends are in `B`.
+
+Our definition only requires that the left endpoint of the segment lies in `B`,
+but by symmetry of open segments, the right endpoint must also lie in `B`.
+See `IsExtreme.right_mem_of_mem_openSegment`. -/
+```
+
+--- candidate 10 (sim=0.728, past_pr=#31648, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -221,4 +222,22 @@ lemma to_isOrderedModule (C : PointedCone R E) (h : ∀ x y : E, x ≤ y ↔ y -
+     IsOrderedModule R E := .of_smul_nonneg <| by simp +contextual [h, C.smul_mem]
+ 
+ end OrderedAddCommGroup
++
++section Salient
++variable [Semiring R] [PartialOrder R] [IsOrderedRing R] [AddCommGroup E] [Module R E]
++open Pointwise
++
++/-- A pointed cone is salient iff an element `x` being a member of both the cone and its negative
++is equivalent to `x = 0`. -/
++lemma salient_iff_mem_neg_eq_zero (C : PointedCone R E) :
++    (C : ConvexCone R E).Salient ↔ ∀ x, (x ∈ C ∧ x ∈ -C) ↔ x = 0 := by
+```
+PAST COMMENT (from reviewer):
+Okay, sure, remove the version I suggested.
+
+--- candidate 11 (sim=0.728, past_pr=#31648, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -221,4 +222,22 @@ lemma to_isOrderedModule (C : PointedCone R E) (h : ∀ x y : E, x ≤ y ↔ y -
+     IsOrderedModule R E := .of_smul_nonneg <| by simp +contextual [h, C.smul_mem]
+ 
+ end OrderedAddCommGroup
++
++section Salient
++variable [Semiring R] [PartialOrder R] [IsOrderedRing R] [AddCommGroup E] [Module R E]
++open Pointwise
++
++/-- A pointed cone is salient iff an element `x` being a member of both the cone and its negative
++is equivalent to `x = 0`. -/
++lemma salient_iff_mem_neg_eq_zero (C : PointedCone R E) :
++    (C : ConvexCone R E).Salient ↔ ∀ x, (x ∈ C ∧ x ∈ -C) ↔ x = 0 := by
+```
+PAST COMMENT (from reviewer):
+Probably this is more useful in practice, no? As otherwise you end up constantly needing to prove the trivial fact that `0 ∈ C ∧ 0 ∈ -C`.
+```suggestion
+    (C : ConvexCone R E).Salient ↔ ∀ x, (x ∈ C ∧ x ∈ -C) → x = 0 := by
+```
+Do you also want to have an `alias` for the reverse direction?
+
+--- candidate 12 (sim=0.725, past_pr=#29241, file=Mathlib/Analysis/Convex/Cone/Basic.lean) ---
+PAST HUNK:
+```
+@@ -80,8 +80,6 @@ instance : SetLike (ProperCone R E) E where
+ 
+ @[ext] lemma ext (h : ∀ x, x ∈ C₁ ↔ x ∈ C₂) : C₁ = C₂ := SetLike.ext h
+ 
+-@[simp] lemma mem_toPointedCone : x ∈ C.toPointedCone ↔ x ∈ C := .rfl
+```
+PAST COMMENT (from reviewer):
+I'd keep the lemma (because it's more easily discoverable than something on closed submodules) but remove the simp attribute.
+
+--- candidate 13 (sim=0.725, past_pr=#29241, file=Mathlib/Analysis/Convex/Cone/Basic.lean) ---
+PAST HUNK:
+```
+@@ -80,8 +80,6 @@ instance : SetLike (ProperCone R E) E where
+ 
+ @[ext] lemma ext (h : ∀ x, x ∈ C₁ ↔ x ∈ C₂) : C₁ = C₂ := SetLike.ext h
+ 
+-@[simp] lemma mem_toPointedCone : x ∈ C.toPointedCone ↔ x ∈ C := .rfl
+```
+PAST COMMENT (from reviewer):
+I'm not sure it is the role of this PR to do this change and the next one. Remove the changes?
+
+--- candidate 14 (sim=0.719, past_pr=#27578, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -105,6 +112,15 @@ abbrev span (s : Set E) : PointedCone R E := Submodule.span R≥0 s
+ 
+ lemma subset_span {s : Set E} : s ⊆ PointedCone.span R s := Submodule.subset_span
+ 
++/-- Elements of PointedCone.span R s are expressible as conical combination of elements from s. -/
++lemma mem_span_set {s : Set E} : x ∈ span R s ↔
++      ∃ c : E →₀ R, ↑c.support ⊆ s ∧ (∀ y, 0 ≤ c y) ∧ c.sum (fun m r => r • m) = x := by
++  rw [Submodule.mem_span_set]
++  constructor
++  · rintro ⟨c, hc, rfl⟩
++    exact ⟨⟨c.support, Subtype.val ∘ c, by simp [← Subtype.val_inj]⟩, hc, fun y ↦ (c y).2, rfl⟩
++  · rintro ⟨c, hc, hc₀, rfl⟩
++    exact ⟨⟨c.support, fun y ↦ ⟨c y, hc₀ _⟩, by simp⟩, hc, rfl⟩
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    exact ⟨⟨c.support, fun y ↦ ⟨c y, hc₀ _⟩, by simp⟩, hc, rfl⟩
+
+```
+
+--- candidate 15 (sim=0.718, past_pr=#20595, file=Mathlib/Analysis/Convex/Cone/Basic.lean) ---
+PAST HUNK:
+```
+@@ -48,11 +48,12 @@ variable {𝕜 E F G : Type*}
+ section Definitions
+ 
+ variable (𝕜 E)
+-variable [OrderedSemiring 𝕜]
++variable [Semiring 𝕜] [PartialOrder 𝕜]
+ 
+ /-- A convex cone is a subset `s` of a `𝕜`-module such that `a • x + b • y ∈ s` whenever `a, b > 0`
+ and `x, y ∈ s`. -/
+-structure ConvexCone [AddCommMonoid E] [SMul 𝕜 E] where
++@[nolint unusedArguments]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+I don't think this is needed?
+
+--- candidate 16 (sim=0.715, past_pr=#35308, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -35,10 +35,55 @@ namespace PointedCone
+ 
+ open Function
+ 
+-section Definitions
++section Submodule
+ 
+ variable [Semiring R] [PartialOrder R] [IsOrderedRing R] [AddCommMonoid E] [Module R E]
+-  {C C₁ C₂ : PointedCone R E} {x : E} {r : R}
++variable {C : PointedCone R E}
++
++/-- A submodule is a pointed cone. -/
++@[coe] abbrev ofSubmodule (S : Submodule R E) : PointedCone R E := S.restrictScalars _
++
++instance : Coe (Submodule R E) (PointedCone R E) := ⟨ofSubmodule⟩
++
++@[simp] lemma ofSubmodule_coe (S : Submodule R E) : (ofSubmodule S : Set E) = S := by rfl
+```
+PAST COMMENT (from reviewer):
+```suggestion
+@[simp] lemma coe_ofSubmodule (S : Submodule R E) : (ofSubmodule S : Set E) = S := rfl
+```
+
+--- candidate 17 (sim=0.712, past_pr=#36953, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -170,18 +170,18 @@ def ofConeComb (C : Set E) (nonempty : C.Nonempty)
+   .ofLinearComb C nonempty fun x hx y hy ⟨a, ha⟩ ⟨b, hb⟩ => coneComb x hx y hy a ha b hb
+ 
+ variable (R) in
+-/-- The span of a set `s` is the smallest pointed cone that contains `s`.
++/-- The cone hull of a set `s` is the smallest pointed cone that contains `s`.
+ 
+-Pointed cones being defined as submodules over nonnegative scalars, this is exactly the
+-submodule span of `s` w.r.t. nonnegative scalars. -/
+-abbrev span (s : Set E) : PointedCone R E := Submodule.span R≥0 s
++Pointed cones being defined as submodules over nonnegative scalars, this is implemented as
++the submodule span of `s` w.r.t. nonnegative scalars. -/
++abbrev hull (s : Set E) : PointedCone R E := span R≥0 s
+ 
+-lemma subset_span {s : Set E} : s ⊆ PointedCone.span R s := Submodule.subset_span
++lemma subset_hull {s : Set E} : s ⊆ PointedCone.hull R s := subset_span
+```
+PAST COMMENT (from reviewer):
+It's OK to not deprecated `span`.
+
+--- candidate 18 (sim=0.712, past_pr=#36953, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -170,18 +170,18 @@ def ofConeComb (C : Set E) (nonempty : C.Nonempty)
+   .ofLinearComb C nonempty fun x hx y hy ⟨a, ha⟩ ⟨b, hb⟩ => coneComb x hx y hy a ha b hb
+ 
+ variable (R) in
+-/-- The span of a set `s` is the smallest pointed cone that contains `s`.
++/-- The cone hull of a set `s` is the smallest pointed cone that contains `s`.
+ 
+-Pointed cones being defined as submodules over nonnegative scalars, this is exactly the
+-submodule span of `s` w.r.t. nonnegative scalars. -/
+-abbrev span (s : Set E) : PointedCone R E := Submodule.span R≥0 s
++Pointed cones being defined as submodules over nonnegative scalars, this is implemented as
++the submodule span of `s` w.r.t. nonnegative scalars. -/
++abbrev hull (s : Set E) : PointedCone R E := span R≥0 s
+ 
+-lemma subset_span {s : Set E} : s ⊆ PointedCone.span R s := Submodule.subset_span
++lemma subset_hull {s : Set E} : s ⊆ PointedCone.hull R s := subset_span
+```
+PAST COMMENT (from reviewer):
+Same here. We want deprecations for all declarations that changed the name
+
+--- candidate 19 (sim=0.710, past_pr=#32355, file=Mathlib/Geometry/Convex/Cone/Simplicial.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,117 @@
++/-
++Copyright (c) 2025 Bjørn Solheim. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Bjørn Solheim
++-/
++module
++
++public import Mathlib.Geometry.Convex.Cone.Pointed
++public import Mathlib.LinearAlgebra.Basis.Basic
++
++/-!
++# Simplicial cones
++
++A **simplicial cone** (also called a **simplex cone**) is a pointed convex cone that equals the
++conic span of a finite linearly independent set of vectors. We do not require that the
++generators span the ambient module. However, in the case of a generating simplicial cone
++the (simplicial) generators linearly span the module.
++
++## Main definitions
++
++* `PointedCone.IsSimplicial`: A pointed cone is simplicial if it equals the conic span of
++  a finite linearly independent set.
++* `PointedCone.IsGenerating`: Abbreviation - generating if it spans the whole module.
++
++## Results
++
++* `PointedCone.span_isSimplicial`: The conic span of a linearly independent finite set is
++  simplicial.
++* `PointedCone.IsSimplicial.toBasis`: A simplicial generating cone determines a basis.
++
++## Implementation notes
++
++This is a minimal API containing only what is needed to prove basic properties of
++cone tensor products involving simplicial and generating cones. Additional lemmas
++(finite generation properties,behavior under maps, simplicial cones in specific cases)
++may be added in future PRs.
++
++Finset + classical choice (non-computable) seems a reasonable choice for this predicate. Other
++possibilities are a finite set or using a structure (which brings along a proo
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+hmm yeah not sure what to do either but the current approach doesn't scale
+I suppose we can leave it for a future PR
+
+--- candidate 20 (sim=0.710, past_pr=#32355, file=Mathlib/Geometry/Convex/Cone/Simplicial.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,117 @@
++/-
++Copyright (c) 2025 Bjørn Solheim. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Bjørn Solheim
++-/
++module
++
++public import Mathlib.Geometry.Convex.Cone.Pointed
++public import Mathlib.LinearAlgebra.Basis.Basic
++
++/-!
++# Simplicial cones
++
++A **simplicial cone** (also called a **simplex cone**) is a pointed convex cone that equals the
++conic span of a finite linearly independent set of vectors. We do not require that the
++generators span the ambient module. However, in the case of a generating simplicial cone
++the (simplicial) generators linearly span the module.
++
++## Main definitions
++
++* `PointedCone.IsSimplicial`: A pointed cone is simplicial if it equals the conic span of
++  a finite linearly independent set.
++* `PointedCone.IsGenerating`: Abbreviation - generating if it spans the whole module.
++
++## Results
++
++* `PointedCone.span_isSimplicial`: The conic span of a linearly independent finite set is
++  simplicial.
++* `PointedCone.IsSimplicial.toBasis`: A simplicial generating cone determines a basis.
++
++## Implementation notes
++
++This is a minimal API containing only what is needed to prove basic properties of
++cone tensor products involving simplicial and generating cones. Additional lemmas
++(finite generation properties,behavior under maps, simplicial cones in specific cases)
++may be added in future PRs.
++
++Finset + classical choice (non-computable) seems a reasonable choice for this predicate. Other
++possibilities are a finite set or using a structure (which brings along a proo
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+This notation line appears already in several files - could you consider refactoring it into scoped notation in the `PointedCone` namespace?
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "summary": "Past feedback about improving definitional docstrings' English/style (including italicizing terms) applies to the new definitional docstring for faces; it also contains a typo.",
+  "confidence": "medium",
+  "strong_matches": [
+    {
+      "past_pr": 6437,
+      "past_file": "Mathlib/Analysis/Convex/Cone/Pointed.lean",
+      "past_comment_excerpt": "A *pointed cone* is defined to be a convex cone which contains `0`. This is a bundled version of",
+      "applies_because": "The new hunk introduces a definitional docstring for what it means for `F` to be a face of `C`. Prior feedback asked for clearer, well-phrased definitional sentences with italicized key terms.",
+      "suggested_adaptation": "Rephrase the docstring to a clear definition with consistent mathlib style and fix the typo, e.g. “A *face* of pointed cones: a pointed cone `F` is a face of `C` if `F ≤ C` and whenever `a • x + y ∈ F` with `x, y ∈ C` and `0 < a`, then `x ∈ F`.”",
+      "supporting_past_prs": [
+        6437
+      ]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "There is a typo in the docstring: “x ist also in F” should be “x is also in F”, and the positivity condition could be stated precisely as `0 < a`.",
+      "supporting_past_prs": [
+        6437
+      ]
+    }
+  ]
+}

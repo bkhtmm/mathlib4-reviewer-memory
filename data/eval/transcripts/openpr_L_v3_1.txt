@@ -1,0 +1,615 @@
+====================================================================================================
+CASE L  PR #35287  (open-pr, v3.1 prompt)
+file: Mathlib/AlgebraicTopology/SimplicialSet/CoherentIso.lean  line: 58.0
+reviewer: @robin-carlier  on 2026-02-14T10:13:08Z
+advice_kind: additional instances suggestion
+prompt_tokens: 8273  completion_tokens: 3234
+HUMAN reviewer (ground truth):
+  > Additionally, you could consider adding extra instances like
+  > ```lean
+  > instance {x y : WalkingIso.{u}} : Unique (x ⟶ y) := inferInstanceAs (Unique Unit)
+  > ```
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Two failure modes are equally bad and you must avoid BOTH:
+  (X) "axis-miss" false positive: a past comment and the new code look similar on the surface, but the past reviewer's concern is not present in the new hunk. (Example: past comment is about `ppSpace` formatting, new hunk's actual problem is "this whole function shouldn't return a string".)
+  (Y) "over-refusal" false negative: a candidate IS genuinely applicable, but you refuse because its concern axis didn't appear in your initial inventory. (Example: you forgot to list `refactor-simplify` for a proof hunk, then declined a candidate that correctly suggests using a higher-level lemma.)
+
+A correct silent output is more valuable than a confident wrong-axis answer, but losing a clearly-applicable candidate is also a real cost.
+
+Read carefully before producing JSON. Follow the four steps below in order.
+
+STEP 1 — STRUCTURAL + SEMANTIC READING OF THE NEW HUNK.
+  1a. Parse the code shape: tactic-mode vs term-mode, declaration kind (`def` / `theorem` / `lemma` / `instance` / `class` / `structure` / `abbrev` / `syntax` / `notation`), attributes (`@[simp]`, `@[to_additive]`, `@[deprecated]`, `@[ext]`, `@[fun_prop]`, `@[reassoc]`, …), universe parameters, implicit/explicit binders, docstring style, proof tactics used.
+  1b. Inventory what *could* be criticized about THIS specific hunk. Pick as many as apply from this list of "concern axes":
+     - correctness-bug        (code doesn't typecheck / is logically wrong)
+     - naming                  (lemma/def name doesn't follow conventions)
+     - docstring               (missing, unclear, typo, wrong phrasing)
+     - attribute               (missing/wrong `@[simp]` / `@[to_additive]` …)
+     - style-syntax            (`fun x ↦` vs `fun x =>`, `by use _; exact _` vs `⟨_, _⟩`, whitespace/`ppSpace`, notation preference)
+     - proof-golf              (the proof tactics could be shorter/nicer)
+     - refactor-simplify       (same statement provable with less machinery, e.g. use a dedicated higher-level lemma instead of manual rewriting)
+     - generalize-signature    (hypotheses too strong; remove/weaken a typeclass)
+     - design-smell-architectural (this API shape is wrong; returning a string, unnecessary instance, redundant definition, etc.)
+     - imports-module          (superfluous imports, module structure)
+     - namespace-organization  (`_root_`, namespace boundary, file placement)
+     - automation-tactic       (should use / should teach `aesop_cat`, `gcongr`, `positivity`, etc.)
+     - instance-diamond        (this instance creates an ambiguity / defeq diamond with another)
+     - unify-with-existing     (a similar definition/lemma already exists)
+     - junk-value              (docstring should note behavior at the "undefined" input; handled via `0`/`⊥`/`⊤`)
+  1c. DEFAULT-INCLUDE RULE. For ANY non-trivial proof or definition hunk (i.e. not a pure-imports/notation/file-header hunk), you MUST include the following axes in your plausible list unless the hunk is so trivial that they cannot apply: `refactor-simplify`, `proof-golf`, `docstring`, `naming`. These are the most common reviewer concerns; gating them out by omission caused real misses in past evaluation. Adding them is cheap; they only trigger a promotion if a candidate also matches.
+  1d. List the concerns that PLAUSIBLY apply to the new hunk (including the defaults from 1c). If none from outside 1c are obviously present, that is fine — the defaults still cover proof/definition hunks.
+
+STEP 2 — PER-CANDIDATE CONCERN CLASSIFICATION.
+  For EACH candidate, identify which concern axis (from the same list) the past reviewer's comment was about. Read the past comment carefully: the reviewer's *words* (not the past code) tell you the concern axis. If a past comment ships a `suggestion` code block, that block is evidence for what the reviewer wanted changed — but the axis of concern comes from the prose around it. Ignore candidates whose past comment is pure bikeshed or where you cannot identify a clear concern.
+
+STEP 3 — AXIS MATCH + APPLICABILITY CHECK.
+  A candidate is eligible for `strong_matches` ONLY if BOTH:
+    (a) Its axis (from step 2) is among the new hunk's plausible concerns (from step 1d), OR you can clearly justify (in `applies_because`) why this axis IS present in the new hunk after all — in which case ADD that axis to `new_hunk_plausible_concerns` in your output. Late additions are allowed but should be the exception, not the rule.
+    (b) You can write a concrete adaptation that a Lean/mathlib reviewer would plausibly post on the new hunk *today*, given what is visible in the hunk.
+  Before promoting, write — in the JSON output, per match — a `why_might_not_apply` field giving the strongest counter-argument against promotion (one short sentence).
+
+  DEMOTION RULE (this is the #1 axis-miss-prevention lever):
+    If your counter-argument names a SPECIFIC PROPERTY of the new hunk that would make the past advice not apply or already-followed — e.g. "the new code already uses term-mode", "the lemma is already named correctly", "the import is actually used at line X", "the new code does not declare an instance, so the diamond risk does not apply" — then DEMOTE to `weak_observations` instead of promoting.
+    Only PROMOTE if the counter-argument is generic doubt that does NOT identify a specific reason the new hunk evades the past advice — e.g. "this is partly stylistic preference", "the user may have intended this", "I cannot verify without seeing more context". Generic doubt does not block promotion; specific evasion does.
+
+  Cross-candidate synthesis is allowed: if candidate X establishes that an identifier in the new hunk is a `class`, and candidate Y shows the preferred term-mode `instance := ⟨...⟩` template, they jointly support a promotion. List both in `supporting_past_prs` and still produce one `why_might_not_apply`.
+
+STEP 4 — CONFIDENCE AND OUTPUT.
+  Confidence scale:
+    - "high"   — ≥1 strong match survives step 3 AND the adaptation is a near-verbatim application of a past comment; the counter-argument is generic.
+    - "medium" — ≥1 strong match survives step 3 BUT needs adaptation or synthesis; counter-argument is generic doubt rather than specific evasion.
+    - "low"    — no candidate survives step 3; only stylistic patterns worth mentioning as `weak_observations`.
+    - "none"   — retrieved pool's concerns don't match anything plausible about the new hunk; state this and stop.
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "new_hunk_plausible_concerns": [<axis labels from Step 1d, plus any added in Step 3a>],
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_concern_axis": "<axis label from the list>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure AND explaining why the concern axis matches>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "why_might_not_apply": "<one short sentence — strongest counter-argument against this promotion>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "axis": "<axis label>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Do not invent axis labels outside the list.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #35287 (file: Mathlib/AlgebraicTopology/SimplicialSet/CoherentIso.lean):
+```
+@@ -0,0 +1,184 @@
+... [18 lines above hidden]
++We show that the type of functor from `WalkingIso` into any category is equivalent to the type of
++isomorphisms in that category.
++
++Then we define the simplicial set `coherentIso` as the nerve of `WalkingIso`.
++Since the morphism types in `WalkingIso` are given by `unit`, the `n`-simplices of `coherentIso` are
++equivalent to `Fin 2`-vectors of length `n + 1`. This shows that the `n`-simplices of `coherentIso`
++have decidable equality.
++Lastly, we show that `hom : coherentIso _⦋1⦌` (the edge from `zero` to `one`) is an isomorphism,
++and `isIsoOfEqMapHom` concludes from this that for any simplicial set `X`,
++any morphism `g : coherentIso ⟶ X` and any `f : X _⦋1⦌`,
++if `g` sends `hom` to `f`, then `f` is an isomorphism.
++
++-/
++
++@[expose] public section
++
++universe u v
++
++open CategoryTheory
++
++namespace CategoryTheory
++
++/-- This is the free-living isomorphism as a category with objects called `zero` and `one`. -/
++def WalkingIso : Type u := ULift (Fin 2)
++
++@[match_pattern]
++def WalkingIso.zero : WalkingIso := ULift.up (0 : Fin 2)
++
++@[match_pattern]
++def WalkingIso.one : WalkingIso := ULift.up (1 : Fin 2)
++
++open WalkingIso
++
++namespace WalkingIso
++
++/-- The free isomorphism is the codiscrete category on two objects. -/
++instance : Category (WalkingIso) where
++  Hom _ _ := Unit
++  id _ := ⟨⟩
++  comp _ _ := ⟨⟩
++
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.685, past_pr=#5409, file=Mathlib/AlgebraicTopology/SplitSimplicialObject.lean) ---
+PAST HUNK:
+```
+@@ -258,11 +258,18 @@ attribute [instance] Splitting.map_isIso
+... [4 lines above hidden]
+-@[simps!]
+ def iso (Δ : SimplexCategoryᵒᵖ) : coprod s.N Δ ≅ X.obj Δ :=
+   asIso (Splitting.map X s.ι Δ)
+ #align simplicial_object.splitting.iso SimplicialObject.Splitting.iso
+ 
++@[simp]
++theorem iso_hom (Δ : SimplexCategoryᵒᵖ) : (iso s Δ).hom = Splitting.map X s.ι Δ :=
++  rfl
++
++@[simp]
++theorem iso_inv (Δ : SimplexCategoryᵒᵖ) : (iso s Δ).inv = inv (Splitting.map X s.ι Δ) :=
++  rfl
++
+```
+PAST COMMENT (from reviewer):
+Because `Splitting.map` is unfolded in `simps` lemmas.
+I wonder why `Splitting.map` isn't unfolded in the old Lean.
+
+--- candidate 2 (sim=0.684, past_pr=#26446, file=Mathlib/CategoryTheory/Localization/Construction.lean) ---
+PAST HUNK:
+```
+@@ -343,7 +343,10 @@ def counitIso : inverse W D ⋙ functor W D ≅ 𝟭 (W.FunctorsInverting D) :=
+         exact fac G hG
+       · rintro ⟨G₁, hG₁⟩ ⟨G₂, hG₂⟩ f
+         ext
+-        apply NatTransExtension.app_eq)
++        dsimp
++        rw [NatTransExtension.app_eq, InducedCategory.eqToHom_hom,
++          InducedCategory.eqToHom_hom]
++        simp)
+```
+PAST COMMENT (from reviewer):
+I don't understand why `simp` isn't picking up `InducedCategory.eqToHom_hom`. It's not that serious but could you make a comment to highlight this technical debt?
+
+--- candidate 3 (sim=0.681, past_pr=#749, file=Mathlib/CategoryTheory/Iso.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,603 @@
+... [9 lines above hidden]
++/-!
++# Isomorphisms
++
++This file defines isomorphisms between objects of a category.
++
++## Main definitions
++
++- `structure Iso` : a bundled isomorphism between two objects of a category;
++- `class IsIso` : an unbundled version of `iso`;
++  note that `IsIso f` is a `Prop`, and only asserts the existence of an inverse.
++  Of course, this inverse is unique, so it doesn't cost us much to use choice to retrieve it.
++- `inv f`, for the inverse of a morphism with `[IsIso f]`
++- `as_iso` : convert from `IsIso` to `Iso` (noncomputable);
+```
+PAST COMMENT (from reviewer):
+```suggestion
+- `asIso` : convert from `IsIso` to `Iso` (noncomputable);
+```
+
+--- candidate 4 (sim=0.681, past_pr=#30467, file=Mathlib/CategoryTheory/Iso.lean) ---
+PAST HUNK:
+```
+@@ -222,7 +222,10 @@ def homFromEquiv (α : X ≅ Y) {Z : C} : (X ⟶ Z) ≃ (Y ⟶ Z) where
+ 
+ end Iso
+ 
+-/-- `IsIso` typeclass expressing that a morphism is invertible. -/
++/-- The `IsIso` typeclass expresses that a morphism is invertible.
++
++Given a morphism `f` with `IsIso f`, one can view `f` as an isomorphism via `asIso f` and get
++the inverse using `inf v`. -/
+```
+PAST COMMENT (from reviewer):
+You inferted two letters I'm avraid :)
+```suggestion
+the inverse using `inv f`. -/
+```
+
+--- candidate 5 (sim=0.680, past_pr=#36613, file=Mathlib/CategoryTheory/ConcreteCategory/Forget.lean) ---
+PAST HUNK:
+```
+@@ -143,26 +148,7 @@ lemma ConcreteCategory.forget₂_comp_apply [HasForget₂ C D] {X Y Z : C}
+   rw [Functor.map_comp, CategoryTheory.comp_apply]
+ 
+ instance hom_isIso {X Y : C} (f : X ⟶ Y) [IsIso f] :
+-    IsIso (C := Type _) ⇑(ConcreteCategory.hom f) :=
++    IsIso (C := Type _) (TypeCat.ofHom ((ConcreteCategory.hom f))) :=
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    IsIso (C := Type _) (TypeCat.ofHom (ConcreteCategory.hom f)) :=
+```
+
+--- candidate 6 (sim=0.680, past_pr=#8013, file=Mathlib/CategoryTheory/Limits/Shapes/Reflexive.lean) ---
+PAST HUNK:
+```
+@@ -148,6 +171,431 @@ instance (priority := 100) hasCoreflexiveEqualizers_of_hasEqualizers [HasEqualiz
+... [358 lines above hidden]
++
++variable (F : WalkingReflexivePair ⥤ C)
++
++/-- Forgetting the reflexion yields an equivalence between cocones over a bundled reflexive pair and
++coforks on the underlying parallel pair. -/
++def inclusionWalkingReflexivePairEquivCocone :
++    Cocone F ≌ Cofork (F.map left) (F.map right) :=
++  (Functor.Final.coconesEquiv _ F).symm.trans
++    (Cocones.precomposeEquivalence
++      (diagramIsoParallelPair (WalkingParallelPair.inclusionWalkingReflexivePair ⋙ F))).symm
++
++@[inherit_doc inclusionWalkingReflexivePairEquivCocone]
++def inclusionWalkingReflexivePairEquiv_obj (G : ReflexiveCofork F) :
+```
+PAST COMMENT (from reviewer):
+```suggestion
+def inclusionWalkingReflexivePairEquivObjIso (G : ReflexiveCofork F) :
+```
+
+--- candidate 7 (sim=0.679, past_pr=#8013, file=Mathlib/CategoryTheory/Limits/Shapes/Reflexive.lean) ---
+PAST HUNK:
+```
+@@ -148,6 +171,431 @@ instance (priority := 100) hasCoreflexiveEqualizers_of_hasEqualizers [HasEqualiz
+... [357 lines above hidden]
++open WalkingReflexivePair WalkingReflexivePair.Hom
++
++variable (F : WalkingReflexivePair ⥤ C)
++
++/-- Forgetting the reflexion yields an equivalence between cocones over a bundled reflexive pair and
++coforks on the underlying parallel pair. -/
++def inclusionWalkingReflexivePairEquivCocone :
++    Cocone F ≌ Cofork (F.map left) (F.map right) :=
++  (Functor.Final.coconesEquiv _ F).symm.trans
++    (Cocones.precomposeEquivalence
++      (diagramIsoParallelPair (WalkingParallelPair.inclusionWalkingReflexivePair ⋙ F))).symm
++
++@[inherit_doc inclusionWalkingReflexivePairEquivCocone]
+```
+PAST COMMENT (from reviewer):
+Here, we need a specific docstring saying this is an isomorphism.
+
+--- candidate 8 (sim=0.677, past_pr=#35731, file=Mathlib/AlgebraicTopology/SimplexCategory/Basic.lean) ---
+PAST HUNK:
+```
+@@ -809,19 +809,11 @@ theorem eq_comp_δ_of_not_surjective {n : ℕ} {Δ : SimplexCategory} (θ : Δ 
+ theorem eq_id_of_mono {x : SimplexCategory} (i : x ⟶ x) [Mono i] : i = 𝟙 _ := by
+   suffices IsIso i by
+     apply eq_id_of_isIso
+-  apply isIso_of_bijective
+-  dsimp
+-  rw [Fintype.bijective_iff_injective_and_card i.toOrderHom, ← mono_iff_injective,
+-    eq_self_iff_true, and_true]
+-  infer_instance
++  exact (isIso_iff_of_mono i).mpr rfl
+```
+PAST COMMENT (from reviewer):
+I think that works.
+
+--- candidate 9 (sim=0.677, past_pr=#7845, file=Mathlib/CategoryTheory/Yoneda.lean) ---
+PAST HUNK:
+```
+@@ -504,4 +504,5 @@ lemma isIso_of_yoneda_map_bijective {X Y : C} (f : X ⟶ Y)
+   obtain ⟨g, hg : g ≫ f = 𝟙 Y⟩ := (hf Y).2 (𝟙 Y)
+   exact ⟨g, (hf _).1 (by aesop_cat), hg⟩
+ 
++attribute [nolint simpNF] CategoryTheory.yonedaEquiv_yoneda_map
+```
+PAST COMMENT (from reviewer):
+This can be deleted safely
+
+--- candidate 10 (sim=0.677, past_pr=#35731, file=Mathlib/AlgebraicTopology/SimplexCategory/Basic.lean) ---
+PAST HUNK:
+```
+@@ -809,19 +809,11 @@ theorem eq_comp_δ_of_not_surjective {n : ℕ} {Δ : SimplexCategory} (θ : Δ 
+ theorem eq_id_of_mono {x : SimplexCategory} (i : x ⟶ x) [Mono i] : i = 𝟙 _ := by
+   suffices IsIso i by
+     apply eq_id_of_isIso
+-  apply isIso_of_bijective
+-  dsimp
+-  rw [Fintype.bijective_iff_injective_and_card i.toOrderHom, ← mono_iff_injective,
+-    eq_self_iff_true, and_true]
+-  infer_instance
++  exact (isIso_iff_of_mono i).mpr rfl
+```
+PAST COMMENT (from reviewer):
+Can this be merged with the `suffices` block? Same below.
+
+--- candidate 11 (sim=0.676, past_pr=#35901, file=Mathlib/CategoryTheory/Sites/Hypercover/One.lean) ---
+PAST HUNK:
+```
+@@ -608,6 +658,148 @@ def isoMk {S : C} {E F : PreOneHypercover S}
+... [86 lines above hidden]
++    | .fst i => WalkingMulticospan.Hom.fst (J := F.multicospanShape) (f.s₁' i)
++    | .snd i => WalkingMulticospan.Hom.snd (J := F.multicospanShape) (f.s₁' i)
++  map_id := by simp
++  map_comp
++    | .id _, _ => by simp
++    | .fst _, .id _ => by simp
++    | .snd _, .id _ => by simp
++
++/-- Isomorphic pre-`1`-hypercovers have equivalent mutifork index categories. -/
++@[simps! functor inverse]
++def equivalenceMulticospanOfIso {E F : PreOneHypercover.{w} S} (f : E ≅ F) :
++    WalkingMulticospan E.multicospanShape ≌ WalkingMulticospan F.multicospanShape := by
++  refine .mk f.hom.mapMulticospan f.inv.mapMulticospan ?_ ?_
+```
+PAST COMMENT (from reviewer):
+Could you try to show the triangle identity?
+
+--- candidate 12 (sim=0.676, past_pr=#33822, file=Mathlib/CategoryTheory/NatIso.lean) ---
+PAST HUNK:
+```
+@@ -7,6 +7,7 @@ module
+ 
+ public import Mathlib.CategoryTheory.Functor.Category
+ public import Mathlib.CategoryTheory.Iso
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+This import should now be redundant
+
+--- candidate 13 (sim=0.675, past_pr=#32578, file=Mathlib/CategoryTheory/Limits/Shapes/Multiequalizer.lean) ---
+PAST HUNK:
+```
+ lemma Hom.comp_eq_comp {X Y Z : WalkingMulticospan J}
+     (f : X ⟶ Y) (g : Y ⟶ Z) : Hom.comp f g = f ≫ g := rfl
+ 
++/-- Construct a natural isomorphism between functors out of a walking multicospan from its
++components. -/
++@[simps!]
++def functorExt {C : Type*} [Category C] {F G : WalkingMulticospan J ⥤ C}
++    (left : ∀ i, F.obj (.left i) ≅ G.obj (.left i))
++    (right : ∀ i, F.obj (.right i) ≅ G.obj (.right i))
++    (wl : ∀ i, F.map (WalkingMulticospan.Hom.fst i) ≫ (right i).hom =
++      (left _).hom ≫ G.map (WalkingMulticospan.Hom.fst i))
++    (wr : ∀ i, F.map (WalkingMulticospan.Hom.snd i) ≫ (right i).hom =
++      (left _).hom ≫ G.map (WalkingMulticospan.Hom.snd i)) :
+```
+PAST COMMENT (from reviewer):
+We could add a default tactic `by cat_disch` here (and below)?
+
+--- candidate 14 (sim=0.675, past_pr=#16783, file=Mathlib/CategoryTheory/Category/Quiv.lean) ---
+PAST HUNK:
+```
+@@ -82,6 +82,38 @@ end Cat
+ 
+ namespace Quiv
+ 
++def isoOfEquiv {V W : Type u } [Quiver.{v + 1, u} V] [Quiver.{v + 1, u} W]
+```
+PAST COMMENT (from reviewer):
+I believe it would much more convenient to develop a suitable API (kind of similar to `eqToHom`) for quivers:
+```lean
+section
+
+variable {V : Type*} [Quiver V]
+
+def _root_.Quiver.homOfEq {X Y : V} (f : X ⟶ Y) {X' Y' : V}
+    (hX : X = X') (hY : Y = Y') : X' ⟶ Y' := by
+  subst hX hY
+  exact f
+
+@[simp]
+lemma _root_.Quiver.homOfEq_trans
+    {X Y : V} (f : X ⟶ Y) {X' Y' : V} (hX : X = X') (hY : Y = Y')
+    {X'' Y'' : V} (hX' : X' = X'') (hY' : Y' = Y'') :
+    Quiver.homOfEq (Quiver.homOfEq f hX hY) hX' hY' =
+      Quiver.homOfEq f (hX.trans hX') (hY.trans hY') := by
+  subst hX hY hX' hY'
+  rfl
+
+lemma _root_.Quiver.homOfEq_injective {X X' Y Y' : V} (hX : X = X') (hY : Y = Y')
+    {f g : X ⟶ Y} (h : Quiver.homOfEq f hX hY = Quiver.homOfEq g hX hY) : f = g := by
+... [truncated]
+
+--- candidate 15 (sim=0.674, past_pr=#36613, file=Mathlib/CategoryTheory/Yoneda.lean) ---
+PAST HUNK:
+```
+@@ -1080,43 +1125,42 @@ lemma isIso_iff_coyoneda_map_bijective {X Y : C} (f : X ⟶ Y) :
+... [23 lines above hidden]
++  invFun x := { app Y := TypeCat.ofHom fun y ↦ F.map y.down x }
+   left_inv τ := by
+-    ext Y ⟨y⟩
+-    simp [uliftYoneda, ← FunctorToTypes.naturality]
++    ext Y ⟨x⟩
++    simp [← comp_apply, ← τ.naturality]
+   right_inv x := by simp
+ 
+ attribute [simp] uliftCoyonedaEquiv_symm_apply_app
+ 
+ set_option backward.isDefEq.respectTransparency false in
+-lemma uliftCoyonedaEquiv_naturality {X Y : C} {F : C ⥤ Type max w v₁}
++lemma uliftCoyonedaEquiv_naturality {X Y : C} {F : C ⥤ Type (max w v₁)}
+```
+PAST COMMENT (from reviewer):
+```suggestion
+lemma uliftCoyonedaEquiv_naturality {X Y : C} {F : C ⥤ Type (max w v₁)}
+```
+Just a general comment: I think it would have been fine to leave unparenthesized the `max u v`, but I am too lazy to go and find them all and make suggestions for all of them. Ultimately it’s a matter of taste I guess.
+
+--- candidate 16 (sim=0.672, past_pr=#28234, file=Mathlib/CategoryTheory/Groupoid.lean) ---
+PAST HUNK:
+```
+@@ -95,7 +95,7 @@ variable (X Y)
+ @[simps!]
+ def Groupoid.isoEquivHom : (X ≅ Y) ≃ (X ⟶ Y) where
+   toFun := Iso.hom
+-  invFun f := ⟨f, Groupoid.inv f, (by simp), (by simp)⟩
++  invFun f := ⟨f, Groupoid.inv f, by simp, by simp⟩
+```
+PAST COMMENT (from reviewer):
+Untested:
+```suggestion
+  invFun f := { hom := f, inv := Groupoid.inv f }
+```
+
+--- candidate 17 (sim=0.670, past_pr=#28395, file=Mathlib/AlgebraicTopology/SimplicialSet/StdSimplex.lean) ---
+PAST HUNK:
+```
+@@ -266,6 +259,59 @@ lemma range_δ {n : ℕ} (i : Fin (n + 2)) :
+... [2 lines above hidden]
+   exact ofSimplex_yonedaEquiv_δ i
+ 
++/-- The standard simplex identifies to the nerve to the preordered type
++`ULift (Fin (n + 1))`. -/
++def isoNerve (n : ℕ) :
++    (Δ[n] : SSet.{u}) ≅ nerve (ULift.{u} (Fin (n + 1))) :=
++  NatIso.ofComponents (fun d ↦ Equiv.toIso (objEquiv.trans
++    { toFun f := (ULift.orderIso.symm.monotone.comp f.toOrderHom.monotone).functor
++      invFun f :=
++        SimplexCategory.Hom.mk
++          (ULift.orderIso.toOrderEmbedding.toOrderHom.comp f.toOrderHom)
++      left_inv _ := by aesop
++      right_inv _ := by rfl }))
+```
+PAST COMMENT (from reviewer):
+```suggestion
+      left_inv _ := by aesop }))
+```
+auto-param finds `right_inv`. 
+
+--- candidate 18 (sim=0.669, past_pr=#25780, file=Mathlib/AlgebraicTopology/SimplicialSet/StdSimplex.lean) ---
+PAST HUNK:
+```
+@@ -314,6 +315,15 @@ def nonDegenerateEquiv {n d : ℕ} :
+ 
+ end stdSimplex
+ 
++/-- The n-simplex is isomorphic to the nerve of the ordinal category `Fin (n + 1)`. -/
++def simplexIsNerve (n : ℕ) : Δ[n] ≅ nerve (Fin (n + 1)) := NatIso.ofComponents <| fun n ↦
++    Equiv.toIso <| stdSimplex.objEquiv.trans SimplexCategory.homEquivFunctor
+```
+PAST COMMENT (from reviewer):
+As I encountered similar definitions in my formalization of the homotopy theory of simplicial sets, I would suggest using the following two definitions which also uses your definition `homEquivFunctor`:
+```lean
+def CategoryTheory.nerve.representableBy
+    {n : ℕ} (α : Type u) [Preorder α] (e : α ≃o Fin (n + 1)) :
+    (nerve α).RepresentableBy ⦋n⦌ where
+  homEquiv := SimplexCategory.homEquivFunctor.trans
+    { toFun F := F ⋙ e.symm.monotone.functor
+      invFun F := F ⋙ e.monotone.functor
+      left_inv F := Functor.ext (fun x ↦ by simp)
+      right_inv F := Functor.ext (fun x ↦ by simp) }
+  homEquiv_comp _ _ := rfl
+
+/-- If a simplicial set `X` is representable by `⦋m⦌` for some `m : ℕ`, then this is the
+corresponding isomorphism `Δ[m] ≅ X`. -/
+def SSet.stdSimplex.isoOfRepres
+... [truncated]
+
+--- candidate 19 (sim=0.668, past_pr=#34008, file=Mathlib/CategoryTheory/Iso.lean) ---
+PAST HUNK:
+```
+@@ -178,272 +191,219 @@ theorem symm_self_id_assoc (α : X ≅ Y) (β : Y ≅ Z) : α.symm ≪≫ α ≪
+... [118 lines above hidden]
+   rfl
+ 
+--- Porting note: the `IsIso f` argument had been instance implicit,
+--- but we've changed it to implicit as a `rw` in `Mathlib/CategoryTheory/Closed/Functor.lean`
+--- was failing to generate it by typeclass search.
+-@[simp]
++@[simp, to_dual none]
+ theorem asIso_inv (f : X ⟶ Y) [IsIso f] : (asIso f).inv = inv f :=
+   rfl
+ 
+ namespace IsIso
+ 
+ -- see Note [lower instance priority]
++@[to_dual]
+ instance (priority := 100) epi_of_iso (f : X ⟶ Y) [IsIso f] : Epi f where
+   left_cancellation g h w := by
+     rw [← IsIso.inv_hom_id_assoc f g, w, IsIso.inv_hom_id_assoc f h]
+ 
+--- see Note [lower instance priority]
+-instance (priority := 100) mono_of_iso (f : X ⟶ Y) [IsIso f] : Mono f where
+-  right_cancellation g h w := by
+-    rw [← Category.comp_id g, ← Category.comp_id h, ← IsIso.hom_inv_id f,
+-      ← Category.assoc, w, ← Category.assoc]
+-
+-@[aesop apply safe (rule_sets := [CategoryTheory]), grind ←=]
+... [1 lines below hidden]
+```
+PAST COMMENT (from reviewer):
+is there a way to get `to_dual` to match both the signature and variable names? Here, 
+`to_dual (reorder := X Y) inv_eq_of_inv_hom_id` seems to give the exact signature of the previous declaration, but the named parameters remain swapped?
+
+(There are probably no places in the library where we call these by being explicit with explicit naming of `X` and `Y` rather than on `f` and `g` for this def, but this is technically a breaking change if some are calling it by naming parameters)
+
+This also applies to a bunch of other declarations here, so I’ll just suggest the reorderings
+
+--- candidate 20 (sim=0.668, past_pr=#34008, file=Mathlib/CategoryTheory/Iso.lean) ---
+PAST HUNK:
+```
+@@ -178,272 +191,219 @@ theorem symm_self_id_assoc (α : X ≅ Y) (β : Y ≅ Z) : α.symm ≪≫ α ≪
+... [124 lines above hidden]
++@[simp, to_dual none]
+ theorem asIso_inv (f : X ⟶ Y) [IsIso f] : (asIso f).inv = inv f :=
+   rfl
+ 
+ namespace IsIso
+ 
+ -- see Note [lower instance priority]
++@[to_dual]
+ instance (priority := 100) epi_of_iso (f : X ⟶ Y) [IsIso f] : Epi f where
+   left_cancellation g h w := by
+     rw [← IsIso.inv_hom_id_assoc f g, w, IsIso.inv_hom_id_assoc f h]
+ 
+--- see Note [lower instance priority]
+-instance (priority := 100) mono_of_iso (f : X ⟶ Y) [IsIso f] : Mono f where
+-  right_cancellation g h w := by
+-    rw [← Category.comp_id g, ← Category.comp_id h, ← IsIso.hom_inv_id f,
+-      ← Category.assoc, w, ← Category.assoc]
+-
+-@[aesop apply safe (rule_sets := [CategoryTheory]), grind ←=]
++@[aesop apply safe (rule_sets := [CategoryTheory]), grind ←=, to_dual inv_eq_of_inv_hom_id]
+ theorem inv_eq_of_hom_inv_id {f : X ⟶ Y} [IsIso f] {g : Y ⟶ X} (hom_inv_id : f ≫ g = 𝟙 X) :
+     inv f = g := by
+   have := congrArg (inv f ≫ ·) hom_inv_id
+   grind
+ 
+... [7 lines below hidden]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+@[aesop apply safe (rule_sets := [CategoryTheory]), to_dual (reorder := X Y) eq_inv_of_inv_hom_id]
+```
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "new_hunk_plausible_concerns": [
+    "refactor-simplify",
+    "proof-golf",
+    "docstring",
+    "naming"
+  ],
+  "summary": "None of the retrieved past review comments clearly apply to this new hunk defining WalkingIso and its category instance.",
+  "confidence": "none",
+  "strong_matches": [],
+  "weak_observations": []
+}

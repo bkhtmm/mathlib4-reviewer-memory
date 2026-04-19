@@ -1,0 +1,559 @@
+====================================================================================================
+CASE T  PR #20431  (open-pr, v2 prompt, sweep2)
+file: Mathlib/RingTheory/AdicCompletion/Basic.lean  line: 535.0
+reviewer: @chrisflav  on 2025-02-10T09:08:05Z
+advice_kind: design smell: _root_ placement
+prompt_tokens: 7262  completion_tokens: 4556
+HUMAN reviewer (ground truth):
+  > Maybe move these after `end AdicCompletion` to get rid of the ugly `_root_`?
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Compared to a naive matcher you must do TWO extra things, because the answer is often only derivable by combining evidence:
+
+A. STRUCTURAL PATTERN EXTRACTION. Past comments often contain `suggestion` code blocks (```suggestion ... ```) or inline code-shape rewrites. These suggested code snippets ARE concrete advice, not just commentary. Treat them as first-class evidence about preferred Lean/mathlib idioms (e.g.: term-mode constructor `:= ⟨_, _, _⟩` vs `by use _; exact _`, `instance` vs `theorem` for class-membership statements, `refine ⟨..., ?_⟩` vs `use ...; constructor`, `@[simp]` / `@[to_additive]` attributes, naming conventions, docstring phrasing, etc.).
+
+B. CROSS-CANDIDATE SYNTHESIS. The applicable advice for the new hunk may require combining evidence from multiple candidates. Example: candidate X's context tells you that an identifier in the new hunk is a `class`; candidate Y shows the term-mode `instance ... := ⟨...⟩` template for proving class membership. Together they support the conclusion: "the new theorem proving class membership should be rewritten as an `instance` with a term-mode constructor". List supporting PRs for any synthesised finding.
+
+Reasoning protocol (do this internally before producing JSON):
+
+  1. STRUCTURAL FEATURES OF THE NEW HUNK. Identify each: tactic-mode vs term-mode? Uses `by use ...; exact ...`? Uses `use ...; constructor`? Declares an `instance` / a `theorem` / a `lemma` / a `def` / a `class`? Has `@[simp]`, `@[to_additive]`, `@[deprecated]`? Uses anonymous functions `fun x =>` vs `↦`? Has a docstring `/-- ... -/` of any specific shape?
+
+  2. PATTERN INVENTORY FROM CANDIDATES. For each candidate, note any concrete pattern shown in its suggested-code or comment (term-mode template, attribute recommendation, naming convention, idiomatic rewrite, terminology preference, etc.). Also note which candidates' past hunks define or use identifiers that appear in the new hunk (these are clues about whether something is a class, an instance, an alias, etc.).
+
+  3. APPLICABILITY CHECK. For each pattern from step 2, ask: does the new hunk's structure (step 1) instantiate the same shape that this pattern was applied to? If yes, that's a STRONG match. If two patterns combine to support a finding, list both supporting PRs.
+
+  4. STRICT REFUSAL. If after this analysis no candidate (alone or in combination) gives concrete, well-grounded advice for the specific code in the new hunk, output an empty `strong_matches` list. Do not paper over with generic advice. Generic style observations belong in `weak_observations`, clearly marked. Do not invent advice that isn't traceable to specific past PRs in the retrieval pool.
+
+Confidence:
+  - "high"  — at least one strong match is grounded in concrete suggested-code or explicit prose from a candidate, and the new hunk clearly fits the same shape
+  - "medium" — at least one strong match exists but requires synthesis or adaptation; OR a single candidate gives related but not identical advice
+  - "low"   — only loose stylistic patterns; nothing actionable
+  - "none"  — retrieved pool is unrelated; do not press an answer
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Be precise about which PR(s) support each finding via supporting_past_prs.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #20431 (file: Mathlib/RingTheory/AdicCompletion/Basic.lean):
+```
+@@ -510,6 +522,29 @@ theorem induction_on {p : AdicCompletion I M → Prop} (x : AdicCompletion I M)
+   obtain ⟨f, rfl⟩ := mk_surjective I M x
+   exact h f
+ 
++variable {I M} in
++lemma _root_.IsHausdorff.iff_injective :
++    IsHausdorff I M ↔ Injective (AdicCompletion.of I M) := by
++  simp [injective_iff_map_eq_zero, isHausdorff_iff, SModEq.zero, AdicCompletion.ext_iff]
++
++variable {I M} in
++lemma _root_.IsPrecomplete.iff_surjective :
++    IsPrecomplete I M ↔ Surjective (AdicCompletion.of I M) := by
++  simp [Function.Surjective, (AdicCompletion.mk_surjective I M).forall,
++    AdicCompletion.ext_iff, isPrecomplete_iff, AdicCauchySequence, Subtype.forall,
++    eq_comm (a := Submodule.Quotient.mk _)]
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.889, past_pr=#25927, file=Mathlib/RingTheory/AdicCompletion/Basic.lean) ---
+PAST HUNK:
+```
+@@ -518,10 +521,238 @@ lemma eval_lift_apply (f : ∀ (n : ℕ), M →ₗ[R] N ⧸ (I ^ n • ⊤ : Sub
+... [48 lines above hidden]
++      toIsPrecomplete := surjective_of_iff.mp h.2 },
++   fun h ↦ ⟨injective_of_iff.mpr h.1, surjective_of_iff.mpr h.2⟩⟩
++
++variable (I M) in
++theorem bijective_of [IsAdicComplete I M] : Function.Bijective (of I M) :=
++  bijective_of_iff.mpr ‹_›
++
++variable (I M) in
++/--
++When `M` is `I`-adic complete, the canonical map from `M` to its `I`-adic completion is a linear
++equivalence.
++-/
++def ofLinearEquiv [IsAdicComplete I M] : M ≃ₗ[R] AdicCompletion I M :=
+```
+PAST COMMENT (from reviewer):
+```suggestion
+@[simps! apply symm_apply]
+def ofLinearEquiv [IsAdicComplete I M] : M ≃ₗ[R] AdicCompletion I M :=
+```
+Should automatically generate the two lemmas below (the second one is misnamed anyway).
+
+--- candidate 2 (sim=0.889, past_pr=#25927, file=Mathlib/RingTheory/AdicCompletion/Basic.lean) ---
+PAST HUNK:
+```
+@@ -518,6 +517,72 @@ lemma eval_lift_apply (f : ∀ (n : ℕ), M →ₗ[R] N ⧸ (I ^ n • ⊤ : Sub
+... [52 lines above hidden]
++      toIsPrecomplete := of_surjective_iff.mp h.2 },
++   fun h ↦ ⟨of_injective_iff.mpr h.1, of_surjective_iff.mpr h.2⟩⟩
++
++variable (I M) in
++theorem of_bijective [IsAdicComplete I M] : Function.Bijective (of I M) :=
++  of_bijective_iff.mpr ‹_›
++
++variable (I M) in
++/--
++When `M` is `I`-adic complete, the canonical map from `M` to its `I`-adic completion is a linear
++equivalence.
++-/
++@[simps! apply symm_apply]
+```
+PAST COMMENT (from reviewer):
+I don't think we want `symm_apply` to be a simp lemma?
+```suggestion
+@[simps! apply]
+```
+instead you want the lemmas `ofLinearEquiv_symm_of` and `of_ofLinearEquiv_symm`
+
+--- candidate 3 (sim=0.828, past_pr=#21582, file=Mathlib/RingTheory/AdicCompletion/Basic.lean) ---
+PAST HUNK:
+```
+@@ -48,33 +48,404 @@ class IsAdicComplete extends IsHausdorff I M, IsPrecomplete I M : Prop
+... [31 lines above hidden]
++is not defeq to `I ^ n • ⊤`.
++-/
++theorem eq_iff_smodEq' [IsHausdorff I R]
++    {x y : R} :  x = y ↔ ∀ n, x ≡ y [SMOD I ^ n] := by
++  refine ⟨fun h _ ↦ h ▸ rfl, fun h ↦ ?_⟩
++  rw [← sub_eq_zero]
++  apply IsHausdorff.haus' (I := I) (x - y)
++  simpa [SModEq.sub_mem] using h
++
++alias ⟨_, eq_of_smodEq'⟩ := eq_iff_smodEq'
++
++variable {a : ℕ → ℕ} (ha : StrictMono a)
++include ha
+```
+PAST COMMENT (from reviewer):
+Can you create a new section here? Even without name, just to make sure that the `include ha` does not leak.
+
+--- candidate 4 (sim=0.810, past_pr=#21582, file=Mathlib/RingTheory/AdicCompletion/Basic.lean) ---
+PAST HUNK:
+```
+@@ -48,33 +48,404 @@ class IsAdicComplete extends IsHausdorff I M, IsPrecomplete I M : Prop
+... [220 lines above hidden]
++    have := hL n
++    apply_fun (i n).symm at this
++    simpa only [RingEquiv.symm_apply_apply, mkQ_apply, mk_eq_mk, quotientEquiv_symm_mk,
++      RingEquiv.symm_refl, RingEquiv.refl_apply, i, f'] using this
++  apply IsPrecomplete.of_eq_factorPowSucc
++  intro m
++  have := hf (m := m)
++  apply_fun i m at this
++  simpa [f', i, Submodule.factorPowSucc, Submodule.factorPow,
++      Ideal.quotEquivOfEq_eq_factor] using this
++
++variable {a : ℕ → ℕ} (ha : StrictMono a)
++include ha
+```
+PAST COMMENT (from reviewer):
+Same as above.
+
+--- candidate 5 (sim=0.776, past_pr=#12516, file=Mathlib/RingTheory/AdicCompletion/Basic.lean) ---
+PAST HUNK:
+```
+@@ -201,67 +203,279 @@ instance (priority := 100) of_subsingleton [Subsingleton M] : IsPrecomplete I M
+... [256 lines above hidden]
++/-- Every element in the adic completion is represented by a Cauchy sequence. -/
++theorem mk_surjective : Function.Surjective (mk I M) := by
++  intro x
++  choose a ha using fun n ↦ Submodule.Quotient.mk_surjective _ (x.val n)
++  refine ⟨⟨a, ?_⟩, ?_⟩
++  · intro m n hmn
++    rw [SModEq.def, ha m, ← transitionMap_mk I M hmn, ha n, x.property hmn]
++  · ext n
++    simp [ha n]
++
++/-- To show a statement about an element of `adicCompletion I M`, it suffices to check it
++on Cauchy sequences. -/
++theorem inductionOn {p : AdicCompletion I M → Prop} (x : AdicCompletion I M)
+```
+PAST COMMENT (from reviewer):
+```suggestion
+theorem induction_on {p : AdicCompletion I M → Prop} (x : AdicCompletion I M)
+```
+
+--- candidate 6 (sim=0.775, past_pr=#12516, file=Mathlib/RingTheory/AdicCompletion/Basic.lean) ---
+PAST HUNK:
+```
+@@ -201,67 +210,204 @@ instance (priority := 100) of_subsingleton [Subsingleton M] : IsPrecomplete I M
+... [92 lines above hidden]
++    transitionMap I M hmn
++      (Submodule.Quotient.mk (p := (I ^ n • ⊤ : Submodule R M)) x) =
++      Submodule.Quotient.mk (p := (I ^ m • ⊤ : Submodule R M)) x := by
++  simp [transitionMap]
++
++@[simp]
++theorem transitionMap_eq (n : ℕ) : transitionMap I M (Nat.le_refl n) = LinearMap.id := by
++  ext
++  simp
++
++@[simp]
++theorem transitionMap_comp {m n k : ℕ} (hmn : m ≤ n) (hnk : n ≤ k) :
++    transitionMap I M hmn ∘ₗ transitionMap I M hnk = transitionMap I M (hmn.trans hnk) := by
+```
+PAST COMMENT (from reviewer):
+Can you add `(transitionMap I M hmn (transitionMap I M hnk x)) = transitionMap I M (hmn.trans hnk) x` as a simp lemma?
+
+--- candidate 7 (sim=0.749, past_pr=#30058, file=Mathlib/RingTheory/AdicCompletion/Topology.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,56 @@
+... [36 lines above hidden]
++      simpa using hI.hasBasis_nhds_zero.uniformity_of_nhds_zero.cauchySeq_iff.mp hu
++    choose N hN using this
++    obtain ⟨L, hL⟩ := H (fun i ↦ u ((Finset.Iic i).sup N))
++      fun _ ↦ hN _ _ (Finset.le_sup (by simpa)) _ (Finset.le_sup (by simp))
++    use L
++    suffices ∀ i, ∃ N, ∀ n, N ≤ n → u n - L ∈ I ^ i by
++      simpa [(hI.hasBasis_nhds L).tendsto_right_iff, sub_eq_neg_add]
++    refine fun i ↦ ⟨(Finset.Iic i).sup N, fun n hn ↦ ?_⟩
++    have := Ideal.add_mem _ (hN i ((Finset.Iic i).sup N) (Finset.le_sup (by simp))
++      n (.trans (Finset.le_sup (by simp)) hn)) (hL i)
++    rwa [sub_add_sub_cancel] at this
++  · intro H f hf
++    obtain ⟨L, hL⟩ := CompleteSpace.complete (f := (Filter.atTop.map f))
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    obtain ⟨L, hL⟩ := CompleteSpace.complete (f := Filter.atTop.map f)
+```
+
+--- candidate 8 (sim=0.741, past_pr=#26384, file=Mathlib/RingTheory/AdicCompletion/Functoriality.lean) ---
+PAST HUNK:
+```
+@@ -360,4 +364,102 @@ end Pi
+... [90 lines above hidden]
++
++theorem surjective_of_mk_map_comp_surjective [IsPrecomplete I R] [haus : IsHausdorff (I.map f) S]
++    (h : Function.Surjective ((Ideal.Quotient.mk (I.map f)).comp f)) :
++    Function.Surjective f := by
++  let _ := f.toAlgebra
++  let fₗ := (Algebra.ofId R S).toLinearMap
++  change Function.Surjective ((restrictScalars R (I.map f)).mkQ ∘ₗ fₗ) at h
++  have : I • ⊤ = restrictScalars R (Ideal.map f I) := by
++    simp only [Ideal.smul_top_eq_map, restrictScalars_inj]
++    rfl
++  have _ := IsHausdorff.map_algebraMap_iff.mp haus
++  apply surjective_of_mkQ_comp_surjective (I := I) (f := fₗ)
++  convert h
+```
+PAST COMMENT (from reviewer):
+Does `exact h` work?
+
+--- candidate 9 (sim=0.739, past_pr=#30058, file=Mathlib/RingTheory/AdicCompletion/Topology.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,56 @@
+... [19 lines above hidden]
++section UniformSpace
++
++open Topology Uniformity
++
++variable {R : Type*} [CommRing R] [UniformSpace R] [IsUniformAddGroup R]
++  {I : Ideal R} (hI : IsAdic I)
++
++include hI in
++/-- `IsPrecomplete I R` is equivalent to being complete in the adic topology. -/
++lemma IsAdic.isPrecomplete_iff : IsPrecomplete I R ↔ CompleteSpace R := by
++  have := hI.hasBasis_nhds_zero.isCountablyGenerated
++  have : (𝓤 R).IsCountablyGenerated := IsUniformAddGroup.uniformity_countably_generated
++  simp only [_root_.isPrecomplete_iff, smul_eq_mul, Ideal.mul_top, SModEq.sub_mem]
+```
+PAST COMMENT (from reviewer):
+Would it be a good idea to protect `IsAdic.isPrecomplete_iff`?
+
+--- candidate 10 (sim=0.732, past_pr=#12650, file=Mathlib/RingTheory/AdicCompletion/Exactness.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,205 @@
+... [71 lines above hidden]
++  let a := mapPreimage hf b
++  refine ⟨AdicCompletion.mk I M (AdicCauchySequence.mk I M (fun n ↦ (a n : M)) ?_), ?_⟩
++  · refine fun n ↦ SModEq.symm ?_
++    simp only [SModEq.symm, SModEq, mapPreimage, Submodule.Quotient.mk_sub,
++      sub_eq_self, Submodule.Quotient.mk_eq_zero, SetLike.coe_mem, a]
++  · exact _root_.AdicCompletion.ext fun n ↦ congrArg _ ((a n).property)
++
++end Surjectivity
++
++variable {M : Type u} [AddCommGroup M] [Module R M]
++variable {N : Type u} [AddCommGroup N] [Module R N]
++variable {P : Type u} [AddCommGroup P] [Module R P]
++
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+
+--- candidate 11 (sim=0.731, past_pr=#12650, file=Mathlib/RingTheory/AdicCompletion/Exactness.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,205 @@
+... [79 lines above hidden]
++
++variable {M : Type u} [AddCommGroup M] [Module R M]
++variable {N : Type u} [AddCommGroup N] [Module R N]
++variable {P : Type u} [AddCommGroup P] [Module R P]
++
++section Injectivity
++
++variable [IsNoetherianRing R] [Module.Finite R N]
++
++open LinearMap
++
++variable (I)
++
+```
+PAST COMMENT (from reviewer):
+```suggestion
+variable [IsNoetherianRing R] [Module.Finite R N] (I)
+
+open LinearMap
+
+```
+
+--- candidate 12 (sim=0.727, past_pr=#23027, file=Mathlib/RingTheory/AdicCompletion/Basic.lean) ---
+PAST HUNK:
+```
+@@ -85,8 +85,9 @@ abbrev Hausdorffification : Type _ :=
+ to define `AdicCompletion`. -/
+ abbrev AdicCompletion.transitionMap {m n : ℕ} (hmn : m ≤ n) := factorPow I M hmn
+ 
+-/-- The completion of a module with respect to an ideal. This is not necessarily Hausdorff.
+-In fact, this is only complete if the ideal is finitely generated. -/
++/-- The completion of a module with respect to an ideal. This is Hausdorff but not
++necessarily complete: a typical sufficient condition for completeness is for the ideal to be
++finitely generated. -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- The completion of a module with respect to an ideal. 
+
+This is Hausdorff but not necessarily complete: a classical sufficient condition for completeness is  that `M` be finitely generated [Stacks, 0G1Q]. -/
+```
+
+--- candidate 13 (sim=0.700, past_pr=#32064, file=Mathlib/RingTheory/AdicCompletion/Algebra.lean) ---
+PAST HUNK:
+```
+@@ -160,6 +160,24 @@ theorem evalₐ_mk (n : ℕ) (x : AdicCauchySequence I R) :
+     evalₐ I n (mk I R x) = Ideal.Quotient.mk (I ^ n) (x.val n) := by
+   simp [evalₐ]
+ 
++variable {I} in
++lemma ext_evalₐ {x y : AdicCompletion I R} (H : ∀ n, evalₐ I n x = evalₐ I n y) : x = y := by
++  ext n
++  have h : (I ^ n • ⊤ : Ideal R) = I ^ n := by ext x; simp
++  exact (Ideal.quotientEquivAlgOfEq R h).injective (H n)
++
++/-- The canonical projection from the `I`-adic completion to `R ⧸ I`. -/
++def evalOneₐ : AdicCompletion I R →ₐ[R] R ⧸ I :=
++  (Ideal.Quotient.factorₐ _ (by simp)).comp (evalₐ _ 1)
+```
+PAST COMMENT (from reviewer):
+Can you provide `evalOneₐ_surjective` as well? Thanks.
+It would also be useful to golf `kerProj_surjective`.
+
+--- candidate 14 (sim=0.697, past_pr=#12543, file=Mathlib/RingTheory/AdicCompletion/Functoriality.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,352 @@
+... [318 lines above hidden]
++end Sum
++
++section Pi
++
++open DirectSum
++
++variable [Fintype ι]
++
++/-- If `ι` is finite, `pi` is a linear equiv. -/
++def piEquivOfFintype :
++    AdicCompletion I (∀ j, M j) ≃ₗ[AdicCompletion I R] ∀ j, AdicCompletion I (M j) :=
++  let f := (congr I (linearEquivFunOnFintype R ι M)).symm
++  let g := (linearEquivFunOnFintype (AdicCompletion I R) ι (fun j ↦ AdicCompletion I (M j)))
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  letI f := (congr I (linearEquivFunOnFintype R ι M)).symm
+  letI g := (linearEquivFunOnFintype (AdicCompletion I R) ι (fun j ↦ AdicCompletion I (M j)))
+```
+
+--- candidate 15 (sim=0.695, past_pr=#29205, file=Mathlib/RingTheory/DedekindDomain/AdicValuation.lean) ---
+PAST HUNK:
+```
+@@ -417,10 +417,6 @@ lemma valuedAdicCompletion_surjective :
+     Function.Surjective (Valued.v : (v.adicCompletion K) → ℤᵐ⁰) :=
+   Valued.valuedCompletion_surjective_iff.mpr (v.valuation_surjective K)
+ 
+--- Porting note: replaced by `Coe`
+--- instance AdicCompletion.hasLiftT : HasLiftT K (v.adicCompletion K) :=
+---   (inferInstance : HasLiftT K (@UniformSpace.Completion K v.adicValued.toUniformSpace))
+-
+```
+PAST COMMENT (from reviewer):
+I'd like a second pair of eyes, just to confirms this is innocuous.
+
+--- candidate 16 (sim=0.694, past_pr=#12543, file=Mathlib/RingTheory/AdicCompletion/Functoriality.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,352 @@
+... [6 lines above hidden]
++import Mathlib.RingTheory.AdicCompletion.Basic
++import Mathlib.RingTheory.AdicCompletion.Algebra
++import Mathlib.Algebra.DirectSum.Basic
++
++/-!
++# Functoriality of adic completions
++
++In this file we establish functorial properties of the adic completion.
++
++## Main definitions
++
++- `LinearMap.adicCauchy I f`: the by `f` induced linear map on `I`-adic cauchy sequences
++- `LinearMap.adicCompletion I f`: the by `f` induced linear map on `I`-adic completions
+```
+PAST COMMENT (from reviewer):
+```suggestion
+- `LinearMap.adicCauchy I f`: the linear map on `I`-adic cauchy sequences induced by `f`
+- `LinearMap.adicCompletion I f`: the by `f` induced linear map on `I`-adic completions
+```
+Is this what you mean?
+
+--- candidate 17 (sim=0.694, past_pr=#26384, file=Mathlib/RingTheory/AdicCompletion/Basic.lean) ---
+PAST HUNK:
+```
+@@ -71,6 +71,31 @@ theorem IsHausdorff.eq_iff_smodEq [IsHausdorff I M] {x y : M} :
+   apply IsHausdorff.haus' (I := I) (x - y)
+   simpa [SModEq.sub_mem] using h
+ 
++theorem IsHausdorff.map_algebraMap_iff [CommRing S] [Algebra R S] :
++    IsHausdorff (I.map (algebraMap R S)) S ↔ IsHausdorff I S := by
++  simp only [isHausdorff_iff, smul_eq_mul, Ideal.mul_top, Ideal.smul_top_eq_map]
++  congr!
++  simp only [← Ideal.map_pow]
++  rfl
++
++lemma IsHausdorff.map [CommRing S] [Module S M] {J : Ideal S} [Algebra R S] [IsScalarTower R S M]
+```
+PAST COMMENT (from reviewer):
+The name  seems weird, shouldn't it be `of_map` or something?
+
+--- candidate 18 (sim=0.693, past_pr=#21563, file=Mathlib/RingTheory/AdicCompletion/Basic.lean) ---
+PAST HUNK:
+```
+@@ -55,6 +55,13 @@ theorem isHausdorff_iff :
+     IsHausdorff I M ↔ ∀ x : M, (∀ n : ℕ, x ≡ 0 [SMOD (I ^ n • ⊤ : Submodule R M)]) → x = 0 :=
+   ⟨IsHausdorff.haus, fun h => ⟨h⟩⟩
+ 
++theorem IsHausdorff.eq_iff_smodEq [IsHausdorff I M] {x y : M} :
++    x = y ↔ ∀ n, x ≡ y [SMOD (I ^ n • ⊤ : Submodule R M)] := by
++  refine ⟨fun h _ ↦ h ▸ rfl, fun h ↦ ?_⟩
++  rw [← sub_eq_zero]
++  apply IsHausdorff.haus' (I := I) (x - y)
++  simpa only [SModEq.sub_mem, sub_zero] using h
+```
+PAST COMMENT (from reviewer):
+Does `simpa using h` work here? The guideline is not to squeeze if not necessary.
+
+--- candidate 19 (sim=0.686, past_pr=#31295, file=Mathlib/RingTheory/AdicCompletion/Basic.lean) ---
+PAST HUNK:
+```
+@@ -600,6 +604,81 @@ end AdicCompletion
+... [40 lines above hidden]
++    (Submodule.Quotient.mk (lift I f h x)) = f n x := by
++  simp only [lift, LinearMap.coe_comp, LinearEquiv.coe_coe, Function.comp_apply]
++  rw [← mkQ_apply, ← eval_of]
++  simp
++
++/--
++The composition of lift linear map `lift I f h : M →ₗ[R] N` with the canonical
++projection `N →ₗ[R] N ⧸ (I ^ n • ⊤)` is `f n` .
++-/
++@[simp]
++theorem mkQ_comp_lift {f : (n : ℕ) → M →ₗ[R] N ⧸ (I ^ n • ⊤)}
++    (h : ∀ {m n : ℕ} (hle : m ≤ n), factorPow I N hle ∘ₗ f n = f m) (n : ℕ) :
++    (mkQ (I ^ n • ⊤ : Submodule R N)) ∘ₗ (lift I f h) = f n := by
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    mkQ (I ^ n • ⊤ : Submodule R N) ∘ₗ lift I f h = f n := by
+```
+
+--- candidate 20 (sim=0.686, past_pr=#31295, file=Mathlib/RingTheory/AdicCompletion/Basic.lean) ---
+PAST HUNK:
+```
+@@ -600,6 +604,81 @@ end AdicCompletion
+... [28 lines above hidden]
++theorem of_comp_lift (f : ∀ (n : ℕ), M →ₗ[R] N ⧸ (I ^ n • ⊤ : Submodule R N))
++    (h : ∀ {m n : ℕ} (hle : m ≤ n), factorPow I N hle ∘ₗ f n = f m) :
++    (of I N) ∘ₗ (lift I f h) = AdicCompletion.lift I f h := by
++  ext1; simp
++
++/--
++The composition of lift linear map `lift I f h : M →ₗ[R] N` with the canonical
++projection `N → N ⧸ (I ^ n • ⊤)` is `f n` .
++-/
++@[simp]
++theorem mk_lift {f : (n : ℕ) → M →ₗ[R] N ⧸ (I ^ n • ⊤)}
++    (h : ∀ {m n : ℕ} (hle : m ≤ n), factorPow I N hle ∘ₗ f n = f m) (n : ℕ) (x : M) :
++    (Submodule.Quotient.mk (lift I f h x)) = f n x := by
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    Submodule.Quotient.mk (lift I f h x) = f n x := by
+```
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "summary": "No past reviewer comment directly matches; the new lemmas may overlap with existing `of_*_iff` equivalences, but prior feedback doesn’t explicitly address this.",
+  "confidence": "low",
+  "strong_matches": [],
+  "weak_observations": [
+    {
+      "observation": "There appear to be existing lemmas `of_injective_iff` / `of_surjective_iff` used elsewhere; `IsHausdorff.iff_injective` / `IsPrecomplete.iff_surjective` might duplicate these or could be aligned in naming.",
+      "supporting_past_prs": [
+        25927
+      ]
+    },
+    {
+      "observation": "Using predicate-namespaced lemmas (e.g. `IsPrecomplete.iff_surjective`) aligns with prior suggestions to protect such equivalences.",
+      "supporting_past_prs": [
+        30058
+      ]
+    }
+  ]
+}

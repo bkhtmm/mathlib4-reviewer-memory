@@ -1,0 +1,524 @@
+====================================================================================================
+CASE C  PR #22361  (open-pr, v2 prompt)
+file: Mathlib/Computability/NFA.lean  line: 90.0
+reviewer: @EtienneC30  on 2025-03-29T10:03:16Z
+url: None
+prompt_tokens: 6324  completion_tokens: 3659
+HUMAN reviewer (ground truth):
+  > This is more common (and sticks to the style of the file).
+  > ```suggestion
+  > /-- `M.acceptsFrom S` is the language of `x` such that `M.evalFrom S x` is an accept state. -/
+  > ```
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Compared to a naive matcher you must do TWO extra things, because the answer is often only derivable by combining evidence:
+
+A. STRUCTURAL PATTERN EXTRACTION. Past comments often contain `suggestion` code blocks (```suggestion ... ```) or inline code-shape rewrites. These suggested code snippets ARE concrete advice, not just commentary. Treat them as first-class evidence about preferred Lean/mathlib idioms (e.g.: term-mode constructor `:= ⟨_, _, _⟩` vs `by use _; exact _`, `instance` vs `theorem` for class-membership statements, `refine ⟨..., ?_⟩` vs `use ...; constructor`, `@[simp]` / `@[to_additive]` attributes, naming conventions, docstring phrasing, etc.).
+
+B. CROSS-CANDIDATE SYNTHESIS. The applicable advice for the new hunk may require combining evidence from multiple candidates. Example: candidate X's context tells you that an identifier in the new hunk is a `class`; candidate Y shows the term-mode `instance ... := ⟨...⟩` template for proving class membership. Together they support the conclusion: "the new theorem proving class membership should be rewritten as an `instance` with a term-mode constructor". List supporting PRs for any synthesised finding.
+
+Reasoning protocol (do this internally before producing JSON):
+
+  1. STRUCTURAL FEATURES OF THE NEW HUNK. Identify each: tactic-mode vs term-mode? Uses `by use ...; exact ...`? Uses `use ...; constructor`? Declares an `instance` / a `theorem` / a `lemma` / a `def` / a `class`? Has `@[simp]`, `@[to_additive]`, `@[deprecated]`? Uses anonymous functions `fun x =>` vs `↦`? Has a docstring `/-- ... -/` of any specific shape?
+
+  2. PATTERN INVENTORY FROM CANDIDATES. For each candidate, note any concrete pattern shown in its suggested-code or comment (term-mode template, attribute recommendation, naming convention, idiomatic rewrite, terminology preference, etc.). Also note which candidates' past hunks define or use identifiers that appear in the new hunk (these are clues about whether something is a class, an instance, an alias, etc.).
+
+  3. APPLICABILITY CHECK. For each pattern from step 2, ask: does the new hunk's structure (step 1) instantiate the same shape that this pattern was applied to? If yes, that's a STRONG match. If two patterns combine to support a finding, list both supporting PRs.
+
+  4. STRICT REFUSAL. If after this analysis no candidate (alone or in combination) gives concrete, well-grounded advice for the specific code in the new hunk, output an empty `strong_matches` list. Do not paper over with generic advice. Generic style observations belong in `weak_observations`, clearly marked. Do not invent advice that isn't traceable to specific past PRs in the retrieval pool.
+
+Confidence:
+  - "high"  — at least one strong match is grounded in concrete suggested-code or explicit prose from a candidate, and the new hunk clearly fits the same shape
+  - "medium" — at least one strong match exists but requires synthesis or adaptation; OR a single candidate gives related but not identical advice
+  - "low"   — only loose stylistic patterns; nothing actionable
+  - "none"  — retrieved pool is unrelated; do not press an answer
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Be precise about which PR(s) support each finding via supporting_past_prs.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #22361 (file: Mathlib/Computability/NFA.lean):
+```
+@@ -85,12 +85,24 @@ theorem eval_singleton (a : α) : M.eval [a] = M.stepSet M.start a :=
+ theorem eval_append_singleton (x : List α) (a : α) : M.eval (x ++ [a]) = M.stepSet (M.eval x) a :=
+   evalFrom_append_singleton _ _ _ _
+ 
++/--
++`M.acceptsFrom S` is the language of `x` such that `M.evalFrom S x` is an accept state.
++-/
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.897, past_pr=#31038, file=Mathlib/Computability/NFA.lean) ---
+PAST HUNK:
+```
+@@ -124,6 +152,60 @@ theorem mem_evalFrom_iff_exists {s : σ} {S : Set σ} {x : List α} :
+   rw [evalFrom_eq_biUnion_singleton]
+   simp
+ 
++variable (M) in
++/-- `M.acceptsFrom S` is the language of `x` such that there is an accept state
++in `M.evalFrom S x`. -/
++def acceptsFrom (S : Set σ) : Language α := {x | ∃ s ∈ M.accept, s ∈ M.evalFrom S x}
++
++theorem mem_acceptsFrom {S : Set σ} {x : List α} :
++    x ∈ M.acceptsFrom S ↔ ∃ s ∈ M.accept, s ∈ M.evalFrom S x := by
++  rfl
++
++@[simp]
++theorem mem_acceptsFrom_nil {S : Set σ} : [] ∈ M.acceptsFrom S ↔ ∃ s ∈ S, s ∈ M.accept := by
++  simp only [mem_acceptsFrom, evalFrom_nil]; tauto
++
++@[simp]
++theorem mem_acceptsFrom_cons {S : Set σ} {a : α} {x : List α} :
++    a :: x ∈ M.acceptsFrom S ↔ x ∈ M.acceptsFrom (M.stepSet S a) := by
++  simp [mem_acceptsFrom]
++
++@[simp]
++theorem append_mem_acceptsFrom {S : Set σ} {x y : List α} :
++    x ++ y ∈ M.acceptsFrom S ↔ y ∈ M.acceptsFrom (M.evalFrom S x) := by
+```
+PAST COMMENT (from reviewer):
+Possibly worth also having
+```lean
+    (x ++ .) \inv' M.acceptsFrom S = M.acceptsFrom (M.evalFrom S x) := by
+```
+
+--- candidate 2 (sim=0.896, past_pr=#31038, file=Mathlib/Computability/NFA.lean) ---
+PAST HUNK:
+```
+@@ -124,6 +144,52 @@ theorem mem_evalFrom_iff_exists {s : σ} {S : Set σ} {x : List α} :
+   rw [evalFrom_eq_biUnion_singleton]
+   simp
+ 
++variable (M) in
++/-- `M.acceptsFrom S` is the language of `x` such that there is an accept state
++in `M.evalFrom S x`. -/
++def acceptsFrom (S : Set σ) : Language α := {x | ∃ s ∈ M.accept, s ∈ M.evalFrom S x}
++
++theorem mem_acceptsFrom {S : Set σ} {x : List α} :
++    x ∈ M.acceptsFrom S ↔ ∃ s ∈ M.accept, s ∈ M.evalFrom S x := by
++  rfl
++
++@[simp]
++theorem mem_acceptsFrom_nil {S : Set σ} : [] ∈ M.acceptsFrom S ↔ ∃ s ∈ S, s ∈ M.accept := by
++  simp [mem_acceptsFrom]; tauto
++
++@[simp]
++theorem mem_acceptsFrom_cons {S : Set σ} {a : α} {x : List α} :
++    a :: x ∈ M.acceptsFrom S ↔ x ∈ M.acceptsFrom (M.stepSet S a) := by
++  simp [mem_acceptsFrom]
++
++@[simp]
++theorem mem_acceptsFrom_append {S : Set σ} {x y : List α} :
+```
+PAST COMMENT (from reviewer):
+```suggestion
+theorem append_mem_acceptsFrom {S : Set σ} {x y : List α} :
+```
+
+--- candidate 3 (sim=0.891, past_pr=#6114, file=Mathlib/Computability/DFA.lean) ---
+PAST HUNK:
+```
+@@ -92,7 +92,7 @@ theorem evalFrom_of_append (start : σ) (x y : List α) :
+ #align DFA.eval_from_of_append DFA.evalFrom_of_append
+ 
+ /-- `M.accepts` is the language of `x` such that `M.eval x` is an accept state. -/
+-def accepts : Language α := fun x => M.eval x ∈ M.accept
++def accepts : Language α := {x | M.eval x ∈ M.accept}
+```
+PAST COMMENT (from reviewer):
+This is still a defeq abuse because `Language` and `Set` are not interchangeable.
+https://github.com/leanprover-community/mathlib/pull/18451 had a path to resolve this, but was more trouble that I cared to deal with.
+
+Having said that, this change is certainly not harmful, so fine to leave it
+
+--- candidate 4 (sim=0.891, past_pr=#6114, file=Mathlib/Computability/DFA.lean) ---
+PAST HUNK:
+```
+@@ -92,7 +92,7 @@ theorem evalFrom_of_append (start : σ) (x y : List α) :
+ #align DFA.eval_from_of_append DFA.evalFrom_of_append
+ 
+ /-- `M.accepts` is the language of `x` such that `M.eval x` is an accept state. -/
+-def accepts : Language α := fun x => M.eval x ∈ M.accept
++def accepts : Language α := {x | M.eval x ∈ M.accept}
+```
+PAST COMMENT (from reviewer):
+`Set.up` is pretty much exactly that function, as `SetSemiring` has all the same instances as `Language`.
+
+--- candidate 5 (sim=0.888, past_pr=#11372, file=Mathlib/Computability/DFA.lean) ---
+PAST HUNK:
+```
+@@ -91,11 +102,19 @@ theorem evalFrom_of_append (start : σ) (x y : List α) :
+   x.foldl_append _ _ y
+ #align DFA.eval_from_of_append DFA.evalFrom_of_append
+ 
++/--
++`M.acceptsFrom start` is the language of `x` such that `M.evalFrom start x` is an accept state.
++-/
++def acceptsFrom (start : σ) : Language α := {x | M.evalFrom start x ∈ M.accept}
+```
+PAST COMMENT (from reviewer):
+I would call the argument just `(s : σ)`. The current name has a potential for confusion with `M.start`.
+
+--- candidate 6 (sim=0.888, past_pr=#11372, file=Mathlib/Computability/DFA.lean) ---
+PAST HUNK:
+```
+@@ -91,11 +102,19 @@ theorem evalFrom_of_append (start : σ) (x y : List α) :
+   x.foldl_append _ _ y
+ #align DFA.eval_from_of_append DFA.evalFrom_of_append
+ 
++/--
++`M.acceptsFrom start` is the language of `x` such that `M.evalFrom start x` is an accept state.
++-/
++def acceptsFrom (start : σ) : Language α := {x | M.evalFrom start x ∈ M.accept}
+```
+PAST COMMENT (from reviewer):
+That's what I meant, thanks for putting it into appropriate words!
+
+--- candidate 7 (sim=0.870, past_pr=#11311, file=Mathlib/Computability/DFA.lean) ---
+PAST HUNK:
+```
+@@ -91,8 +92,14 @@ theorem evalFrom_of_append (start : σ) (x y : List α) :
+   x.foldl_append _ _ y
+ #align DFA.eval_from_of_append DFA.evalFrom_of_append
+ 
++/-- `M.acceptsFrom` is the language of `x` such that `M.evalFrom start x` is an accept state. -/
++def acceptsFrom (start : σ) : Language α := {x | M.evalFrom start x ∈ M.accept}
++
++theorem mem_acceptsFrom (start : σ) (x : List α) :
++    x ∈ M.acceptsFrom start ↔ M.evalFrom start x ∈ M.accept := by rfl
++
+ /-- `M.accepts` is the language of `x` such that `M.eval x` is an accept state. -/
+-def accepts : Language α := {x | M.eval x ∈ M.accept}
++def accepts : Language α := M.acceptsFrom M.start
+ #align DFA.accepts DFA.accepts
+ 
+ theorem mem_accepts (x : List α) : x ∈ M.accepts ↔ M.evalFrom M.start x ∈ M.accept := by rfl
+```
+PAST COMMENT (from reviewer):
+Can you make sure your new definition is defeq to the previous?
+```suggestion
+theorem mem_accepts (x : List α) : x ∈ M.accepts ↔ M.eval x ∈ M.accept := by rfl
+```
+
+--- candidate 8 (sim=0.855, past_pr=#20645, file=Mathlib/Computability/EpsilonNFA.lean) ---
+PAST HUNK:
+```
+@@ -124,6 +144,107 @@ theorem eval_append_singleton (x : List α) (a : α) : M.eval (x ++ [a]) = M.ste
+ def accepts : Language α :=
+   { x | ∃ S ∈ M.accept, S ∈ M.eval x }
+ 
++/-- `M.IsPath` represents a traversal in `M` from a start state to an end state by following a list
++  of transitions in order. -/
+```
+PAST COMMENT (from reviewer):
+Please don't indent docstrings
+```suggestion
+of transitions in order. -/
+```
+
+--- candidate 9 (sim=0.823, past_pr=#20645, file=Mathlib/Computability/EpsilonNFA.lean) ---
+PAST HUNK:
+```
+@@ -124,6 +144,107 @@ theorem eval_append_singleton (x : List α) (a : α) : M.eval (x ++ [a]) = M.ste
+ def accepts : Language α :=
+   { x | ∃ S ∈ M.accept, S ∈ M.eval x }
+ 
++/-- `M.IsPath` represents a traversal in `M` from a start state to an end state by following a list
++  of transitions in order. -/
++inductive IsPath : σ → σ → List (Option α) → Prop
+```
+PAST COMMENT (from reviewer):
+```suggestion
+@[mk_iff]
+inductive IsPath : σ → σ → List (Option α) → Prop
+```
+
+--- candidate 10 (sim=0.725, past_pr=#25321, file=Mathlib/Computability/NFA.lean) ---
+PAST HUNK:
+```
+@@ -104,6 +152,49 @@ def accepts : Language α := {x | ∃ S ∈ M.accept, S ∈ M.eval x}
+ theorem mem_accepts {x : List α} : x ∈ M.accepts ↔ ∃ S ∈ M.accept, S ∈ M.evalFrom M.start x := by
+   rfl
+ 
++variable (M) in
++/-- `M.Path` represents a concrete path through the NFA from a start state to an end state
++for a particular word.
++
++Note that due to the non-deterministic nature of the automata, there can be more than one `Path`
++for a given word.
++
++Also note that this is `Type` and not a `Prop`, so that we can speak about the properties
++of a particular `Path`, such as the set of states visited along the way (defined as `Path.supp`). -/
++inductive Path : σ → σ → List α → Type (max u v)
++  | nil (s : σ) : Path s s []
++  | cons (t s u : σ) (a : α) (x : List α) :
++      t ∈ M.step s a → Path t u x → Path s u (a :: x)
++
++/-- Set of states visited by a path. -/
++@[simp]
++def Path.supp [DecidableEq σ] {s t : σ} {x : List α} : M.Path s t x → Finset σ
++  | nil s => {s}
++  | cons _ _ _ _ _ _ p => {s} ∪ p.supp
++
++theorem mem_evalFrom_iff_exists_path {s t : σ} {x : List α} :
++    t ∈ M.evalFrom {s} x ↔ Nonempty (M.Path s t x) where
+```
+PAST COMMENT (from reviewer):
+```suggestion
+theorem mem_evalFrom_iff_nonempty_path {s t : σ} {x : List α} :
+    t ∈ M.evalFrom {s} x ↔ Nonempty (M.Path s t x) where
+```
+
+--- candidate 11 (sim=0.656, past_pr=#13554, file=Mathlib/Computability/DFA.lean) ---
+PAST HUNK:
+```
+@@ -28,11 +28,9 @@ Currently, there are two disjoint sets of simp lemmas: one for `DFA.eval`, and a
+ - Should `mem_accepts` and `mem_acceptsFrom` be marked `@[simp]`?
+ -/
+ 
+-
+-open Computability
+-
+ universe u v
+ 
++open Computability
+```
+PAST COMMENT (from reviewer):
+All I'm saying is that you should revert the change I've commented on
+
+--- candidate 12 (sim=0.656, past_pr=#13554, file=Mathlib/Computability/DFA.lean) ---
+PAST HUNK:
+```
+@@ -28,11 +28,9 @@ Currently, there are two disjoint sets of simp lemmas: one for `DFA.eval`, and a
+ - Should `mem_accepts` and `mem_acceptsFrom` be marked `@[simp]`?
+ -/
+ 
+-
+-open Computability
+-
+ universe u v
+ 
++open Computability
+```
+PAST COMMENT (from reviewer):
+Actually the standard is to have
+```
+open ...
+open scoped ...
+
+universe ...
+variable ...
+```
+It's important to have `open ...`/`open scoped ...` before `variable ...` because the latter might use some names or notations only accessible in a namespace, and `universe` is a very close cousin of `variable` so should stay next to it
+
+--- candidate 13 (sim=0.643, past_pr=#35600, file=Mathlib/Computability/EpsilonNFA.lean) ---
+PAST HUNK:
+```
+@@ -362,3 +366,498 @@ theorem accept_one : (1 : εNFA α σ).accept = univ :=
+   rfl
+ 
+ end εNFA
++
++namespace RegularExpression
++
++theorem matches'_foldl_acc {α : Type*}
++    (L : List α) (f : α → RegularExpression α) (acc : RegularExpression α) :
++    (L.foldl (fun acc a => acc + f a) acc).matches' =
+```
+PAST COMMENT (from reviewer):
+Is this not the same as
+```suggestion
+    (acc + (L.map f).sum).matches' =
+```
+? Let's use existing primitives where possible. Eg this shows that probably we want lemmas about `(a + b).matches'` and `(L.map f).sum.matches'`
+
+--- candidate 14 (sim=0.627, past_pr=#11311, file=Mathlib/Computability/DFA.lean) ---
+PAST HUNK:
+```
+@@ -166,4 +173,39 @@ theorem pumping_lemma [Fintype σ] {x : List α} (hx : x ∈ M.accepts)
+   rwa [mem_accepts, evalFrom_of_append, evalFrom_of_append, h, hc]
+ #align DFA.pumping_lemma DFA.pumping_lemma
+ 
++section equivOfStates
++
++variable {σ' : Type*} (f : σ ≃ σ') (M : DFA α σ)
++
++/-- Lift an equivalence on states to an equivalence on DFAs. -/
++def equivOfStates : DFA α σ ≃ DFA α σ' where
+```
+PAST COMMENT (from reviewer):
+```suggestion
+def congr : DFA α σ ≃ DFA α' σ' where
+```
+or something like that. Can you also define `map : DFA α σ → DFA α' σ'`?
+
+--- candidate 15 (sim=0.619, past_pr=#23820, file=Mathlib/Computability/DFA.lean) ---
+PAST HUNK:
+```
+@@ -11,11 +11,26 @@ import Mathlib.Tactic.NormNum
+ /-!
+ # Deterministic Finite Automata
+ 
+-This file contains the definition of a Deterministic Finite Automaton (DFA), a state machine which
+-determines whether a string (implemented as a list over an arbitrary alphabet) is in a regular set
+-in linear time.
+-Note that this definition allows for Automaton with infinite states, a `Fintype` instance must be
+-supplied for true DFA's.
++A Deterministic Finite Automaton (DFA) is a state machine which
++decides membership in a particular regular language, by following a path
++uniquely determined by an input string.
++
++We define regular languages to be ones for which a DFA exists, other formulations
++are then proved equivalent.
++
++Note that this definition allows for automata with infinite states,
++a `Fintype` instance must be supplied for true DFAs.
++
++## Main definitions
++
++- `DFA α σ` : automaton over alphabet `α` and set of states `σ`
++- `M.accepts` : language accepted by `M`
+```
+PAST COMMENT (from reviewer):
+```suggestion
+- `M.accepts`: the language accepted by the DFA `M`
+```
+
+--- candidate 16 (sim=0.616, past_pr=#12572, file=Mathlib/Data/Sym/Basic.lean) ---
+PAST HUNK:
+```
+@@ -535,6 +535,21 @@ theorem mem_append_iff {s' : Sym α m} : a ∈ s.append s' ↔ a ∈ s ∨ a ∈
+   Multiset.mem_add
+ #align sym.mem_append_iff Sym.mem_append_iff
+ 
++/--
++Defines an equivalence between `α` and `Sym α 1`.
++-/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- Defines an equivalence between `α` and `Sym α 1`. -/
+```
+Is there any reason for this comment to take 3 lines?
+
+--- candidate 17 (sim=0.615, past_pr=#14749, file=Mathlib/Data/Sym/Basic.lean) ---
+PAST HUNK:
+```
+@@ -534,6 +534,19 @@ theorem mem_append_iff {s' : Sym α m} : a ∈ s.append s' ↔ a ∈ s ∨ a ∈
+   Multiset.mem_add
+ #align sym.mem_append_iff Sym.mem_append_iff
+ 
++/-- Defines an equivalence between `α` and `Sym α 1`. -/
+```
+PAST COMMENT (from reviewer):
+This is devoid of information. I already know this from the *type* of the declaration. However I would like to know what's going on inside the *body*. Can you change it to something like 
+```suggestion
+/-- `a ↦ {a}` as an equivalence between `α` and `Sym α 1`. -/
+```
+
+--- candidate 18 (sim=0.608, past_pr=#23125, file=Mathlib/Computability/Language.lean) ---
+PAST HUNK:
+```
+@@ -215,12 +215,8 @@ theorem mem_pow {l : Language α} {x : List α} {n : ℕ} :
+ 
+ theorem kstar_eq_iSup_pow (l : Language α) : l∗ = ⨆ i : ℕ, l ^ i := by
+   ext x
+-  simp only [mem_kstar, mem_iSup, mem_pow]
+-  constructor
+-  · rintro ⟨S, rfl, hS⟩
+-    exact ⟨_, S, rfl, rfl, hS⟩
+-  · rintro ⟨_, S, rfl, rfl, hS⟩
+-    exact ⟨S, rfl, hS⟩
++  simp_rw [mem_kstar, mem_iSup, mem_pow]
++  tauto
+```
+PAST COMMENT (from reviewer):
+```
+theorem kstar_eq_iSup_pow (l : Language α) : l∗ = ⨆ i : ℕ, l ^ i := by
+  aesop (add simp [mem_iSup, mem_pow, mem_kstar])
+```
+automation can do the whole thing, with a tiny bit of help :)
+
+--- candidate 19 (sim=0.608, past_pr=#23125, file=Mathlib/Computability/Language.lean) ---
+PAST HUNK:
+```
+@@ -215,12 +215,8 @@ theorem mem_pow {l : Language α} {x : List α} {n : ℕ} :
+ 
+ theorem kstar_eq_iSup_pow (l : Language α) : l∗ = ⨆ i : ℕ, l ^ i := by
+   ext x
+-  simp only [mem_kstar, mem_iSup, mem_pow]
+-  constructor
+-  · rintro ⟨S, rfl, hS⟩
+-    exact ⟨_, S, rfl, rfl, hS⟩
+-  · rintro ⟨_, S, rfl, rfl, hS⟩
+-    exact ⟨S, rfl, hS⟩
++  simp_rw [mem_kstar, mem_iSup, mem_pow]
++  tauto
+```
+PAST COMMENT (from reviewer):
+Right, the general pattern is mentioned here: [#mathlib4 > potential simp_procs @ 💬](https://leanprover.zulipchat.com/#narrow/channel/287929-mathlib4/topic/potential.20simp_procs/near/506852714), and an upgrade to that simproc (which I had thought was the existing behaviour already) would make this work
+
+--- candidate 20 (sim=0.608, past_pr=#11026, file=Mathlib/Data/Sym/Basic.lean) ---
+PAST HUNK:
+```
+@@ -532,6 +532,45 @@ theorem mem_append_iff {s' : Sym α m} : a ∈ s.append s' ↔ a ∈ s ∨ a ∈
+   Multiset.mem_add
+ #align sym.mem_append_iff Sym.mem_append_iff
+ 
++/-- An element of type α can be seen as an element of Sym α 1 --/
++def one {α : Type*} (i : α) : Sym α 1 := ⟨[i], by simp only [Multiset.coe_singleton,
+```
+PAST COMMENT (from reviewer):
+```suggestion
+def one (i : α) : Sym α 1 := ⟨[i], by simp only [Multiset.coe_singleton,
+```
+`α` already exists.
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "summary": "No prior reviewer comments directly apply; only a weak note that the docstring phrasing should reflect NFA semantics ('there is an accept state in ...') as used previously.",
+  "confidence": "low",
+  "strong_matches": [],
+  "weak_observations": [
+    {
+      "observation": "For NFA, evalFrom returns a set; prefer docstring phrasing 'there is an accept state in M.evalFrom S x' rather than 'M.evalFrom S x is an accept state'.",
+      "supporting_past_prs": [
+        31038
+      ]
+    }
+  ]
+}

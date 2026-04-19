@@ -1,0 +1,547 @@
+====================================================================================================
+CASE 1  PR #38109  (open-pr)
+file: Mathlib/GroupTheory/FinitelyPresentedGroup.lean  line: 77.0
+prompt_version: v2
+prompt_tokens: 7411  completion_tokens: 3546  latency: 61.84s
+HUMAN reviewer (ground truth):
+  > I would probably use `refine` here rather than `use` followed by `constructor`.
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Compared to a naive matcher you must do TWO extra things, because the answer is often only derivable by combining evidence:
+
+A. STRUCTURAL PATTERN EXTRACTION. Past comments often contain `suggestion` code blocks (```suggestion ... ```) or inline code-shape rewrites. These suggested code snippets ARE concrete advice, not just commentary. Treat them as first-class evidence about preferred Lean/mathlib idioms (e.g.: term-mode constructor `:= ⟨_, _, _⟩` vs `by use _; exact _`, `instance` vs `theorem` for class-membership statements, `refine ⟨..., ?_⟩` vs `use ...; constructor`, `@[simp]` / `@[to_additive]` attributes, naming conventions, docstring phrasing, etc.).
+
+B. CROSS-CANDIDATE SYNTHESIS. The applicable advice for the new hunk may require combining evidence from multiple candidates. Example: candidate X's context tells you that an identifier in the new hunk is a `class`; candidate Y shows the term-mode `instance ... := ⟨...⟩` template for proving class membership. Together they support the conclusion: "the new theorem proving class membership should be rewritten as an `instance` with a term-mode constructor". List supporting PRs for any synthesised finding.
+
+Reasoning protocol (do this internally before producing JSON):
+
+  1. STRUCTURAL FEATURES OF THE NEW HUNK. Identify each: tactic-mode vs term-mode? Uses `by use ...; exact ...`? Uses `use ...; constructor`? Declares an `instance` / a `theorem` / a `lemma` / a `def` / a `class`? Has `@[simp]`, `@[to_additive]`, `@[deprecated]`? Uses anonymous functions `fun x =>` vs `↦`? Has a docstring `/-- ... -/` of any specific shape?
+
+  2. PATTERN INVENTORY FROM CANDIDATES. For each candidate, note any concrete pattern shown in its suggested-code or comment (term-mode template, attribute recommendation, naming convention, idiomatic rewrite, terminology preference, etc.). Also note which candidates' past hunks define or use identifiers that appear in the new hunk (these are clues about whether something is a class, an instance, an alias, etc.).
+
+  3. APPLICABILITY CHECK. For each pattern from step 2, ask: does the new hunk's structure (step 1) instantiate the same shape that this pattern was applied to? If yes, that's a STRONG match. If two patterns combine to support a finding, list both supporting PRs.
+
+  4. STRICT REFUSAL. If after this analysis no candidate (alone or in combination) gives concrete, well-grounded advice for the specific code in the new hunk, output an empty `strong_matches` list. Do not paper over with generic advice. Generic style observations belong in `weak_observations`, clearly marked. Do not invent advice that isn't traceable to specific past PRs in the retrieval pool.
+
+Confidence:
+  - "high"  — at least one strong match is grounded in concrete suggested-code or explicit prose from a candidate, and the new hunk clearly fits the same shape
+  - "medium" — at least one strong match exists but requires synthesis or adaptation; OR a single candidate gives related but not identical advice
+  - "low"   — only loose stylistic patterns; nothing actionable
+  - "none"  — retrieved pool is unrelated; do not press an answer
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Be precise about which PR(s) support each finding via supporting_past_prs.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #38109 (file: Mathlib/GroupTheory/FinitelyPresentedGroup.lean):
+```
+@@ -66,4 +66,17 @@ theorem equiv (iso : G ≃* H) (h : IsFinitelyPresented G) : IsFinitelyPresented
+   refine ⟨n, (iso : G →* H).comp φ, iso.surjective.comp hφsurj, ?_⟩
+   rwa [MonoidHom.ker_mulEquiv_comp φ iso]
+ 
++/-- The trivial group is the normal closure of a finite set of relations. -/
++theorem Subgroup.isNormalClosureFG_bot : Subgroup.IsNormalClosureFG (⊥ : Subgroup G) := by
++  use ∅
++  exact ⟨Finite.of_subsingleton, Subgroup.normalClosure_empty⟩
++
++/-- A free group (with a finite number of generators) is finitely presented. -/
++instance {n : ℕ} : Group.IsFinitelyPresented (FreeGroup (Fin n)) := by
++  use n, FreeGroup.map id
++  constructor
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.811, past_pr=#36996, file=Mathlib/GroupTheory/FinitelyPresentedGroup.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,88 @@
++/-
++Copyright (c) 2025 Hang Lu Su. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Riccardo Brasca, Fabrizio Barroero, Stefano Francaviglia,
++  Francesco Milizia, Valerio Proietti, Hang Lu Su, Lawrence Wu
++-/
++module
++
++public import Mathlib.Algebra.Group.Subgroup.Basic
++public import Mathlib.Data.Set.Finite.Basic
++public import Mathlib.GroupTheory.FreeGroup.Basic
++
++/-!
++# Finitely Presented Groups
++
++This file defines finitely presented groups.
++
++## Main definitions
++* `IsNormalClosureFG`: defines when a subgroup is the normal closure of a finite set.
++* `IsFinitelyPresented`: defines when a group is finitely presented.
++
++## Main results
++* `IsNormalClosureFG.map`: being the normal closure of a finite set is invariant
++  under surjective homomorphism.
++* `IsFinitelyPresented.of_mulEquiv`: finitely presented groups are closed under isomorphism.
++
++## Tags
++finitely presented group, finitely generated normal closure
++-/
++
++@[expose] public section
++
++variable {G H α β : Type*} [Group G] [Group H]
++
++/-- This is a statement about the following commutative diagram:
++suppose that `G` and `H` are isomorphic via `iso`, and `S` is a set in `G`,
++then the canonical inclusion map from `FreeGroup(iso '' S)` to `H` is given by
++first taking the inverse isomorphism between the `FreeGroup (S)` and `FreeGroup (iso '' S)`, then
++composing with the canonical inclusion map from `FreeGroup(S)` to `G` and then taking `iso`. -/
++lemma FreeGroup.lift_mulEquiv_image (iso : G ≃* H) (S : Set G) :
++    FreeGroup
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  out : ∃ S : Set G, S.Finite ∧ Subgroup.closure S = ⊤ ∧
+```
+
+--- candidate 2 (sim=0.810, past_pr=#36996, file=Mathlib/GroupTheory/FinitelyPresentedGroup.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,86 @@
++/-
++Copyright (c) 2025 Hang Lu Su. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Riccardo Brasca, Fabrizio Barroero, Stefano Francaviglia,
++  Francesco Milizia, Valerio Proietti, Hang Lu Su, Lawrence Wu
++-/
++module
++
++public import Mathlib.Algebra.Group.Subgroup.Basic
++public import Mathlib.Data.Set.Finite.Basic
++public import Mathlib.GroupTheory.FreeGroup.Basic
++
++/-!
++# Finitely Presented Groups
++
++This file defines finitely presented groups.
++
++## Main definitions
++* `Subgroup.IsNormalClosureFG`: defines when a subgroup is the normal closure of a finite set.
++* `IsFinitelyPresented`: defines when a group is finitely presented.
++
++## Main results
++* `Subgroup.IsNormalClosureFG_map`: being the normal closure of a finite set is invariant
++  under surjective homomorphism.
++* `IsFinitelyPresented.of_mulEquiv`: finitely presented groups are closed under isomorphism.
++
++## Tags
++finitely presented group, finitely generated normal closure
++-/
++
++@[expose] public section
++
++variable {G H α β : Type*} [Group G] [Group H]
++
++/-- This is a statement about the following commutative diagram:
++suppose that `G` and `H` are isomorphic via `iso`, and `S` is a set in `G`,
++then the canonical inclusion map from `FreeGroup(iso '' S)` to `H` is given by
++first taking the inverse isomorphism between the `FreeGroup (S)` and `FreeGroup (iso '' S)`, then
++composing with the canonical inclusion map from `FreeGroup(S)` to `G` and then taking `iso`. -/
++lemma FreeGroup.lift_mulEquiv_image (iso : G ≃* H) (S : Set G
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+I propose this definition:
+```lean4
+/-- A group is finitely presented if it has a finite generating set such that the kernel
+of the induced map from the free group on that set is the normal closure of finitely many
+relations. -/
+@[mk_iff]
+class IsFinitelyPresented (G : Type*) [Group G] : Prop where
+  out : ∃ (n : ℕ) (φ : FreeGroup (Fin n) →* G), Function.Surjective φ ∧
+  φ.ker.IsNormalClosureFG
+```
+I like my definition more than the definition proposed in this PR for several reasons.
+(1) Your definition has a term `S` which is coerced into a type (when considering `S → G`). If you want to use `S` as a type, this is evidence that it should start life as a type.
+(2) The fact that `S` is coerced from a term to a type has caused to you have to write the horrible `Fre
+... [truncated]
+
+--- candidate 3 (sim=0.721, past_pr=#30056, file=Mathlib/GroupTheory/Finiteness.lean) ---
+PAST HUNK:
+```
+@@ -384,6 +392,21 @@ theorem Group.fg_iff' :
+     Group.FG G ↔ ∃ (n : _) (S : Finset G), S.card = n ∧ Subgroup.closure (S : Set G) = ⊤ :=
+   Group.fg_def.trans ⟨fun ⟨S, hS⟩ => ⟨S.card, S, rfl, hS⟩, fun ⟨_n, S, _hn, hS⟩ => ⟨S, hS⟩⟩
+ 
++/-- A group is finitely generated iff there exists a surjective homomorphism from a `FreeGroup`
++on finite generators. -/
++@[to_additive /-- An additive group is finitely generated iff there exists a surjective homomorphism
++from a `FreeAddGroup` on finite generators. -/]
++theorem Group.fg_iff_freeGroup_hom_surjective {G} [Group G] :
++    Group.FG G ↔ ∃ (S : Set G) (_ : Finite S) (φ : FreeGroup S →* G), Function.Surjective φ := by
++  constructor
++  · intro hfg
++    obtain ⟨S, hclosure, hfin⟩ := fg_iff.mp hfg
++    refine ⟨S, hfin, FreeGroup.lift (·), ?_⟩
++    simp [← MonoidHom.range_eq_top, ← hclosure, FreeGroup.range_lift_eq_closure]
++  · rintro ⟨S, hfin, φ, hφ⟩
+```
+PAST COMMENT (from reviewer):
+```suggestion
+theorem Group.fg_iff_exists_freeGroup_hom_surjective :
+    Group.FG G ↔ ∃ (S : Set G) (_ : S.Finite) (φ : FreeGroup S →* G), Function.Surjective φ := by
+  refine ⟨fun ⟨S, hS⟩ ↦ ⟨S, S.finite_toSet, FreeGroup.lift Subtype.val, ?_⟩, ?_⟩
+  · rwa [← MonoidHom.range_eq_top, FreeGroup.range_lift_eq_closure, Subtype.range_coe]
+  · rintro ⟨S, hfin : Finite S, φ, hφ⟩
+```
+
+--- candidate 4 (sim=0.719, past_pr=#11493, file=Mathlib/GroupTheory/PresentedGroup.lean) ---
+PAST HUNK:
+```
+@@ -47,6 +47,15 @@ def of {rels : Set (FreeGroup α)} (x : α) : PresentedGroup rels :=
+   QuotientGroup.mk (FreeGroup.of x)
+ #align presented_group.of PresentedGroup.of
+ 
++/-- The generators of a presented group generate the presented group. That is, the subgroup closure
++of the set of generators equals `⊤`. -/
++theorem closure_range_of (rels : Set (FreeGroup α)) :
+```
+PAST COMMENT (from reviewer):
+```suggestion
+@[simp]
+theorem closure_range_of (rels : Set (FreeGroup α)) :
+```
+
+--- candidate 5 (sim=0.715, past_pr=#18620, file=Mathlib/GroupTheory/PresentedGroup.lean) ---
+PAST HUNK:
+```
+@@ -38,10 +38,18 @@ namespace PresentedGroup
+ instance (rels : Set (FreeGroup α)) : Group (PresentedGroup rels) :=
+   QuotientGroup.Quotient.group _
+ 
++/-- The canonical map from a free group `α` to a presented group with generators `x : α` `x` is
++mapped to its equivalence class under the given set of relations `rels`-/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- The canonical map from the free group on `α` to a presented group with generators `x : α`,
+where `x` is mapped to its equivalence class under the given set of relations `rels`-/
+```
+
+--- candidate 6 (sim=0.713, past_pr=#30056, file=Mathlib/GroupTheory/Finiteness.lean) ---
+PAST HUNK:
+```
+@@ -166,6 +167,18 @@ theorem Monoid.fg_iff :
+     Monoid.FG M ↔ ∃ S : Set M, Submonoid.closure S = (⊤ : Submonoid M) ∧ S.Finite :=
+   ⟨fun _ => (Submonoid.fg_iff ⊤).1 FG.fg_top, fun h => ⟨(Submonoid.fg_iff ⊤).2 h⟩⟩
+ 
++/-- A monoid is finitely generated iff there exists a surjective homomorphism from a `FreeMonoid`
++on finite generators. -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+on finitely many generators. -/
+```
+I think that this is clearer.  If you accept this, then a similar change should be applied to the additive version.
+
+--- candidate 7 (sim=0.703, past_pr=#9403, file=Mathlib/GroupTheory/PresentedGroup.lean) ---
+PAST HUNK:
+```
+@@ -94,6 +94,14 @@ theorem ext {φ ψ : PresentedGroup rels →* G} (hx : ∀ (x : α), φ (.of x)
+   ext
+   apply hx
+ 
++/-- Presented groups of isomorphic types are isomorphic. -/
++def equivPresentedGroup {β : Type*} (e : α ≃ β) :
++    PresentedGroup rels ≃* PresentedGroup ((FreeGroup.freeGroupCongr e) '' rels) :=
++  QuotientGroup.congr (Subgroup.normalClosure rels)
++    (Subgroup.normalClosure ((FreeGroup.freeGroupCongr e)'' rels)) (FreeGroup.freeGroupCongr e)
++    (Subgroup.map_normalClosure rels (FreeGroup.freeGroupCongr e).toMonoidHom
++      (FreeGroup.freeGroupCongr e).surjective)
+```
+PAST COMMENT (from reviewer):
+I think you want `rels` to be an explicit argument to `equivPresentedGroup`, right? That way you can write `equivPresentedGroup rels e` and specify `rels`.
+
+Definitions should generally come with some minimal API that characterizes them. The main one I can think of is `equivPresentedGroup_apply_of` (if I got the name right). That would be something like `equivPresentedGroup rels e (PresentedGroup.of x) = PresentedGroup.of (e x)`. You could also throw in `equivPresentedGroup_symm_apply_of` for `(equivPresentedGroup rels e).symm (PresentedGroup.of x) = PresentedGroup.of (e.symm x)`, and you probably can deduce it from the previous one.
+
+--- candidate 8 (sim=0.701, past_pr=#23495, file=Mathlib/Algebra/Module/Presentation/Free.lean) ---
+PAST HUNK:
+```
+@@ -69,7 +69,7 @@ noncomputable def presentationFinsupp (G : Type w₀) :
+   R := PEmpty.{w₁ + 1}
+   relation := by rintro ⟨⟩
+   toSolution := Relations.solutionFinsupp _
+-  toIsPresentation := Relations.solutionFinsupp_isPresentation _
++  toIsPresentation := by exact Relations.solutionFinsupp_isPresentation _
+```
+PAST COMMENT (from reviewer):
+Assigning to parent projections is complicated, and there are some complicated dependent types here. It used to be that only some parent projections could be assigned, and now all of them can be. For uniformity, they're all handled in the same way; the expression is lifted to a `let` and that value is used to fill in fields; as a later step, fields are combined when possible. This code was previously taking advantage of how `toSolution` and `toIsPresentation` were actual fields in the underlying constructor.
+
+This is what this particular expression expands to.
+```
+def Module.presentationFinsupp.{w₀, w₁, u} : (A : Type u) → [inst : Ring A] → (G : Type w₀) → Presentation A (G →₀ A) :=
+fun A [Ring A] G ↦
+  let __Solution :=
+    { G := G, R := PEmpty.{w₁ + 1}, relation :=
+... [truncated]
+
+--- candidate 9 (sim=0.701, past_pr=#23495, file=Mathlib/Algebra/Module/Presentation/Free.lean) ---
+PAST HUNK:
+```
+@@ -69,7 +69,7 @@ noncomputable def presentationFinsupp (G : Type w₀) :
+   R := PEmpty.{w₁ + 1}
+   relation := by rintro ⟨⟩
+   toSolution := Relations.solutionFinsupp _
+-  toIsPresentation := Relations.solutionFinsupp_isPresentation _
++  toIsPresentation := by exact Relations.solutionFinsupp_isPresentation _
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  #adaptation_note /-- 2025-03-29 lean4#7717 Needed to add `by exact` -/
+  toIsPresentation := by exact Relations.solutionFinsupp_isPresentation _
+```
+Or do you understand why this happened and it's expected?
+
+--- candidate 10 (sim=0.701, past_pr=#35033, file=Mathlib/GroupTheory/Finiteness.lean) ---
+PAST HUNK:
+```
+@@ -415,6 +415,36 @@ theorem Group.fg_iff_exists_freeGroup_hom_surjective :
+     refine fg_iff.mpr ⟨φ '' Set.range FreeGroup.of, ?_, Set.toFinite _⟩
+     simp [← MonoidHom.map_closure, hφ, FreeGroup.closure_range_of, ← MonoidHom.range_eq_map]
+ 
++/-- A group if finitely generated if and only if there exists a surjective homomorphism from a
++`FreeGroup` on an arbitrary finite type `α` to the group. -/
++@[to_additive /-- An additive group is finitely generated iff there exists a surjective homomorphism
++from a `FreeAddGroup` on an arbitrary finite type `α` to the group. -/]
++theorem Group.fg_iff_exists_freeGroup_hom_surjective_finite {G : Type*} [Group G] :
+```
+PAST COMMENT (from reviewer):
+```suggestion
+theorem Group.fg_iff_exists_freeGroup_hom_surjective_finite
+```
+
+--- candidate 11 (sim=0.700, past_pr=#35033, file=Mathlib/GroupTheory/Finiteness.lean) ---
+PAST HUNK:
+```
+@@ -415,6 +415,36 @@ theorem Group.fg_iff_exists_freeGroup_hom_surjective :
+     refine fg_iff.mpr ⟨φ '' Set.range FreeGroup.of, ?_, Set.toFinite _⟩
+     simp [← MonoidHom.map_closure, hφ, FreeGroup.closure_range_of, ← MonoidHom.range_eq_map]
+ 
++/-- A group if finitely generated if and only if there exists a surjective homomorphism from a
++`FreeGroup` on an arbitrary finite type `α` to the group. -/
++@[to_additive /-- An additive group is finitely generated iff there exists a surjective homomorphism
++from a `FreeAddGroup` on an arbitrary finite type `α` to the group. -/]
++theorem Group.fg_iff_exists_freeGroup_hom_surjective_finite {G : Type*} [Group G] :
++    Group.FG G ↔ ∃ (α : Type) (_ : Finite α) (φ : FreeGroup α →* G), Function.Surjective φ := by
++    constructor
+```
+PAST COMMENT (from reviewer):
+This whole proof should be dedented.
+
+--- candidate 12 (sim=0.697, past_pr=#18620, file=Mathlib/GroupTheory/PresentedGroup.lean) ---
+PAST HUNK:
+```
+@@ -53,6 +61,23 @@ theorem closure_range_of (rels : Set (FreeGroup α)) :
+     FreeGroup.closure_range_of, ← MonoidHom.range_eq_map]
+   exact MonoidHom.range_top_of_surjective _ (QuotientGroup.mk'_surjective _)
+ 
++@[induction_eliminator]
++theorem induction_on {rels : Set (FreeGroup α)}  {C : PresentedGroup rels → Prop}
++    (x : PresentedGroup rels) (H : ∀ z, C (mk rels z)) : C x :=
++  Quotient.inductionOn' x H
++
++theorem generated_by (rels : Set (FreeGroup α)) (H : Subgroup (PresentedGroup rels))
++    (h : ∀ j : α, PresentedGroup.of j ∈ H) : ∀ x : (PresentedGroup rels), x ∈ H := by
++  intro x
+```
+PAST COMMENT (from reviewer):
+Or
+```suggestion
+    (h : ∀ j : α, PresentedGroup.of j ∈ H) (x : PresentedGroup rels) : x ∈ H := by
+```
+
+--- candidate 13 (sim=0.691, past_pr=#27787, file=Mathlib/GroupTheory/Finiteness.lean) ---
+PAST HUNK:
+```
+@@ -286,6 +286,11 @@ theorem Group.fg_iff_monoid_fg : Group.FG G ↔ Monoid.FG G :=
+   ⟨fun h => Monoid.fg_def.2 <| (Subgroup.fg_iff_submonoid_fg ⊤).1 (Group.fg_def.1 h), fun h =>
+     Group.fg_def.2 <| (Subgroup.fg_iff_submonoid_fg ⊤).2 (Monoid.fg_def.1 h)⟩
+ 
++@[to_additive]
++instance Monoid.fg_of_group_fg [Group.FG G] : Monoid.FG G := by
++  rw [← Group.fg_iff_monoid_fg]
++  infer_instance
+```
+PAST COMMENT (from reviewer):
+```suggestion
+instance Monoid.fg_of_group_fg [Group.FG G] : Monoid.FG G := Group.fg_iff_monoid_fg.mp ‹_›
+```
+
+--- candidate 14 (sim=0.690, past_pr=#34621, file=Mathlib/GroupTheory/FreeGroup/Basic.lean) ---
+PAST HUNK:
+```
+@@ -886,6 +888,25 @@ def freeGroupEmptyEquivUnit : FreeGroup Empty ≃ Unit where
+   invFun _ := 1
+   left_inv := by rintro ⟨_ | ⟨⟨⟨⟩, _⟩, _⟩⟩; rfl
+ 
++/-- We define the free group on no generators as isomorphic to the trivial `Unit` group. -/
+```
+PAST COMMENT (from reviewer):
+I think you should just upgrade the def above rather than creating a new one.
+
+--- candidate 15 (sim=0.686, past_pr=#9403, file=Mathlib/GroupTheory/PresentedGroup.lean) ---
+PAST HUNK:
+```
+@@ -27,13 +27,14 @@ given by generators `x : α` and relations `r ∈ rels`.
+ generators, relations, group presentations
+ -/
+ 
++open FreeGroup Subgroup
+ 
+ variable {α : Type*}
+ 
+ /-- Given a set of relations, `rels`, over a type `α`, `PresentedGroup` constructs the group with
+ generators `x : α` and relations `rels` as a quotient of `FreeGroup α`. -/
+ def PresentedGroup (rels : Set (FreeGroup α)) :=
+-  FreeGroup α ⧸ Subgroup.normalClosure rels
++  FreeGroup α ⧸ normalClosure rels
+```
+PAST COMMENT (from reviewer):
+For a `feat` PR, it's better practice to not mix refactoring into it, unless you can find some reviewer who thinks it's immediately a good idea and is OK with the distraction of interleaved non-feature changes.
+
+I'm not sure removing `Subgroup.` and `FreeGroup.` is an improvement myself, but I don't know that it's not an improvement either (this isn't a corner of mathlib I typically do reviews for). If you limit the PR to just adding `equivPresentedGroup` you'll have a better shot at getting it quickly reviewed.
+
+--- candidate 16 (sim=0.685, past_pr=#34621, file=Mathlib/GroupTheory/FreeGroup/Basic.lean) ---
+PAST HUNK:
+```
+@@ -886,6 +888,22 @@ def freeGroupEmptyEquivUnit : FreeGroup Empty ≃ Unit where
+   invFun _ := 1
+   left_inv := by rintro ⟨_ | ⟨⟨⟨⟩, _⟩, _⟩⟩; rfl
+ 
++/-- We define the free group on no generators as isomorphic to the trivial `Unit` group. -/
++@[to_additive]
+```
+PAST COMMENT (from reviewer):
+you're getting a failure here because the additivised version doesn't have a docstring! you can fix it by mimicking https://github.com/leanprover-community/mathlib4/blob/2255913443eedeb84ccfc8c2dbf6778adfb4486d/Mathlib/GroupTheory/FreeGroup/Basic.lean#L882
+
+--- candidate 17 (sim=0.684, past_pr=#21620, file=Mathlib/GroupTheory/PresentedGroup.lean) ---
+PAST HUNK:
+```
+@@ -52,6 +52,22 @@ mapped to the equivalence class of the image of `x` in `FreeGroup α`. -/
+ def of {rels : Set (FreeGroup α)} (x : α) : PresentedGroup rels :=
+   mk rels (FreeGroup.of x)
+ 
++lemma mk_eq_one_iff {rels : Set (FreeGroup α)} {x : FreeGroup α} :
++    mk rels x = 1 ↔ x ∈ Subgroup.normalClosure rels :=
++  QuotientGroup.eq_one_iff _
++
++lemma one_of_mem {rels : Set (FreeGroup α)} {x : FreeGroup α} (hx : x ∈ rels) :
++    mk rels x = 1 :=
++  mk_eq_one_iff.mpr <| Subgroup.subset_normalClosure hx
++
++lemma mk_eq_mk_of_mul_inv_mem {rels : Set (FreeGroup α)} {x y : FreeGroup α} (hx : x*y⁻¹ ∈ rels) :
+```
+PAST COMMENT (from reviewer):
+```suggestion
+lemma mk_eq_mk_of_mul_inv_mem {rels : Set (FreeGroup α)} {x y : FreeGroup α} (hx : x * y⁻¹ ∈ rels) :
+```
+and the next lemma
+
+--- candidate 18 (sim=0.681, past_pr=#12548, file=Mathlib/GroupTheory/Coxeter/Basic.lean) ---
+PAST HUNK:
+```
+@@ -121,7 +121,8 @@ def reindexGroupEquiv : (M.reindex e).Group ≃* M.Group :=
+   (QuotientGroup.congr (Subgroup.normalClosure M.relationsSet)
+     (Subgroup.normalClosure (M.reindex e).relationsSet)
+     (FreeGroup.freeGroupCongr e) (by
+-      rw [reindex_relationsSet,
++      -- Adaptation note: 2024-04-21, this did not previously require `erw`.
++      erw [reindex_relationsSet,
+         Subgroup.map_normalClosure _ _ (FreeGroup.freeGroupCongr e).surjective,
+         ← MulEquiv.coe_toMonoidHom]
+       rfl)).symm
+```
+PAST COMMENT (from reviewer):
+There's a genuine difference here between `Surjective ⇑(FreeGroup.freeGroupCongr e)` and `Surjective ⇑↑(FreeGroup.freeGroupCongr e)`, so I'm not sure this is a bug. Alternative proof:
+```suggestion
+      rw [reindex_relationsSet,
+        Subgroup.map_normalClosure _ _ (by simpa using (FreeGroup.freeGroupCongr e).surjective),
+        MonoidHom.coe_coe])).symm
+```
+
+--- candidate 19 (sim=0.677, past_pr=#34784, file=Mathlib/Algebra/Group/Subgroup/Basic.lean) ---
+PAST HUNK:
+```
+@@ -531,38 +551,46 @@ lemma normalClosure_empty : normalClosure (∅ : Set G) = (⊥ : Subgroup G) :=
+ 
+```
+PAST COMMENT (from reviewer):
+Shouldn't `normalClosure_empty` also get `@[to_additive]`ized? (If it should not, then please add a comment to the code explaining why.)
+
+--- candidate 20 (sim=0.674, past_pr=#9185, file=Mathlib/GroupTheory/Subgroup/Basic.lean) ---
+PAST HUNK:
+```
+@@ -3498,6 +3508,19 @@ instance (priority := 100) Subgroup.normal_subgroupOf {H N : Subgroup G} [N.Norm
+ #align subgroup.normal_subgroup_of Subgroup.normal_subgroupOf
+ #align add_subgroup.normal_add_subgroup_of AddSubgroup.normal_addSubgroupOf
+ 
++theorem Subgroup.map_normalClosure {s : Set G} (f : G →* N) (hf : Surjective f) :
+```
+PAST COMMENT (from reviewer):
+```suggestion
+theorem Subgroup.map_normalClosure (s : Set G) (f : G →* N) (hf : Surjective f) :
+```
+and below
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "summary": "No concrete past reviewer advice clearly applies; only minor docstring phrasing parallels exist.",
+  "confidence": "low",
+  "strong_matches": [],
+  "weak_observations": [
+    {
+      "observation": "Consider phrasing “with finitely many generators” instead of “with a finite number of generators.”",
+      "supporting_past_prs": [
+        30056
+      ]
+    },
+    {
+      "observation": "Docstring clarity/grammar tweaks (e.g., be precise: “trivial subgroup is the normal closure of the empty set”).",
+      "supporting_past_prs": [
+        18620,
+        35033
+      ]
+    }
+  ]
+}

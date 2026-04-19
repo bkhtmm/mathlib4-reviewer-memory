@@ -1,0 +1,526 @@
+====================================================================================================
+CASE R  PR #25427  (open-pr, v2 prompt, sweep2)
+file: Mathlib/LinearAlgebra/Basis/HasCanonicalBasis.lean  line: 92.0
+reviewer: @lecopivo  on 2025-06-05T13:32:43Z
+advice_kind: design smell: unnecessary instance
+prompt_tokens: 7465  completion_tokens: 4432
+HUMAN reviewer (ground truth):
+  > By using `FinEnum` to index basis vectors this instance and the one bellow is not necessary.
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Compared to a naive matcher you must do TWO extra things, because the answer is often only derivable by combining evidence:
+
+A. STRUCTURAL PATTERN EXTRACTION. Past comments often contain `suggestion` code blocks (```suggestion ... ```) or inline code-shape rewrites. These suggested code snippets ARE concrete advice, not just commentary. Treat them as first-class evidence about preferred Lean/mathlib idioms (e.g.: term-mode constructor `:= ⟨_, _, _⟩` vs `by use _; exact _`, `instance` vs `theorem` for class-membership statements, `refine ⟨..., ?_⟩` vs `use ...; constructor`, `@[simp]` / `@[to_additive]` attributes, naming conventions, docstring phrasing, etc.).
+
+B. CROSS-CANDIDATE SYNTHESIS. The applicable advice for the new hunk may require combining evidence from multiple candidates. Example: candidate X's context tells you that an identifier in the new hunk is a `class`; candidate Y shows the term-mode `instance ... := ⟨...⟩` template for proving class membership. Together they support the conclusion: "the new theorem proving class membership should be rewritten as an `instance` with a term-mode constructor". List supporting PRs for any synthesised finding.
+
+Reasoning protocol (do this internally before producing JSON):
+
+  1. STRUCTURAL FEATURES OF THE NEW HUNK. Identify each: tactic-mode vs term-mode? Uses `by use ...; exact ...`? Uses `use ...; constructor`? Declares an `instance` / a `theorem` / a `lemma` / a `def` / a `class`? Has `@[simp]`, `@[to_additive]`, `@[deprecated]`? Uses anonymous functions `fun x =>` vs `↦`? Has a docstring `/-- ... -/` of any specific shape?
+
+  2. PATTERN INVENTORY FROM CANDIDATES. For each candidate, note any concrete pattern shown in its suggested-code or comment (term-mode template, attribute recommendation, naming convention, idiomatic rewrite, terminology preference, etc.). Also note which candidates' past hunks define or use identifiers that appear in the new hunk (these are clues about whether something is a class, an instance, an alias, etc.).
+
+  3. APPLICABILITY CHECK. For each pattern from step 2, ask: does the new hunk's structure (step 1) instantiate the same shape that this pattern was applied to? If yes, that's a STRONG match. If two patterns combine to support a finding, list both supporting PRs.
+
+  4. STRICT REFUSAL. If after this analysis no candidate (alone or in combination) gives concrete, well-grounded advice for the specific code in the new hunk, output an empty `strong_matches` list. Do not paper over with generic advice. Generic style observations belong in `weak_observations`, clearly marked. Do not invent advice that isn't traceable to specific past PRs in the retrieval pool.
+
+Confidence:
+  - "high"  — at least one strong match is grounded in concrete suggested-code or explicit prose from a candidate, and the new hunk clearly fits the same shape
+  - "medium" — at least one strong match exists but requires synthesis or adaptation; OR a single candidate gives related but not identical advice
+  - "low"   — only loose stylistic patterns; nothing actionable
+  - "none"  — retrieved pool is unrelated; do not press an answer
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Be precise about which PR(s) support each finding via supporting_past_prs.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #25427 (file: Mathlib/LinearAlgebra/Basis/HasCanonicalBasis.lean):
+```
+@@ -0,0 +1,104 @@
+... [52 lines above hidden]
++  coe_basis_eq := by ext; simp
++
++/-
++Note: this could be generalised to a product of vector spaces that each have a
++`HasCanonicalBasis` instance, but for now this isn't necessary, and the index
++type would be a very ugly type, which is undesirable.
++-/
++noncomputable instance [Ring 𝕜] (p : ENNReal) :
++  HasCanonicalBasis 𝕜 (PiLp p (fun (_ : ι) ↦ 𝕜)) ι (Pi.single · 1) where
++  basis := (PiLp.basisFun p 𝕜 ι)
++  coe_basis_eq := by ext; simp
++
++noncomputable instance : HasCanonicalBasis 𝕜 𝕜 (Fin 1) (fun _ ↦ 1) where
++  basis := Basis.singleton _ 𝕜
++  coe_basis_eq := by ext i; aesop
++
++/-- This abbrev provides us with a way of reindexing canonical bases, which is useful
++in the context of defining canonical bases for products. -/
++noncomputable abbrev reindex {V : Type v} {κ : Type w'}
++    {f : ι → V} {g : κ → V} [Semiring 𝕜] [AddCommGroup V] [Module 𝕜 V]
++    (hc : HasCanonicalBasis 𝕜 V ι f) (e : ι ≃ κ) (he : ∀ (i : κ), g i = hc.basis (e.symm i)) :
++    HasCanonicalBasis 𝕜 V κ g where
++  basis := Basis.reindex (HasCanonicalBasis.basis) e
++  coe_basis_eq := by ext; simp [Basis.reindex_apply, he]
++
++variable (𝕜) in
++/-- Constructs a "canonical basis" on a product of two modules equipped with a canonical basis.
++This isn't an instance since have a sum as the index type for our bases is in general undesirable
++(e.g. this would force `𝕜 × 𝕜`  to have basis `Fin 1 ⊕ Fin 1` rather than `Fin 2`) -/
++noncomputable abbrev prod {V : Type v} {W : Type v'} {κ : Type w'}
++    [AddCommGroup V] [AddCommGroup W] [Module 𝕜 V] [Module 𝕜 W]
++    (f : ι → V) (g : κ → W) [HasCanonicalBasis 𝕜 V ι f] [HasCanonicalBasis 𝕜 W κ g] :
++    HasCanonicalBasis 𝕜 (V × W) (ι ⊕ κ) (Sum.elim (LinearMap.inl 𝕜 _ _ ∘ f)
++      (LinearMap.inr 𝕜 _ _ ∘ g)) where
++  basis := Basis.prod HasCanonicalBasis.basis HasCanonicalBasis.basis
++  coe_basis_eq := by ext <;> simp [Basis.prod_apply, Sum.elim]
++
++/--
++The canonical basis for `𝕜 × 𝕜`
++-/
++noncomputable instance : HasCanonicalBasis 𝕜 (𝕜 × 𝕜) (Fin 2) (![(1, 0), (0, 1)]) :=
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.738, past_pr=#7037, file=Mathlib/Analysis/InnerProductSpace/PiL2.lean) ---
+PAST HUNK:
+```
+@@ -612,6 +612,38 @@ protected theorem repr_reindex (b : OrthonormalBasis ι 𝕜 E) (e : ι ≃ ι')
+ 
+ end OrthonormalBasis
+ 
++section EuclideanSpace
++
++variable (𝕜 ι) [IsROrC 𝕜] [Fintype ι] [DecidableEq ι]
++
++/-- The basis `Pi.basisFun` bundled as an orthormal basis of `EuclideanSpace 𝕜 ι`. -/
++noncomputable def EuclideanSpace.basisFun :
+```
+PAST COMMENT (from reviewer):
+(it's effectively `LinearIsometryEquiv.refl`!)
+
+--- candidate 2 (sim=0.738, past_pr=#7037, file=Mathlib/Analysis/InnerProductSpace/PiL2.lean) ---
+PAST HUNK:
+```
+@@ -612,6 +612,38 @@ protected theorem repr_reindex (b : OrthonormalBasis ι 𝕜 E) (e : ι ≃ ι')
+ 
+ end OrthonormalBasis
+ 
++section EuclideanSpace
++
++variable (𝕜 ι) [IsROrC 𝕜] [Fintype ι] [DecidableEq ι]
++
++/-- The basis `Pi.basisFun` bundled as an orthormal basis of `EuclideanSpace 𝕜 ι`. -/
++noncomputable def EuclideanSpace.basisFun :
+```
+PAST COMMENT (from reviewer):
+This basis already exists elsewhere, with a different defeq; I'll try to find it when I'm next at lean!
+
+--- candidate 3 (sim=0.731, past_pr=#12242, file=Mathlib/Analysis/InnerProductSpace/PiL2.lean) ---
+PAST HUNK:
+```
+@@ -528,6 +528,66 @@ theorem _root_.Basis.coe_toOrthonormalBasis (v : Basis ι 𝕜 E) (hv : Orthonor
+     _ = (v : ι → E) := by simp
+ #align basis.coe_to_orthonormal_basis Basis.coe_toOrthonormalBasis
+ 
++/-- `Pi.orthonormalBasis (B : ∀ i, OrthonormalBasis (ι i) 𝕜 (E i))` is the
++`Σ i, ι i`-indexed orthonormal basis on `Π i, E i` given by `B i` on each component. -/
++protected noncomputable def _root_.Pi.orthonormalBasis {η : Type*} [Fintype η] {ι : η → Type*}
++    [∀ i, Fintype (ι i)] {𝕜 : Type*} [RCLike 𝕜] {E : η → Type*} [∀ i, NormedAddCommGroup (E i)]
++    [∀ i, InnerProductSpace 𝕜 (E i)] (B : ∀ i, OrthonormalBasis (ι i) 𝕜 (E i)) :
++    OrthonormalBasis ((i : η) × (ι i)) 𝕜 (PiLp 2 fun i : η ↦ (E i)) := by
++  classical
++  refine Basis.toOrthonormalBasis ?_ ⟨fun j ↦ ?_, ?_⟩
++  · exact Pi.basis (fun i : η ↦ (B i).toBasis)
+```
+PAST COMMENT (from reviewer):
+This is not well-typed, it should be `(Pi.basis (fun i : η ↦ (B i).toBasis)).map (WithLp.linearEquiv 2 _ _).symm`
+
+The lemma below needs to change too.
+
+--- candidate 4 (sim=0.731, past_pr=#12242, file=Mathlib/Analysis/InnerProductSpace/PiL2.lean) ---
+PAST HUNK:
+```
+@@ -528,6 +528,66 @@ theorem _root_.Basis.coe_toOrthonormalBasis (v : Basis ι 𝕜 E) (hv : Orthonor
+     _ = (v : ι → E) := by simp
+ #align basis.coe_to_orthonormal_basis Basis.coe_toOrthonormalBasis
+ 
++/-- `Pi.orthonormalBasis (B : ∀ i, OrthonormalBasis (ι i) 𝕜 (E i))` is the
++`Σ i, ι i`-indexed orthonormal basis on `Π i, E i` given by `B i` on each component. -/
++protected noncomputable def _root_.Pi.orthonormalBasis {η : Type*} [Fintype η] {ι : η → Type*}
++    [∀ i, Fintype (ι i)] {𝕜 : Type*} [RCLike 𝕜] {E : η → Type*} [∀ i, NormedAddCommGroup (E i)]
++    [∀ i, InnerProductSpace 𝕜 (E i)] (B : ∀ i, OrthonormalBasis (ι i) 𝕜 (E i)) :
++    OrthonormalBasis ((i : η) × (ι i)) 𝕜 (PiLp 2 fun i : η ↦ (E i)) := by
++  classical
++  refine Basis.toOrthonormalBasis ?_ ⟨fun j ↦ ?_, ?_⟩
++  · exact Pi.basis (fun i : η ↦ (B i).toBasis)
+```
+PAST COMMENT (from reviewer):
+With that, the next subgoal is `simp [LinearMap.stdBasis, (B j.fst).orthonormal.1 j.snd]`
+
+--- candidate 5 (sim=0.715, past_pr=#22868, file=Mathlib/LinearAlgebra/FiniteDimensional.lean) ---
+PAST HUNK:
+```
+@@ -239,6 +239,26 @@ theorem coe_basisOfLinearIndependentOfCardEqFinrank {ι : Type*} [Nonempty ι] [
+     ⇑(basisOfLinearIndependentOfCardEqFinrank lin_ind card_eq) = b :=
+   Basis.coe_mk _ _
+ 
++/-- In a vector space `ι → K`, a linear independent family indedex by `ι` is a basis. -/
++noncomputable def basisOfPiSpaceOfLinearIndependent {ι : Type*} [Fintype ι] {b : ι → (ι → K)}
++    (hb : LinearIndependent K b) :
++    Basis ι K (ι → K) := by
++  by_cases hι : Nonempty ι
+```
+PAST COMMENT (from reviewer):
+`cases isEmpty_or_nonempty ι`
+
+--- candidate 6 (sim=0.713, past_pr=#22868, file=Mathlib/LinearAlgebra/FiniteDimensional/Lemmas.lean) ---
+PAST HUNK:
+```
+@@ -238,6 +238,26 @@ theorem coe_basisOfLinearIndependentOfCardEqFinrank {ι : Type*} [Nonempty ι] [
+... [11 lines above hidden]
++    exact Basis.empty _
++
++@[simp]
++theorem coe_basisOfPiSpaceOfLinearIndependent {ι : Type*} [Fintype ι] {b : ι → (ι → K)}
++    (hb : LinearIndependent K b) :
++    ⇑(basisOfPiSpaceOfLinearIndependent hb) = b := by
++  by_cases hι : Nonempty ι
++  · rw [basisOfPiSpaceOfLinearIndependent, dif_pos hι]
++    exact coe_basisOfLinearIndependentOfCardEqFinrank hb _
++  · rw [basisOfPiSpaceOfLinearIndependent, dif_neg hι]
++    ext i
++    exact ((not_nonempty_iff.mp hι).false i).elim
++
+```
+PAST COMMENT (from reviewer):
+```suggestion
+noncomputable def basisOfPiSpaceOfLinearIndependent {ι : Type*} [Fintype ι]
+    [Decidable (Nonempty ι)] {b : ι → (ι → K)} (hb : LinearIndependent K b) : Basis ι K (ι → K) :=
+  if hι : Nonempty ι then
+    basisOfLinearIndependentOfCardEqFinrank hb (Module.finrank_fintype_fun_eq_card K).symm
+  else
+    have : IsEmpty ι := not_nonempty_iff.mp hι
+    Basis.empty _
+
+@[simp]
+theorem coe_basisOfPiSpaceOfLinearIndependent {ι : Type*} [Fintype ι] [Decidable (Nonempty ι)]
+    {b : ι → (ι → K)} (hb : LinearIndependent K b) :
+    ⇑(basisOfPiSpaceOfLinearIndependent hb) = b := by
+  by_cases hι : Nonempty ι
+  · simp [hι, basisOfPiSpaceOfLinearIndependent]
+  · rw [basisOfPiSpaceOfLinearIndependent, dif_neg hι]
+    ext i
+    exact ((not_nonempty_iff.mp hι).fa
+... [truncated]
+
+--- candidate 7 (sim=0.700, past_pr=#4420, file=Mathlib/Analysis/InnerProductSpace/PiL2.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,1010 @@
+... [342 lines above hidden]
++
++instance instInhabited : Inhabited (OrthonormalBasis ι 𝕜 (EuclideanSpace 𝕜 ι)) :=
++  ⟨ofRepr (LinearIsometryEquiv.refl 𝕜 (EuclideanSpace 𝕜 ι))⟩
++#align orthonormal_basis.inhabited OrthonormalBasis.instInhabited
++
++@[coe, inherit_doc OrthonormalBasis]
++protected def cast (b : OrthonormalBasis ι 𝕜 E) (i : ι) : E := by
++  classical exact b.repr.symm (EuclideanSpace.single i (1 : 𝕜))
++
++/-- `b i` is the `i`th basis vector. -/
++instance instCoeFun : CoeFun (OrthonormalBasis ι 𝕜 E) fun _ => ι → E where
++  coe := OrthonormalBasis.cast
++#align orthonormal_basis.has_coe_to_fun OrthonormalBasis.instCoeFun
+```
+PAST COMMENT (from reviewer):
+It might be best to replace this with `FunLike`
+
+--- candidate 8 (sim=0.691, past_pr=#15417, file=Mathlib/Analysis/InnerProductSpace/l2Space.lean) ---
+PAST HUNK:
+```
+@@ -380,26 +382,31 @@ namespace HilbertBasis
+ instance {ι : Type*} : Inhabited (HilbertBasis ι 𝕜 ℓ²(ι, 𝕜)) :=
+   ⟨ofRepr (LinearIsometryEquiv.refl 𝕜 _)⟩
+ 
++open Classical in
+ /-- `b i` is the `i`th basis vector. -/
+ instance instCoeFun : CoeFun (HilbertBasis ι 𝕜 E) fun _ => ι → E where
+   coe b i := b.repr.symm (lp.single 2 i (1 : 𝕜))
+ 
++open Classical in
+```
+PAST COMMENT (from reviewer):
+use decidability assumptions?
+
+--- candidate 9 (sim=0.679, past_pr=#24209, file=Mathlib/LinearAlgebra/StdBasis.lean) ---
+PAST HUNK:
+```
+@@ -105,7 +82,7 @@ given by `s j` on each component.
+ For the standard basis over `R` on the finite-dimensional space `η → R` see `Pi.basisFun`.
+ -/
+ protected noncomputable def basis (s : ∀ j, Basis (ιs j) R (Ms j)) :
+-    Basis (Σj, ιs j) R (∀ j, Ms j) :=
++    Basis (Σ j, ιs j) R (∀ j, Ms j) :=
+```
+PAST COMMENT (from reviewer):
+By the way: this change should disappear when merging master (as it was already made on master).
+
+--- candidate 10 (sim=0.673, past_pr=#3264, file=Mathlib/LinearAlgebra/StdBasis.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,310 @@
+... [108 lines above hidden]
++#align linear_map.supr_range_std_basis_le_infi_ker_proj LinearMap.supᵢ_range_stdBasis_le_infᵢ_ker_proj
++
++theorem infᵢ_ker_proj_le_supᵢ_range_stdBasis {I : Finset ι} {J : Set ι} (hu : Set.univ ⊆ ↑I ∪ J) :
++    (⨅ i ∈ J, ker (proj i : (∀ i, φ i) →ₗ[R] φ i)) ≤ ⨆ i ∈ I, range (stdBasis R φ i) :=
++  SetLike.le_def.2
++    (by
++      intro b hb
++      simp only [mem_infᵢ, mem_ker, proj_apply] at hb
++      rw [←
++        show (∑ i in I, stdBasis R φ i (b i)) = b by
++          ext i
++          rw [Finset.sum_apply, ← stdBasis_same R φ i (b i)]
++          refine' Finset.sum_eq_single i (fun j hjI ne => stdBasis_ne _ _ _ _ ne.symm _) _
+```
+PAST COMMENT (from reviewer):
+I already pushed that fix. It tells lean which metavariables it can turn into goals and which it has to solve immediately.
+
+--- candidate 11 (sim=0.673, past_pr=#3264, file=Mathlib/LinearAlgebra/StdBasis.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,310 @@
+... [108 lines above hidden]
++#align linear_map.supr_range_std_basis_le_infi_ker_proj LinearMap.supᵢ_range_stdBasis_le_infᵢ_ker_proj
++
++theorem infᵢ_ker_proj_le_supᵢ_range_stdBasis {I : Finset ι} {J : Set ι} (hu : Set.univ ⊆ ↑I ∪ J) :
++    (⨅ i ∈ J, ker (proj i : (∀ i, φ i) →ₗ[R] φ i)) ≤ ⨆ i ∈ I, range (stdBasis R φ i) :=
++  SetLike.le_def.2
++    (by
++      intro b hb
++      simp only [mem_infᵢ, mem_ker, proj_apply] at hb
++      rw [←
++        show (∑ i in I, stdBasis R φ i (b i)) = b by
++          ext i
++          rw [Finset.sum_apply, ← stdBasis_same R φ i (b i)]
++          refine' Finset.sum_eq_single i (fun j hjI ne => stdBasis_ne _ _ _ _ ne.symm _) _
+```
+PAST COMMENT (from reviewer):
+One thing that might help here is using `refine` instead and replacing only the relevant `_` with `?_`
+
+--- candidate 12 (sim=0.667, past_pr=#6321, file=Mathlib/LinearAlgebra/Basis/VectorSpace.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,281 @@
+... [5 lines above hidden]
++-/
++import Mathlib.LinearAlgebra.Basis
++import Mathlib.LinearAlgebra.FreeModule.Basic
++
++#align_import linear_algebra.basis from "leanprover-community/mathlib"@"13bce9a6b6c44f6b4c91ac1c1d2a816e2533d395"
++
++/-!
++# Bases in a vector space
++
++This file provides results for bases of a vector space.
++
++Some of these results should be merged with the results on free modules.
++We state these results in a separate file to the results on modules to avoid an
+```
+PAST COMMENT (from reviewer):
+```suggestion
+We state these results in a separate file to the results on modules to avoid an
+import cycle.
+```
+
+--- candidate 13 (sim=0.660, past_pr=#26238, file=Mathlib/Analysis/InnerProductSpace/PiL2.lean) ---
+PAST HUNK:
+```
+@@ -696,6 +696,38 @@ end EuclideanSpace
+ instance OrthonormalBasis.instInhabited : Inhabited (OrthonormalBasis ι 𝕜 (EuclideanSpace 𝕜 ι)) :=
+   ⟨EuclideanSpace.basisFun ι 𝕜⟩
+ 
++namespace OrthonormalBasis
++
++variable {E' : Type*} [Fintype ι'] [NormedAddCommGroup E'] [InnerProductSpace 𝕜 E']
++    (b : OrthonormalBasis ι 𝕜 E) (b' : OrthonormalBasis ι' 𝕜 E') (e : ι ≃ ι')
++
++/-- The `LinearIsometryEquiv` which maps an orthonormal basis to another. This is a convenience
++wrapper around `Orthonormal.equiv`. -/
++protected noncomputable def equiv : E ≃ₗᵢ[𝕜] E' :=
++  Orthonormal.equiv (v := b.toBasis) (v' := b'.toBasis) b.orthonormal b'.orthonormal e
+```
+PAST COMMENT (from reviewer):
+Here's a computable version:
+```suggestion
+protected def equiv : E ≃ₗᵢ[𝕜] E' :=
+  b.repr.trans <| .trans (.piLpCongrLeft _ _ _ e) b'.repr.symm
+```
+
+--- candidate 14 (sim=0.658, past_pr=#21405, file=Mathlib/Analysis/InnerProductSpace/l2Space.lean) ---
+PAST HUNK:
+```
+@@ -386,18 +386,19 @@ instance {ι : Type*} : Inhabited (HilbertBasis ι 𝕜 ℓ²(ι, 𝕜)) :=
+ 
+ open Classical in
+ /-- `b i` is the `i`th basis vector. -/
+-instance instCoeFun : CoeFun (HilbertBasis ι 𝕜 E) fun _ => ι → E where
+-  coe b i := b.repr.symm (lp.single 2 i (1 : 𝕜))
++@[coe] def toFun (b : HilbertBasis ι 𝕜 E) (i : ι) : E := b.repr.symm <| lp.single 2 i (1 : 𝕜)
+```
+PAST COMMENT (from reviewer):
+Sorry, which "other PR" does this refer to?
+
+--- candidate 15 (sim=0.658, past_pr=#21405, file=Mathlib/Analysis/InnerProductSpace/l2Space.lean) ---
+PAST HUNK:
+```
+@@ -386,18 +386,19 @@ instance {ι : Type*} : Inhabited (HilbertBasis ι 𝕜 ℓ²(ι, 𝕜)) :=
+ 
+ open Classical in
+ /-- `b i` is the `i`th basis vector. -/
+-instance instCoeFun : CoeFun (HilbertBasis ι 𝕜 E) fun _ => ι → E where
+-  coe b i := b.repr.symm (lp.single 2 i (1 : 𝕜))
++@[coe] def toFun (b : HilbertBasis ι 𝕜 E) (i : ι) : E := b.repr.symm <| lp.single 2 i (1 : 𝕜)
+```
+PAST COMMENT (from reviewer):
+Just to not lose it from the other PR; this one should be adjusted to use FunLike, which needs the proofs in #21440 and probably the API in #21444
+
+--- candidate 16 (sim=0.658, past_pr=#3466, file=Mathlib/LinearAlgebra/FiniteDimensional.lean) ---
+PAST HUNK:
+```
+@@ -230,39 +233,44 @@ theorem finiteDimensional_iff_of_rank_eq_nsmul {W} [AddCommGroup W] [Module K W]
+... [29 lines above hidden]
+   (@finsetBasis K V _ _ _ (iff_fg.2 inferInstance)).reindex (Fintype.equivFinOfCardEq h)
+ #align finite_dimensional.fin_basis FiniteDimensional.finBasis
+ 
+-/-- An `n`-dimensional vector space has a basis indexed by `fin n`. -/
++/-- An `n`-dimensional vector space has a basis indexed by `Fin n`. -/
+ noncomputable def finBasisOfFinrankEq [FiniteDimensional K V] {n : ℕ} (hn : finrank K V = n) :
+     Basis (Fin n) K V :=
+   (finBasis K V).reindex (Fin.cast hn).toEquiv
+ #align finite_dimensional.fin_basis_of_finrank_eq FiniteDimensional.finBasisOfFinrankEq
+ 
+ variable {K V}
+ 
++set_option pp.explicit true in
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+
+--- candidate 17 (sim=0.658, past_pr=#22693, file=Mathlib/LinearAlgebra/DirectSum/Basis.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,30 @@
++/-
++Copyright (c) 2021 Riccardo Brasca. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Riccardo Brasca
++-/
++import Mathlib.Algebra.DirectSum.Module
++import Mathlib.LinearAlgebra.Finsupp.VectorSpace
++
++/-!
++# Bases for direct sum of modules
+```
+PAST COMMENT (from reviewer):
+Should this file be renamed `Free.lean` instead? And the title rewritten accordingly?
+
+--- candidate 18 (sim=0.655, past_pr=#7034, file=Mathlib/MeasureTheory/Measure/Lebesgue/EqHaar.lean) ---
+PAST HUNK:
+```
+@@ -79,6 +79,34 @@ theorem Basis.parallelepiped_basisFun (ι : Type*) [Fintype ι] :
+     · exact zero_le_one
+ #align basis.parallelepiped_basis_fun Basis.parallelepiped_basisFun
+ 
++ /-- A parallelepiped can be expressed on the standard basis. -/
++ theorem Basis.parallelepiped_eq_map  {ι E : Type*} [Fintype ι] [NormedAddCommGroup E]
+```
+PAST COMMENT (from reviewer):
+Why can't that be in `MeasureTheory.Measure.Haar.OfBasis`?
+
+--- candidate 19 (sim=0.655, past_pr=#7034, file=Mathlib/MeasureTheory/Measure/Lebesgue/EqHaar.lean) ---
+PAST HUNK:
+```
+@@ -79,6 +79,34 @@ theorem Basis.parallelepiped_basisFun (ι : Type*) [Fintype ι] :
+     · exact zero_le_one
+ #align basis.parallelepiped_basis_fun Basis.parallelepiped_basisFun
+ 
++ /-- A parallelepiped can be expressed on the standard basis. -/
++ theorem Basis.parallelepiped_eq_map  {ι E : Type*} [Fintype ι] [NormedAddCommGroup E]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- A parallelepiped can be expressed on the standard basis. -/
+theorem Basis.parallelepiped_eq_map  {ι E : Type*} [Fintype ι] [NormedAddCommGroup E]
+```
+
+--- candidate 20 (sim=0.654, past_pr=#17732, file=Mathlib/Analysis/InnerProductSpace/PiL2.lean) ---
+PAST HUNK:
+```
+@@ -95,10 +97,43 @@ theorem PiLp.inner_apply {ι : Type*} [Fintype ι] {f : ι → Type*} [∀ i, No
+   rfl
+ 
+ /-- The standard real/complex Euclidean space, functions on a finite type. For an `n`-dimensional
+-space use `EuclideanSpace 𝕜 (Fin n)`. -/
++space use `EuclideanSpace 𝕜 (Fin n)`.
++
++For the case when `n = Fin _`, there is `!ₑ[x, y, ...]` notation for building elements of this type,
+```
+PAST COMMENT (from reviewer):
+```suggestion
+For the case when `n = Fin e`, there is `!ₑ[x, y, ...]` notation for building elements of this type,
+```
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "summary": "The new `reindex` abbrev uses `HasCanonicalBasis.basis` without supplying the explicit instance, likely ill-typed; it should use the provided `hc` structure (`hc.basis`).",
+  "confidence": "medium",
+  "strong_matches": [
+    {
+      "past_pr": 12242,
+      "past_file": "Mathlib/Analysis/InnerProductSpace/PiL2.lean",
+      "past_comment_excerpt": "This is not well-typed, it should be ...",
+      "applies_because": "Like the past hunk, the new code builds a basis via a projection but omits necessary arguments; `Basis.reindex (HasCanonicalBasis.basis) e` doesn’t supply the `HasCanonicalBasis` value, whereas `hc` is available.",
+      "suggested_adaptation": "In `reindex`, write `basis := Basis.reindex hc.basis e` (or `(hc.basis).reindex e`) and keep the `coe_basis_eq` proof as `by ext; simp [Basis.reindex_apply, he]`.",
+      "supporting_past_prs": [
+        12242
+      ]
+    }
+  ],
+  "weak_observations": []
+}

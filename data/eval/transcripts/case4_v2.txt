@@ -1,0 +1,701 @@
+====================================================================================================
+CASE 4  PR #36007  (heldout-closed)
+file: Mathlib/Geometry/Manifold/Algebra/LieGroup.lean  line: 176.0
+prompt_version: v2
+prompt_tokens: 9909  completion_tokens: 2400  latency: 31.04s
+HUMAN reviewer (ground truth):
+  > ```suggestion
+  >     CMDiff n fun x ↦ f x / g x := by simp_rw [div_eq_mul_inv]; exact hf.mul hg.inv
+  > ```
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Compared to a naive matcher you must do TWO extra things, because the answer is often only derivable by combining evidence:
+
+A. STRUCTURAL PATTERN EXTRACTION. Past comments often contain `suggestion` code blocks (```suggestion ... ```) or inline code-shape rewrites. These suggested code snippets ARE concrete advice, not just commentary. Treat them as first-class evidence about preferred Lean/mathlib idioms (e.g.: term-mode constructor `:= ⟨_, _, _⟩` vs `by use _; exact _`, `instance` vs `theorem` for class-membership statements, `refine ⟨..., ?_⟩` vs `use ...; constructor`, `@[simp]` / `@[to_additive]` attributes, naming conventions, docstring phrasing, etc.).
+
+B. CROSS-CANDIDATE SYNTHESIS. The applicable advice for the new hunk may require combining evidence from multiple candidates. Example: candidate X's context tells you that an identifier in the new hunk is a `class`; candidate Y shows the term-mode `instance ... := ⟨...⟩` template for proving class membership. Together they support the conclusion: "the new theorem proving class membership should be rewritten as an `instance` with a term-mode constructor". List supporting PRs for any synthesised finding.
+
+Reasoning protocol (do this internally before producing JSON):
+
+  1. STRUCTURAL FEATURES OF THE NEW HUNK. Identify each: tactic-mode vs term-mode? Uses `by use ...; exact ...`? Uses `use ...; constructor`? Declares an `instance` / a `theorem` / a `lemma` / a `def` / a `class`? Has `@[simp]`, `@[to_additive]`, `@[deprecated]`? Uses anonymous functions `fun x =>` vs `↦`? Has a docstring `/-- ... -/` of any specific shape?
+
+  2. PATTERN INVENTORY FROM CANDIDATES. For each candidate, note any concrete pattern shown in its suggested-code or comment (term-mode template, attribute recommendation, naming convention, idiomatic rewrite, terminology preference, etc.). Also note which candidates' past hunks define or use identifiers that appear in the new hunk (these are clues about whether something is a class, an instance, an alias, etc.).
+
+  3. APPLICABILITY CHECK. For each pattern from step 2, ask: does the new hunk's structure (step 1) instantiate the same shape that this pattern was applied to? If yes, that's a STRONG match. If two patterns combine to support a finding, list both supporting PRs.
+
+  4. STRICT REFUSAL. If after this analysis no candidate (alone or in combination) gives concrete, well-grounded advice for the specific code in the new hunk, output an empty `strong_matches` list. Do not paper over with generic advice. Generic style observations belong in `weak_observations`, clearly marked. Do not invent advice that isn't traceable to specific past PRs in the retrieval pool.
+
+Confidence:
+  - "high"  — at least one strong match is grounded in concrete suggested-code or explicit prose from a candidate, and the new hunk clearly fits the same shape
+  - "medium" — at least one strong match exists but requires synthesis or adaptation; OR a single candidate gives related but not identical advice
+  - "low"   — only loose stylistic patterns; nothing actionable
+  - "none"  — retrieved pool is unrelated; do not press an answer
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Be precise about which PR(s) support each finding via supporting_past_prs.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #36007 (file: Mathlib/Geometry/Manifold/Algebra/LieGroup.lean):
+```
+@@ -138,41 +139,41 @@ end
+ 
+ @[to_additive]
+ theorem ContMDiffWithinAt.inv {f : M → G} {s : Set M} {x₀ : M}
+-    (hf : ContMDiffWithinAt I' I n f s x₀) : ContMDiffWithinAt I' I n (fun x => (f x)⁻¹) s x₀ :=
++    (hf : CMDiffAt[s] n f x₀) : CMDiffAt[s] n (fun x => (f x)⁻¹) x₀ :=
+   (contMDiff_inv I n).contMDiffAt.contMDiffWithinAt.comp x₀ hf <| Set.mapsTo_univ _ _
+ 
+ @[to_additive]
+-theorem ContMDiffAt.inv {f : M → G} {x₀ : M} (hf : ContMDiffAt I' I n f x₀) :
+-    ContMDiffAt I' I n (fun x => (f x)⁻¹) x₀ :=
++theorem ContMDiffAt.inv {f : M → G} {x₀ : M} (hf : CMDiffAt n f x₀) :
++    CMDiffAt n (fun x => (f x)⁻¹) x₀ :=
+   (contMDiff_inv I n).contMDiffAt.comp x₀ hf
+ 
+ @[to_additive]
+-theorem ContMDiffOn.inv {f : M → G} {s : Set M} (hf : ContMDiffOn I' I n f s) :
+-    ContMDiffOn I' I n (fun x => (f x)⁻¹) s := fun x hx => (hf x hx).inv
++theorem ContMDiffOn.inv {f : M → G} {s : Set M} (hf : CMDiff[s] n f) :
++    CMDiff[s] n (fun x => (f x)⁻¹) := fun x hx => (hf x hx).inv
+ 
+ @[to_additive]
+-theorem ContMDiff.inv {f : M → G} (hf : ContMDiff I' I n f) : ContMDiff I' I n fun x => (f x)⁻¹ :=
++theorem ContMDiff.inv {f : M → G} (hf : CMDiff n f) : CMDiff n fun x => (f x)⁻¹ :=
+   fun x => (hf x).inv
+ 
+ @[to_additive]
+ theorem ContMDiffWithinAt.div {f g : M → G} {s : Set M} {x₀ : M}
+-    (hf : ContMDiffWithinAt I' I n f s x₀) (hg : ContMDiffWithinAt I' I n g s x₀) :
+-    ContMDiffWithinAt I' I n (fun x => f x / g x) s x₀ := by
++    (hf : CMDiffAt[s] n f x₀) (hg : CMDiffAt[s] n g x₀) :
++    CMDiffAt[s] n (fun x => f x / g x) x₀ := by
+   simp_rw [div_eq_mul_inv]; exact hf.mul hg.inv
+ 
+ @[to_additive]
+-theorem ContMDiffAt.div {f g : M → G} {x₀ : M} (hf : ContMDiffAt I' I n f x₀)
+-    (hg : ContMDiffAt I' I n g x₀) : ContMDiffAt I' I n (fun x => f x / g x) x₀ := by
++theorem ContMDiffAt.div {f g : M → G} {x₀ : M} (hf : CMDiffAt n f x₀)
++    (hg : CMDiffAt n g x₀) : CMDiffAt n (fun x => f x / g x) x₀ := by
+   simp_rw [div_eq_mul_inv]; exact hf.mul hg.inv
+ 
+ @[to_additive]
+-theorem ContMDiffOn.div {f g : M → G} {s : Set M} (hf : ContMDiffOn I' I n f s)
+-    (hg : ContMDiffOn I' I n g s) : ContMDiffOn I' I n (fun x => f x / g x) s := by
++theorem ContMDiffOn.div {f g : M → G} {s : Set M} (hf : CMDiff[s] n f)
++    (hg : CMDiff[s] n g) : CMDiff[s] n (fun x => f x / g x) := by
+   simp_rw [div_eq_mul_inv]; exact hf.mul hg.inv
+ 
+ @[to_additive]
+-theorem ContMDiff.div {f g : M → G} (hf : ContMDiff I' I n f) (hg : ContMDiff I' I n g) :
+-    ContMDiff I' I n fun x => f x / 
+... [truncated]
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.781, past_pr=#9766, file=Mathlib/Geometry/Manifold/Algebra/LieGroup.lean) ---
+PAST HUNK:
+```
+@@ -301,8 +314,10 @@ theorem SmoothOn.inv₀ (hf : SmoothOn I' I f s) (h0 : ∀ x ∈ s, f x ≠ 0) :
+     SmoothOn I' I (fun x => (f x)⁻¹) s :=
+   ContMDiffOn.inv₀ hf h0
+ 
+-end HasSmoothInv
++end SmoothInv₀
+ 
++/-! Point-wise division of smooth functions `f : M → G` where `[SmoothMul I G]` and
+```
+PAST COMMENT (from reviewer):
+one more section heading, please.
+
+--- candidate 2 (sim=0.763, past_pr=#9775, file=Mathlib/Geometry/Manifold/Algebra/LieGroup.lean) ---
+PAST HUNK:
+```
+@@ -33,6 +33,7 @@ groups here are not necessarily finite dimensional.
+   is smooth at all points at which `f` doesn't vanish.
+   ``ContMDiff.div₀` and variants: if also `SmoothMul N` (i.e., `N` is a Lie group except possibly
+   for smoothness of inversion at `0`), similar results hold for point-wise division.
++
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+
+--- candidate 3 (sim=0.742, past_pr=#29459, file=Mathlib/Geometry/Manifold/Algebra/Monoid.lean) ---
+PAST HUNK:
+```
+@@ -410,6 +410,24 @@ theorem contMDiff_finprod_cond (hc : ∀ i, p i → ContMDiff I' I n (f i))
+   simp only [← finprod_subtype_eq_finprod_cond]
+   exact contMDiff_finprod (fun i => hc i i.2) (hf.comp_injective Subtype.coe_injective)
+ 
++variable {g : M → G}
++
++theorem ContMDiffWithinAt.pow (hg : ContMDiffWithinAt I' I n g s x) (m : ℕ) :
++    ContMDiffWithinAt I' I n (fun x ↦ g x ^ m) s x :=
++  (contMDiff_pow m).contMDiffAt.comp_contMDiffWithinAt x hg
++
++nonrec theorem ContMDiffAt.pow (hg : ContMDiffAt I' I n g x) (m : ℕ) :
++    ContMDiffAt I' I n (fun x ↦ g x ^ m) x :=
++  hg.pow m
++
++theorem ContMDiffOn.pow (hg : ContMDiffOn I' I n g s) (m : ℕ) :
++    ContMDiffOn I' I n (fun x ↦ g x ^ m) s :=
++  fun x hx => (hg x hx).pow m
+```
+PAST COMMENT (from reviewer):
+Please use \mapsto, thanks!
+
+--- candidate 4 (sim=0.728, past_pr=#25159, file=Mathlib/Geometry/Manifold/ContMDiff/Basic.lean) ---
+PAST HUNK:
+```
+@@ -272,20 +272,26 @@ theorem contMDiff_of_mulTSupport [One M'] {f : M → M'}
+   by_cases hx : x ∈ mulTSupport f
+   · exact hf x hx
+   · exact ContMDiffAt.congr_of_eventuallyEq contMDiffAt_const
+-      (not_mem_mulTSupport_iff_eventuallyEq.1 hx)
++      (notMem_mulTSupport_iff_eventuallyEq.1 hx)
+ 
+-@[to_additive contMDiffWithinAt_of_not_mem]
+-theorem contMDiffWithinAt_of_not_mem_mulTSupport {f : M → M'} [One M'] {x : M}
++@[to_additive contMDiffWithinAt_of_notMem]
++theorem contMDiffWithinAt_of_notMem_mulTSupport {f : M → M'} [One M'] {x : M}
+     (hx : x ∉ mulTSupport f) (n : WithTop ℕ∞) (s : Set M) : ContMDiffWithinAt I I' n f s x := by
+   apply contMDiffWithinAt_const.congr_of_eventuallyEq
+-    (eventually_nhdsWithin_of_eventually_nhds <| not_mem_mulTSupport_iff_eventuallyEq.mp hx)
+-    (image_eq_one_of_nmem_mulTSupport hx)
++    (eventually_nhdsWithin_of_eventually_nhds <| notMem_mulTSupport_iff_eventuallyEq.mp hx)
++    (image_eq_one_of_notMem_mulTSupport hx)
++
++@[deprecated (since := "2025-05-23")]
+```
+PAST COMMENT (from reviewer):
+the to_additive version is missing a deprecation. Same thing for the next lemma.
+
+--- candidate 5 (sim=0.723, past_pr=#31278, file=Mathlib/Geometry/Manifold/ContMDiff/Basic.lean) ---
+PAST HUNK:
+```
+@@ -209,6 +209,10 @@ theorem contMDiffAt_one [One M'] : ContMDiffAt I I' n (1 : M → M') x :=
+ theorem contMDiffWithinAt_const : ContMDiffWithinAt I I' n (fun _ : M => c) s x :=
+   contMDiffAt_const.contMDiffWithinAt
+ 
++@[simp]
+```
+PAST COMMENT (from reviewer):
+Same comment as below about location.
+
+--- candidate 6 (sim=0.720, past_pr=#29459, file=Mathlib/Geometry/Manifold/Algebra/Monoid.lean) ---
+PAST HUNK:
+```
+@@ -410,6 +410,24 @@ theorem contMDiff_finprod_cond (hc : ∀ i, p i → ContMDiff I' I n (f i))
+   simp only [← finprod_subtype_eq_finprod_cond]
+   exact contMDiff_finprod (fun i => hc i i.2) (hf.comp_injective Subtype.coe_injective)
+ 
++variable {g : M → G}
++
++theorem ContMDiffWithinAt.pow (hg : ContMDiffWithinAt I' I n g s x) (m : ℕ) :
++    ContMDiffWithinAt I' I n (fun x ↦ g x ^ m) s x :=
+```
+PAST COMMENT (from reviewer):
+Question to fellow reviewers: is that the preferred style to write functions (as opposed to pow composed with g)?
+
+--- candidate 7 (sim=0.720, past_pr=#9775, file=Mathlib/Geometry/Manifold/Algebra/LieGroup.lean) ---
+PAST HUNK:
+```
+@@ -372,3 +375,65 @@ theorem Smooth.div₀ (hf : Smooth I' I f) (hg : Smooth I' I g) (h₀ : ∀ x, g
+   ContMDiff.div₀ hf hg h₀
+ 
+ end Div
++
++/-! ### Differentiability of finite point-wise sums and products
++
++  Finite point-wise products of functions `M → G` into an abelian multiplicative
++  Lie group `G` are differentiable. -/
++section FiniteSumProduct
++open Function
++open scoped BigOperators
++
++-- let `M` be a smooth manifold over `(E,H)`
++-- let `G` be an abelian Lie group modeled on `(E', H')`
++variable {𝕜 : Type*} [NontriviallyNormedField 𝕜]
++  {E : Type*} [NormedAddCommGroup E] [NormedSpace 𝕜 E] {H : Type*} [TopologicalSpace H]
++  {I : ModelWithCorners 𝕜 E H} {M : Type*} [TopologicalSpace M] [ChartedSpace H M]
++  {E' H' : Type*} [NormedAddCommGroup E'] [NormedSpace 𝕜 E'] [TopologicalSpace H']
++  {I' : ModelWithCorners 𝕜 E' H'}
++  {G : Type*} [CommGroup G] [TopologicalSpace G] [ChartedSpace H' G] [LieGroup I' G]
++variable {ι : Type*} {J : Finset ι} {f : ι → M → G} {n : ℕ∞} {s : Set M} {x₀ : M}
++
++@[to_additive]
++theorem ContMDiffWithinAt.prod (h : ∀ i ∈ J, ContMDiffWithinAt I I' n (f i) s x₀) :
++    ContMDiffWithinAt I I' n (fun x ↦ ∏ i in J, f i x) s x₀ := by
++  classical
++  induction' J using Finset.induction_on with i K iK IH
++  · simp [contMDiffWithinAt_const]
++  · simp only [iK, Finset.prod_insert, not_false_iff]
++    exact (h _ (Finset.mem_insert_self i K)).mul (IH fun j hj ↦ h _ <| Finset.mem_insert_of_mem hj)
++
++@[to_additive]
++theorem ContMDiffAt.prod (h : ∀ i ∈ J, ContMDiffAt I I' n (f i) x₀) :
++    ContMDiffAt I I' n (fun x ↦ ∏ i in J, f i x) x₀ :
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+Is there a reason not to put these results together in one file?
+
+--- candidate 8 (sim=0.712, past_pr=#31278, file=Mathlib/Geometry/Manifold/ContMDiff/Basic.lean) ---
+PAST HUNK:
+```
+@@ -209,6 +209,13 @@ theorem contMDiffAt_one [One M'] : ContMDiffAt I I' n (1 : M → M') x :=
+ theorem contMDiffWithinAt_const : ContMDiffWithinAt I I' n (fun _ : M => c) s x :=
+   contMDiffAt_const.contMDiffWithinAt
+ 
++@[simp]
++theorem contMDiffWithinAt_empty : ContMDiffWithinAt I I' n f ∅ x :=
+```
+PAST COMMENT (from reviewer):
+Same, for at least the second one.
+Can you also add `mDifferentiableWithinAt_empty`? I believe I forgot that one. Thank you!
+
+--- candidate 9 (sim=0.710, past_pr=#19296, file=Mathlib/Geometry/Manifold/MFDeriv/Basic.lean) ---
+PAST HUNK:
+```
+@@ -477,36 +477,39 @@ theorem ContMDiff.mdifferentiableAt (hf : ContMDiff I I' n f) (hn : 1 ≤ n) :
+     MDifferentiableAt I I' f x :=
+   hf.contMDiffAt.mdifferentiableAt hn
+ 
++theorem ContMDiff.mdifferentiableWithinAt (hf : ContMDiff I I' n f) (hn : 1 ≤ n) :
+```
+PAST COMMENT (from reviewer):
+Flagging this explicitly: this was simply a missing API lemma, which you added as its smooth counterpart existed?
+
+--- candidate 10 (sim=0.710, past_pr=#33723, file=Mathlib/Analysis/Calculus/ContDiff/Operations.lean) ---
+PAST HUNK:
+```
+@@ -510,9 +510,17 @@ theorem contDiff_smul : ContDiff 𝕜 n fun p : 𝕜 × F => p.1 • p.2 :=
+ set at this point. -/
+ @[fun_prop]
+ theorem ContDiffWithinAt.smul {s : Set E} {f : E → 𝕜} {g : E → F} (hf : ContDiffWithinAt 𝕜 n f s x)
+-    (hg : ContDiffWithinAt 𝕜 n g s x) : ContDiffWithinAt 𝕜 n (fun x => f x • g x) s x :=
++    (hg : ContDiffWithinAt 𝕜 n g s x) : ContDiffWithinAt 𝕜 n (f • g) s x :=
+   contDiff_smul.contDiffWithinAt.comp x (hf.prodMk hg) subset_preimage_univ
+ 
++/-- The scalar multiplication of two `C^n` functions within a set at a point is `C^n` within this
++set at this point. -/
++@[fun_prop]
++theorem ContDiffWithinAt.fun_smul {s : Set E} {f : E → 𝕜} {g : E → F}
++    (hf : ContDiffWithinAt 𝕜 n f s x) (hg : ContDiffWithinAt 𝕜 n g s x) :
++    ContDiffWithinAt 𝕜 n (fun x ↦ f x • g x) s x :=
++  ContDiffWithinAt.smul hf hg
+```
+PAST COMMENT (from reviewer):
+Can this be auto-generated from the non-compositional version by using the `to_fun` decorator? (Edit: Yes, it can)
+
+--- candidate 11 (sim=0.707, past_pr=#10494, file=Mathlib/Tactic/FunProp/Continuous.lean) ---
+PAST HUNK:
+```
+@@ -1,226 +0,0 @@
+-/-
+-Copyright (c) 2024 Tomáš Skřivan All rights reserved.
+-Released under Apache 2.0 license as described in the file LICENSE.
+-Authors: Tomáš Skřivan
+--/
+-import Mathlib.Topology.Constructions
+-import Mathlib.Topology.Algebra.Group.Basic
+-import Mathlib.Topology.Algebra.Field
+-import Mathlib.Topology.Order.Lattice
+-import Mathlib.Analysis.SpecialFunctions.Log.Basic
+-
+-import Mathlib.Tactic.FunProp
+-
+-/-!
+-## `funProp` minimal setup for Continuous(At/On)
+--/
+-
+-section Missing
+-
+-section lambda_rules
+-
+-
+-variable {α : Type*} {β : Type*} {γ : Type*}
+-variable [TopologicalSpace α] [TopologicalSpace β] [TopologicalSpace γ]
+-variable {ι : Type*} {π : ι → Type*} {κ : Type*} [TopologicalSpace α]
+-  [T : ∀ i, TopologicalSpace (π i)] {f : α → ∀ i : ι, π i}
+-
+-theorem continuousAt_id' (y) : ContinuousAt (fun x : α => x) y := continuousAt_id
+-
+-theorem continuousOn_id' (s) : ContinuousOn (fun x : α => x) s := continuousOn_id
+-
+-theorem ContinuousAt.comp' {g : β → γ} {f : α → β} {x : α} (hg : ContinuousAt g (f x))
+-    (hf : ContinuousAt f x) : ContinuousAt (fun x => g (f x)) x := ContinuousAt.comp hg hf
+-
+-theorem ContinuousOn.comp'' {g : β → γ} {f : α → β} {s : Set α} {t : Set β} (hg : ContinuousOn g t)
+-    (hf : ContinuousOn f s) (h : Set.MapsTo f s t) : ContinuousOn (fun x => g (f x)) s :=
+-  ContinuousOn.comp hg hf h
+-
+-theorem continuousOn_apply (i : ι) (s) : ContinuousOn (fun p : ∀ i, π i => p i) s :=
+-  Continuous.continuousOn (continuous_apply i)
+-
+-theorem continuousAt_pi' {f : α → ∀ i, π i} {x : α} (hf : ∀ i, ContinuousAt (fun y => f y i)
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+Is `ContinuousOn.pow` the same lemma that is also tagged earlier?
+
+--- candidate 12 (sim=0.706, past_pr=#10494, file=Mathlib/Tactic/FunProp/Continuous.lean) ---
+PAST HUNK:
+```
+@@ -1,226 +0,0 @@
+-/-
+-Copyright (c) 2024 Tomáš Skřivan All rights reserved.
+-Released under Apache 2.0 license as described in the file LICENSE.
+-Authors: Tomáš Skřivan
+--/
+-import Mathlib.Topology.Constructions
+-import Mathlib.Topology.Algebra.Group.Basic
+-import Mathlib.Topology.Algebra.Field
+-import Mathlib.Topology.Order.Lattice
+-import Mathlib.Analysis.SpecialFunctions.Log.Basic
+-
+-import Mathlib.Tactic.FunProp
+-
+-/-!
+-## `funProp` minimal setup for Continuous(At/On)
+--/
+-
+-section Missing
+-
+-section lambda_rules
+-
+-
+-variable {α : Type*} {β : Type*} {γ : Type*}
+-variable [TopologicalSpace α] [TopologicalSpace β] [TopologicalSpace γ]
+-variable {ι : Type*} {π : ι → Type*} {κ : Type*} [TopologicalSpace α]
+-  [T : ∀ i, TopologicalSpace (π i)] {f : α → ∀ i : ι, π i}
+-
+-theorem continuousAt_id' (y) : ContinuousAt (fun x : α => x) y := continuousAt_id
+-
+-theorem continuousOn_id' (s) : ContinuousOn (fun x : α => x) s := continuousOn_id
+-
+-theorem ContinuousAt.comp' {g : β → γ} {f : α → β} {x : α} (hg : ContinuousAt g (f x))
+-    (hf : ContinuousAt f x) : ContinuousAt (fun x => g (f x)) x := ContinuousAt.comp hg hf
+-
+-theorem ContinuousOn.comp'' {g : β → γ} {f : α → β} {s : Set α} {t : Set β} (hg : ContinuousOn g t)
+-    (hf : ContinuousOn f s) (h : Set.MapsTo f s t) : ContinuousOn (fun x => g (f x)) s :=
+-  ContinuousOn.comp hg hf h
+-
+-theorem continuousOn_apply (i : ι) (s) : ContinuousOn (fun p : ∀ i, π i => p i) s :=
+-  Continuous.continuousOn (continuous_apply i)
+-
+-theorem continuousAt_pi' {f : α → ∀ i, π i} {x : α} (hf : ∀ i, ContinuousAt (fun y => f y i)
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+Is `ContinuousAt.pow` the same lemma that is also tagged earlier?
+
+--- candidate 13 (sim=0.703, past_pr=#13951, file=Mathlib/Topology/Algebra/Group/Basic.lean) ---
+PAST HUNK:
+```
+@@ -395,6 +395,23 @@ theorem inv_closure : ∀ s : Set G, (closure s)⁻¹ = closure s⁻¹ :=
+ #align inv_closure inv_closure
+ #align neg_closure neg_closure
+ 
++variable [TopologicalSpace α] {f : α → G} {s : Set α} {x : α}
++
++@[to_additive (attr := simp)]
++lemma continuous_inv_iff : Continuous f⁻¹ ↔ Continuous f := (Homeomorph.inv G).comp_continuous_iff
++
++@[to_additive (attr := simp)]
++lemma continuousAt_inv_iff : ContinuousAt f⁻¹ x ↔ ContinuousAt f x :=
++  (Homeomorph.inv G).comp_continuousAt_iff _ _
++
++@[to_additive (attr := simp)]
++lemma continuousOn_inv_iff : ContinuousOn f⁻¹ s ↔ ContinuousOn f s :=
++  (Homeomorph.inv G).comp_continuousOn_iff _ _
++
++alias ⟨Continuous.of_inv, _⟩ := continuous_inv_iff
++alias ⟨ContinuousAt.of_inv, _⟩ := continuousAt_inv_iff
++alias ⟨ContinuousOn.of_inv, _⟩ := continuousOn_inv_iff
+```
+PAST COMMENT (from reviewer):
+to_additive attributes?
+
+--- candidate 14 (sim=0.701, past_pr=#20816, file=Mathlib/Analysis/Calculus/Deriv/Inv.lean) ---
+PAST HUNK:
+```
+@@ -106,10 +106,12 @@ theorem HasDerivAt.inv (hc : HasDerivAt c c' x) (hx : c x ≠ 0) :
+   rw [← hasDerivWithinAt_univ] at *
+   exact hc.inv hx
+ 
+-theorem derivWithin_inv' (hc : DifferentiableWithinAt 𝕜 c s x) (hx : c x ≠ 0)
+-    (hxs : UniqueDiffWithinAt 𝕜 s x) :
+-    derivWithin (fun x => (c x)⁻¹) s x = -derivWithin c s x / c x ^ 2 :=
+-  (hc.hasDerivWithinAt.inv hx).derivWithin hxs
++theorem derivWithin_inv' (hc : DifferentiableWithinAt 𝕜 c s x) (hx : c x ≠ 0) :
++    derivWithin (fun x => (c x)⁻¹) s x = -derivWithin c s x / c x ^ 2 := by
++  rcases uniqueDiffWithinAt_or_nhdsWithin_eq_bot s x with hxs | hxs
++  · exact (hc.hasDerivWithinAt.inv hx).derivWithin hxs
++  · simp [derivWithin_zero_of_isolated hxs]
++
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+
+--- candidate 15 (sim=0.700, past_pr=#13234, file=Mathlib/Geometry/Manifold/ContMDiffMFDeriv.lean) ---
+PAST HUNK:
+```
+@@ -135,11 +135,11 @@ protected theorem ContMDiffAt.mfderiv {x₀ : N} (f : N → M → M') (g : N →
+       rintro x ⟨hx, h2x⟩
+       simp_rw [writtenInExtChartAt, Function.comp_apply]
+       rw [(extChartAt I (g x₂)).left_inv hx, (extChartAt I' (f x₂ (g x₂))).left_inv h2x]
+-    refine' Filter.EventuallyEq.fderivWithin_eq_nhds _
+-    refine' eventually_of_mem (inter_mem _ _) this
++    refine Filter.EventuallyEq.fderivWithin_eq_nhds ?_
++    refine eventually_of_mem (inter_mem ?_ ?_) this
+     · exact extChartAt_preimage_mem_nhds' _ hx₂ (extChartAt_source_mem_nhds I (g x₂))
+-    refine' extChartAt_preimage_mem_nhds' _ hx₂ _
+-    exact h2x₂.continuousAt.preimage_mem_nhds (extChartAt_source_mem_nhds _ _)
++    · refine extChartAt_preimage_mem_nhds' _ hx₂ ?_
++      exact h2x₂.continuousAt.preimage_mem_nhds (extChartAt_source_mem_nhds _ _)
+```
+PAST COMMENT (from reviewer):
+Just flagging an extra `·`, I like it, though!
+
+--- candidate 16 (sim=0.698, past_pr=#35731, file=Mathlib/Geometry/Manifold/ContMDiff/Basic.lean) ---
+PAST HUNK:
+```
+@@ -384,10 +384,7 @@ theorem contMDiff_inclusion {n : WithTop ℕ∞} {U V : Opens M} (h : U ≤ V) :
+     ContMDiff I I n (Opens.inclusion h : U → V) := by
+   rintro ⟨x, hx : x ∈ U⟩
+   apply (contDiffWithinAt_localInvariantProp n).liftProp_inclusion
+-  intro y
+-  dsimp only [ContDiffWithinAtProp, id_comp, preimage_univ]
+-  rw [Set.univ_inter]
+-  exact contDiffWithinAt_id.congr I.rightInvOn (congr_arg I (I.left_inv y))
++  exact (contDiffWithinAtProp_id ·)
+```
+PAST COMMENT (from reviewer):
+Can this be merged with `apply`?
+
+--- candidate 17 (sim=0.698, past_pr=#24573, file=Mathlib/Analysis/Complex/UpperHalfPlane/Manifold.lean) ---
+PAST HUNK:
+```
+@@ -70,4 +72,51 @@ lemma mdifferentiable_iff {f : ℍ → ℂ} :
+     fun h ⟨z, hz⟩ ↦ mdifferentiableAt_iff.mpr <| (h z hz).differentiableAt
+       <| (Complex.continuous_im.isOpen_preimage _ isOpen_Ioi).mem_nhds hz⟩
+ 
++lemma contMDiff_num (g : GL(2, ℝ)⁺) :
++    ContMDiff 𝓘(ℂ) 𝓘(ℂ) ω (num g) :=
++  (contMDiff_const.smul contMDiff_coe).add contMDiff_const
++
++lemma contMDiff_denom (g : GL(2, ℝ)⁺) :
++    ContMDiff 𝓘(ℂ) 𝓘(ℂ) ω (denom g) :=
++  (contMDiff_const.smul contMDiff_coe).add contMDiff_const
++
++lemma contMDiff_denom_zpow (g : GL(2, ℝ)⁺) (k : ℤ) :
++    ContMDiff 𝓘(ℂ) 𝓘(ℂ) ω (denom g · ^ k) := fun τ ↦ by
++  have : AnalyticAt ℂ (· ^ k) (denom g τ) := (differentiableOn_zpow k _ (by tauto)).analyticOnNhd
++    isOpen_compl_singleton _ (denom_ne_zero g τ)
++  exact (this.contDiffAt (n := ω)).contMDiffAt.comp τ (contMDiff_denom g τ)
++
++lemma contMDiff_inv_denom (g : GL(2, ℝ)⁺) :
++    ContMDiff 𝓘(ℂ) 𝓘(ℂ) ω (fun τ ↦ (denom g τ)⁻¹) := by
++  simpa using contMDiff_denom_zpow g (-1)
++
++/-- Each element of `GL(2, ℝ)⁺` defines a map of analytic manifolds `ℍ → ℍ`. -/
++lemma contMDiff_smul (g : GL(2, ℝ)⁺) :
++    ContMDiff 𝓘(ℂ) 𝓘(ℂ) ω (fun τ : ℍ ↦ g • τ) := fun τ ↦ by
++  refine contMDiffAt_iff_target.mpr ⟨(continuous_const_smul g).continuousAt, ?_⟩
++  simpa [smulAux, Function.comp_def] using (contMDiff_num g τ).mul (contMDiff_inv_denom g τ)
++
++lemma mdifferentiable_num (g : GL(2, ℝ)⁺) :
++    MDifferentiable 𝓘(ℂ) 𝓘(ℂ) (num g) :=
++  (contMDiff_num g).mdifferentiable le_top
++
++lemma mdifferentiable_denom (g : GL(2, ℝ)⁺) :
++    MDifferentiable 𝓘(ℂ) 𝓘(ℂ) (denom g) :=
++  (contMDiff_denom 
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+Why not deduce it from the contMDiff version?
+
+--- candidate 18 (sim=0.692, past_pr=#28674, file=Mathlib/Geometry/Manifold/ContMDiff/Basic.lean) ---
+PAST HUNK:
+```
+@@ -158,6 +158,18 @@ theorem contMDiffWithinAt_id : ContMDiffWithinAt I I n (id : M → M) s x :=
+ 
+ end id
+ 
++/-! ### Iterated functions -/
++
++section Iterate
++
++/-- Iterated `ContMDiff` functions are `ContMDiff`. -/
++theorem ContMDiff.iterate {f : M → M} (fa : ContMDiff I I n f) (k : ℕ) :
+```
+PAST COMMENT (from reviewer):
+A more standard name is
+```suggestion
+theorem ContMDiff.iterate {f : M → M} (hf : ContMDiff I I n f) (k : ℕ) :
+```
+
+--- candidate 19 (sim=0.691, past_pr=#8397, file=Mathlib/Geometry/Manifold/ContMDiff.lean) ---
+PAST HUNK:
+```
+@@ -2030,6 +2030,83 @@ nonrec theorem Smooth.smul {f : M → 𝕜} {g : M → V} (hf : Smooth I 𝓘(
+   hf.smul hg
+ #align smooth.smul Smooth.smul
+ 
++/-! ### Smoothness of an open embedding and its inverse -/
++
++section
++
++variable (I)
++  [Nonempty M] {e : M → H} (h : OpenEmbedding e)
++  [Nonempty M'] {e' : M' → H'} (h' : OpenEmbedding e')
++  {n : WithTop ℕ}
++
++lemma contMDiff_openEmbedding :
++    @ContMDiff _ _ _ _ _ _ _ I _ _ h.singletonChartedSpace _ _ _ _ _ I _ _ _ n e := by
++  haveI := h.singleton_smoothManifoldWithCorners I
++  rw [@contMDiff_iff _ _ _ _ _ _ _ _ _ _ h.singletonChartedSpace]
++  use h.continuous
++  intros x y -- show the function is actually the identity on the range of I ∘ e
++  apply contDiffOn_id.congr
++  intros z hz -- factorise into the chart (=e) and the model (=id)
++  rw [extChartAt_coe, @extChartAt_coe_symm _ _ _ _ _ _ _ _ _ _ _ h.singletonChartedSpace,
++    chartAt_self_eq]
++  repeat rw [Function.comp_apply]
++  rw [LocalHomeomorph.refl_apply, id.def, LocalHomeomorph.singletonChartedSpace_chartAt_eq,
++    h.toLocalHomeomorph_right_inv]
++  · rw [id.def, I.right_inv]
++    apply Set.mem_of_subset_of_mem _ hz.1
++    exact @extChartAt_target_subset_range _ _ _ _ _ _ _ _ _ I x h.singletonChartedSpace
++  · rw [ModelWithCorners.symm] -- show hz implies z is in range of I ∘ e
++    have := hz.1
++    rw [@extChartAt_target _ _ _ _ _ _ _ _ _ _ h.singletonChartedSpace] at this
++    have := this.1
++    rw [Set.mem_preimage, LocalHomeomorph.singletonChartedSpace_chartAt_eq,
++      h.toLocalHomeomorph_target] at this
++    exact this
++
++variable {I}
++lemma c
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+`open`ing Set might also be useful here (I count 16 overall occurences in this file).
+
+--- candidate 20 (sim=0.690, past_pr=#8397, file=Mathlib/Geometry/Manifold/ContMDiff.lean) ---
+PAST HUNK:
+```
+@@ -2030,6 +2030,83 @@ nonrec theorem Smooth.smul {f : M → 𝕜} {g : M → V} (hf : Smooth I 𝓘(
+   hf.smul hg
+ #align smooth.smul Smooth.smul
+ 
++/-! ### Smoothness of an open embedding and its inverse -/
++
++section
++
++variable (I)
++  [Nonempty M] {e : M → H} (h : OpenEmbedding e)
++  [Nonempty M'] {e' : M' → H'} (h' : OpenEmbedding e')
++  {n : WithTop ℕ}
++
++lemma contMDiff_openEmbedding :
++    @ContMDiff _ _ _ _ _ _ _ I _ _ h.singletonChartedSpace _ _ _ _ _ I _ _ _ n e := by
++  haveI := h.singleton_smoothManifoldWithCorners I
++  rw [@contMDiff_iff _ _ _ _ _ _ _ _ _ _ h.singletonChartedSpace]
++  use h.continuous
++  intros x y -- show the function is actually the identity on the range of I ∘ e
++  apply contDiffOn_id.congr
++  intros z hz -- factorise into the chart (=e) and the model (=id)
++  rw [extChartAt_coe, @extChartAt_coe_symm _ _ _ _ _ _ _ _ _ _ _ h.singletonChartedSpace,
++    chartAt_self_eq]
++  repeat rw [Function.comp_apply]
++  rw [LocalHomeomorph.refl_apply, id.def, LocalHomeomorph.singletonChartedSpace_chartAt_eq,
++    h.toLocalHomeomorph_right_inv]
++  · rw [id.def, I.right_inv]
++    apply Set.mem_of_subset_of_mem _ hz.1
++    exact @extChartAt_target_subset_range _ _ _ _ _ _ _ _ _ I x h.singletonChartedSpace
++  · rw [ModelWithCorners.symm] -- show hz implies z is in range of I ∘ e
++    have := hz.1
++    rw [@extChartAt_target _ _ _ _ _ _ _ _ _ _ h.singletonChartedSpace] at this
++    have := this.1
++    rw [Set.mem_preimage, LocalHomeomorph.singletonChartedSpace_chartAt_eq,
++      h.toLocalHomeomorph_target] at this
++    exact this
++
++variable {I}
++lemma c
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+Please also use a focusing dot for the second subgoal, per the [style guide](https://leanprover-community.github.io/contribute/style.html). (I don't know exactly which parts changed in mathlib4.)
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "summary": "Use pointwise function notation (f⁻¹, f / g) instead of lambdas, and if keeping lambdas prefer ↦ over =>.",
+  "confidence": "high",
+  "strong_matches": [
+    {
+      "past_pr": 33723,
+      "past_file": "Mathlib/Analysis/Calculus/ContDiff/Operations.lean",
+      "past_comment_excerpt": "… : ContDiffWithinAt 𝕜 n (f • g) s x :=",
+      "applies_because": "The new lemmas state CMDiff properties for fun x => (f x)⁻¹ and fun x => f x / g x; past review preferred using pointwise operations on functions instead of explicit lambdas.",
+      "suggested_adaptation": "State these as CMDiff… f⁻¹ and CMDiff… (f / g) (and analogously within/at/on), avoiding fun x => ….",
+      "supporting_past_prs": [
+        33723
+      ]
+    },
+    {
+      "past_pr": 29459,
+      "past_file": "Mathlib/Geometry/Manifold/Algebra/Monoid.lean",
+      "past_comment_excerpt": "Please use \\mapsto, thanks!",
+      "applies_because": "The new hunk uses lambdas with =>; past review asked to prefer the ↦ arrow in such lambda expressions.",
+      "suggested_adaptation": "If you keep the lambda form anywhere, change fun x => … to fun x ↦ ….",
+      "supporting_past_prs": [
+        29459
+      ]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "You already have @[to_additive] on these lemmas; no action needed.",
+      "supporting_past_prs": [
+        13951
+      ]
+    }
+  ]
+}

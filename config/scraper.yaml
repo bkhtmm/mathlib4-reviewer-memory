@@ -1,0 +1,41 @@
+repo:
+  owner: leanprover-community
+  name: mathlib4
+
+api:
+  base_url: https://api.github.com
+  graphql_url: https://api.github.com/graphql
+  timeout_seconds: 45
+  max_retries: 10
+  backoff_seconds: 2.0
+  user_agent: mathlib4-pr-data-scraper
+
+pagination:
+  graphql_page_size: 25
+  rest_page_size: 100
+  max_pages_per_entity: 1000000
+
+sync:
+  requery_recent_days: 14
+
+extraction:
+  backfill_states:
+    - CLOSED
+  sync_states:
+    - CLOSED
+  normalize_flush_every_prs: 25
+  progress_every_prs: 5
+
+paths:
+  raw_root: data/raw/github
+  curated_root: data/curated/mathlib4
+  exports_root: data/exports
+  state_file: data/state/scraper_state.json
+  run_logs_dir: data/state/runs
+
+filters:
+  infra_bot_patterns:
+    - github-actions
+    - mathlib-bors
+    - bors
+    - leanprover-radar

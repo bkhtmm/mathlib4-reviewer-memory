@@ -1,0 +1,474 @@
+====================================================================================================
+CASE D  PR #36621  (open-pr, v2 prompt)
+file: Mathlib/Topology/Category/TopPair.lean  line: 15.0
+reviewer: @vlad902  on 2026-03-15T11:40:51Z
+advice_kind: module-structure / file header
+prompt_tokens: 5502  completion_tokens: 2193
+HUMAN reviewer (ground truth):
+  > `#min_imports` gives a much smaller set of imports you could replace this with. Also you are not using the new module structure, look at another file and copy its header structure (e.g. add `module` at the top, these will be `public` imports, and add a `@[expose] public section` below.)
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Compared to a naive matcher you must do TWO extra things, because the answer is often only derivable by combining evidence:
+
+A. STRUCTURAL PATTERN EXTRACTION. Past comments often contain `suggestion` code blocks (```suggestion ... ```) or inline code-shape rewrites. These suggested code snippets ARE concrete advice, not just commentary. Treat them as first-class evidence about preferred Lean/mathlib idioms (e.g.: term-mode constructor `:= ⟨_, _, _⟩` vs `by use _; exact _`, `instance` vs `theorem` for class-membership statements, `refine ⟨..., ?_⟩` vs `use ...; constructor`, `@[simp]` / `@[to_additive]` attributes, naming conventions, docstring phrasing, etc.).
+
+B. CROSS-CANDIDATE SYNTHESIS. The applicable advice for the new hunk may require combining evidence from multiple candidates. Example: candidate X's context tells you that an identifier in the new hunk is a `class`; candidate Y shows the term-mode `instance ... := ⟨...⟩` template for proving class membership. Together they support the conclusion: "the new theorem proving class membership should be rewritten as an `instance` with a term-mode constructor". List supporting PRs for any synthesised finding.
+
+Reasoning protocol (do this internally before producing JSON):
+
+  1. STRUCTURAL FEATURES OF THE NEW HUNK. Identify each: tactic-mode vs term-mode? Uses `by use ...; exact ...`? Uses `use ...; constructor`? Declares an `instance` / a `theorem` / a `lemma` / a `def` / a `class`? Has `@[simp]`, `@[to_additive]`, `@[deprecated]`? Uses anonymous functions `fun x =>` vs `↦`? Has a docstring `/-- ... -/` of any specific shape?
+
+  2. PATTERN INVENTORY FROM CANDIDATES. For each candidate, note any concrete pattern shown in its suggested-code or comment (term-mode template, attribute recommendation, naming convention, idiomatic rewrite, terminology preference, etc.). Also note which candidates' past hunks define or use identifiers that appear in the new hunk (these are clues about whether something is a class, an instance, an alias, etc.).
+
+  3. APPLICABILITY CHECK. For each pattern from step 2, ask: does the new hunk's structure (step 1) instantiate the same shape that this pattern was applied to? If yes, that's a STRONG match. If two patterns combine to support a finding, list both supporting PRs.
+
+  4. STRICT REFUSAL. If after this analysis no candidate (alone or in combination) gives concrete, well-grounded advice for the specific code in the new hunk, output an empty `strong_matches` list. Do not paper over with generic advice. Generic style observations belong in `weak_observations`, clearly marked. Do not invent advice that isn't traceable to specific past PRs in the retrieval pool.
+
+Confidence:
+  - "high"  — at least one strong match is grounded in concrete suggested-code or explicit prose from a candidate, and the new hunk clearly fits the same shape
+  - "medium" — at least one strong match exists but requires synthesis or adaptation; OR a single candidate gives related but not identical advice
+  - "low"   — only loose stylistic patterns; nothing actionable
+  - "none"  — retrieved pool is unrelated; do not press an answer
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Be precise about which PR(s) support each finding via supporting_past_prs.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #36621 (file: Mathlib/Topology/Category/TopPair.lean):
+```
+@@ -0,0 +1,163 @@
++/-
++Copyright (c) 2026 Jakob Scharmberg. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Jakob Scharmberg
++-/
++import Mathlib.Topology.Defs.Basic
++import Mathlib.Topology.Category.TopCat.Basic
++import Mathlib.Topology.Defs.Induced
++import Mathlib.CategoryTheory.Category.Basic
++import Mathlib.CategoryTheory.CommSq
++import Mathlib.Topology.Homotopy.Basic
++import Mathlib.Topology.Category.TopCat.Limits.Basic
++import Mathlib.CategoryTheory.Limits.Shapes.BinaryProducts
++import Mathlib.Topology.UnitInterval
++import Mathlib.Topology.Category.TopCat.Limits.Basic
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.728, past_pr=#15417, file=Mathlib/AlgebraicTopology/TopologicalSimplex.lean) ---
+PAST HUNK:
+```
+@@ -82,6 +83,7 @@ def toTop : SimplexCategory ⥤ TopCat where
+     funext i
+     dsimp
+     simp only [comp_apply, TopCat.coe_of_of, ContinuousMap.coe_mk, coe_toTopMap]
++    classical
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+
+--- candidate 2 (sim=0.725, past_pr=#3802, file=Mathlib/Topology/Category/Top/Limits/Pullbacks.lean) ---
+PAST HUNK:
+```
+@@ -370,43 +390,147 @@ theorem pullback_fst_image_snd_preimage (f : X ⟶ Z) (g : Y ⟶ Z) (U : Set Y)
+   · rintro ⟨y, hy, rfl⟩
+     exact
+       ⟨(pullback.snd : pullback f g ⟶ _) y, hy,
+-        (concrete_category.congr_hom pullback.condition y).symm⟩
++        (ConcreteCategory.congr_hom pullback.condition y).symm⟩
+   · rintro ⟨y, hy, eq⟩
+-    exact ⟨(TopCat.pullbackIsoProdSubtype f g).inv ⟨⟨_, _⟩, Eq.symm⟩, by simpa, by simp⟩
++    exact ⟨(TopCat.pullbackIsoProdSubtype f g).inv ⟨⟨_, _⟩, eq.symm⟩, by simpa, by simp⟩
+ #align Top.pullback_fst_image_snd_preimage TopCat.pullback_fst_image_snd_preimage
+ 
+ end Pullback
+ 
+-theorem coinduced_of_isColimit {F : J ⥤ TopCat.{max v u}} (c : Cocone F) (hc : IsColimit c) :
+-    c.pt.TopologicalSpace = ⨆ j, (F.obj j).TopologicalSpace.coinduced (c.ι.app j) := by
+-  let homeo := homeo_of_iso (hc.cocone_point_unique_up_to_iso (colimit_cocone_is_colimit F))
++/-- The binary coproduct cofan in `TopCat`. -/
++protected def binaryCofan (X Y : TopCat.{u}) : BinaryCofan X Y :=
++  BinaryCofan.mk (⟨Sum.inl, by continuity⟩ : X ⟶ TopCat.of (Sum X Y)) ⟨Sum.inr, by continuity⟩
++#align Top.binary_cofan TopCat.binaryCofan
++
++/-- The constructed binary coproduct cofan in `TopCat` is the coproduct. -/
+```
+PAST COMMENT (from reviewer):
+Are the next 100 lines new? Or did this move in ml3 during the porting of this file? I don't see it when comparing to the mathport output that this port started from...
+
+--- candidate 3 (sim=0.722, past_pr=#15417, file=Mathlib/AlgebraicTopology/TopologicalSimplex.lean) ---
+PAST HUNK:
+```
+@@ -73,6 +73,7 @@ def toTop : SimplexCategory ⥤ TopCat where
+     ext f
+     apply toTopObj.ext
+     funext i
++    classical
+```
+PAST COMMENT (from reviewer):
+I don't understand: in the current version, `classical` is still there, and can be removed. Did you forget to push?
+
+--- candidate 4 (sim=0.713, past_pr=#4593, file=Mathlib/Topology/Order/FrameAdjunction.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,224 @@
++/-
++Copyright (c) 2023 Anne Baanen, Sam v. Gool, Leo Mayer, Brendan S. Murphy. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Anne Baanen, Sam v. Gool, Leo Mayer, Brendan S. Murphy
++-/
++import Mathlib.Order.CompleteBooleanAlgebra
++import Mathlib.Topology.Basic
++import Mathlib.Topology.Bases
++import Mathlib.Topology.Sets.Opens
++import Mathlib.CategoryTheory.Adjunction.Basic
++import Mathlib.CategoryTheory.Opposites
++import Mathlib.Topology.Category.TopCat.Basic
++import Mathlib.Order.Category.FrmCat
+```
+PAST COMMENT (from reviewer):
+Looks like we only need the last import, and it provides the rest transitively.
+```suggestion
+import Mathlib.Order.Category.FrmCat
+```
+
+--- candidate 5 (sim=0.711, past_pr=#31943, file=Mathlib/AlgebraicTopology/FundamentalGroupoid/Product.lean) ---
+PAST HUNK:
+```
+@@ -181,7 +181,7 @@ def prodIso : CategoryTheory.Grpd.of (πₓ A × πₓ B) ≅ πₓ (TopCat.of (
+     have : Path.Homotopic.projLeft ((prodToProdTop A B).map (f₀, f₁)) = f₀ ∧
+       Path.Homotopic.projRight ((prodToProdTop A B).map (f₀, f₁)) = f₁ :=
+         And.intro (Path.Homotopic.projLeft_prod f₀ f₁) (Path.Homotopic.projRight_prod f₀ f₁)
+-    simpa
++    aesop_cat
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    cat_disch
+```
+
+--- candidate 6 (sim=0.710, past_pr=#24777, file=Mathlib/CategoryTheory/MorphismProperty/TransfiniteComposition.lean) ---
+PAST HUNK:
+```
+@@ -3,9 +3,10 @@ Copyright (c) 2024 Joël Riou. All rights reserved.
+ Released under Apache 2.0 license as described in the file LICENSE.
+ Authors: Joël Riou
+ -/
+-import Mathlib.CategoryTheory.Limits.Constructions.EventuallyConstant
+ import Mathlib.CategoryTheory.MorphismProperty.Composition
++import Mathlib.CategoryTheory.MorphismProperty.Limits
+ import Mathlib.CategoryTheory.Limits.Shapes.Preorder.TransfiniteCompositionOfShape
++import Mathlib.CategoryTheory.Limits.Connected
+ import Mathlib.Order.Shrink
+ import Mathlib.Order.Interval.Set.SuccOrder
+ import Mathlib.Logic.UnivLE
+```
+PAST COMMENT (from reviewer):
+```suggestion
+import Mathlib.CategoryTheory.Limits.Connected
+import Mathlib.CategoryTheory.Limits.Shapes.Preorder.TransfiniteCompositionOfShape
+import Mathlib.CategoryTheory.MorphismProperty.Limits
+import Mathlib.Order.Interval.Set.SuccOrder
+import Mathlib.Order.Shrink
+```
+
+--- candidate 7 (sim=0.707, past_pr=#11727, file=Mathlib/Condensed/TopComparison.lean) ---
+PAST HUNK:
+```
+@@ -30,8 +30,8 @@ universe w w' v u
+ 
+ open CategoryTheory Opposite Limits regularCoverage ContinuousMap
+ 
+-variable {C : Type u} [Category.{v} C] (G : C ⥤ TopCat.{v})
+```
+PAST COMMENT (from reviewer):
+I don't think this is necessarily more general; omitting `.{}` means that a universe metavariable is used instead, which could potentially be populated with something *less* general. Could you keep the explicit universe names here (perhaps using more of them) to ensure the generality is what you intend?
+
+--- candidate 8 (sim=0.707, past_pr=#17142, file=Mathlib/Geometry/Manifold/ChartedSpace.lean) ---
+PAST HUNK:
+```
+@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
+ Authors: Sébastien Gouëzel
+ -/
+ import Mathlib.Topology.PartialHomeomorph
++import Mathlib.Topology.Connected.PathConnected
+```
+PAST COMMENT (from reviewer):
+Pointing out for later reviewers: this is where the import increase is coming from.
+
+--- candidate 9 (sim=0.705, past_pr=#2508, file=Mathlib/Topology/Order/ScottTopology.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,439 @@
++/-
++Copyright (c) 2023 Christopher Hoskin. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Christopher Hoskin
++-/
++
++import Mathlib.Logic.Equiv.Defs
++import Mathlib.Order.Directed
++import Mathlib.Order.UpperLower.Basic
++import Mathlib.Topology.Basic
++import Mathlib.Topology.ContinuousFunction.Basic
++import Mathlib.Topology.Order
++import Mathlib.Topology.Order.Lattice
++import Mathlib.Topology.Order.UpperLowerSetTopology
++import Mathlib.Topology.Order.LowerUpperTopology
+```
+PAST COMMENT (from reviewer):
+Can you trim down the imports? Only a few are actually needed.
+
+--- candidate 10 (sim=0.701, past_pr=#4076, file=Mathlib/Topology/Category/Top/Limits/Konig.lean) ---
+PAST HUNK:
+```
+@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
+ Authors: Kyle Miller
+ 
+ ! This file was ported from Lean 3 source module topology.category.Top.limits.konig
+-! leanprover-community/mathlib commit 8195826f5c428fc283510bc67303dd4472d78498
++! leanprover-community/mathlib commit 178a32653e369dce2da68dc6b2694e385d484ef1
+```
+PAST COMMENT (from reviewer):
+Same comment here. I think these two files should be in a separate PR to this one, as the porting story is rather more clouded, and the dashboard has nothing helpful to show.
+
+--- candidate 11 (sim=0.699, past_pr=#2145, file=test/Continuity.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,22 @@
++import Mathlib.Topology.Basic
+```
+PAST COMMENT (from reviewer):
+I think it's worth a note in a comment that this is not a port of https://github.com/leanprover-community/mathlib/blob/master/test/continuity.lean (yet)
+
+--- candidate 12 (sim=0.695, past_pr=#22827, file=Mathlib/Topology/Constructions/SumProd.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,987 @@
++/-
++Copyright (c) 2017 Johannes Hölzl. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Johannes Hölzl, Mario Carneiro, Patrick Massot
++-/
++import Mathlib.Topology.Homeomorph.Defs
++import Mathlib.Topology.Maps.Basic
++
++/-!
++# Direct sums and products of topological spaces
+```
+PAST COMMENT (from reviewer):
+```suggestion
+# Disjoint unions and products of topological spaces
+```
+
+--- candidate 13 (sim=0.694, past_pr=#13170, file=Mathlib/Topology/Category/LightProfinite/IsLight.lean) ---
+PAST HUNK:
+```
+@@ -34,6 +34,8 @@ universe u
+ 
+ open CategoryTheory Limits FintypeCat Opposite TopologicalSpace
+ 
++attribute [local instance] ConcreteCategory.instFunLike -- TODO remove this?
+```
+PAST COMMENT (from reviewer):
+```suggestion
+-- This was a global instance prior to #13170. We may experiment with removing it.
+attribute [local instance] ConcreteCategory.instFunLike
+```
+
+--- candidate 14 (sim=0.694, past_pr=#13170, file=Mathlib/Topology/Category/TopCat/Limits/Products.lean) ---
+PAST HUNK:
+```
+@@ -327,10 +331,10 @@ theorem binaryCofan_isColimit_iff {X Y : TopCat} (c : BinaryCofan X Y) :
+         (binaryCofanIsColimit X Y)).symm.openEmbedding.comp openEmbedding_inl,
+           (homeoOfIso <| h.coconePointUniqueUpToIso
+             (binaryCofanIsColimit X Y)).symm.openEmbedding.comp openEmbedding_inr, ?_⟩
+-      erw [Set.range_comp, ← eq_compl_iff_isCompl, coe_comp, coe_comp, Set.range_comp _ Sum.inr,
++      erw [Set.range_comp, ← eq_compl_iff_isCompl, Set.range_comp _ Sum.inr,
+         ← Set.image_compl_eq (homeoOfIso <| h.coconePointUniqueUpToIso
+             (binaryCofanIsColimit X Y)).symm.bijective, Set.compl_range_inr, Set.image_comp]
+-      aesop
++           -- now `erw` after #13170
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+
+--- candidate 15 (sim=0.693, past_pr=#2110, file=Mathlib/Topology/Constructions.lean) ---
+PAST HUNK:
+```
+@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
+ Authors: Johannes Hölzl, Mario Carneiro, Patrick Massot
+ 
+ ! This file was ported from Lean 3 source module topology.constructions
+-! leanprover-community/mathlib commit bcfa726826abd57587355b4b5b7e78ad6527b7e4
++! leanprover-community/mathlib commit dc6c365e751e34d100e80fe6e314c3c3e0fd2988
+```
+PAST COMMENT (from reviewer):
+In future, always check the port status page for a forward-port; if there is another PR that changes the file before yours, then mark your PR as dependent on that one.
+
+I intend to build a bot that pastes these links automatically
+
+--- candidate 16 (sim=0.693, past_pr=#2110, file=Mathlib/Topology/Constructions.lean) ---
+PAST HUNK:
+```
+@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
+ Authors: Johannes Hölzl, Mario Carneiro, Patrick Massot
+ 
+ ! This file was ported from Lean 3 source module topology.constructions
+-! leanprover-community/mathlib commit bcfa726826abd57587355b4b5b7e78ad6527b7e4
++! leanprover-community/mathlib commit dc6c365e751e34d100e80fe6e314c3c3e0fd2988
+```
+PAST COMMENT (from reviewer):
+Namely, this incorrectly marks this file as up to date, but did not forward-port all the necessary changes
+
+--- candidate 17 (sim=0.692, past_pr=#26446, file=Mathlib/Topology/Category/CompHaus/Basic.lean) ---
+PAST HUNK:
+```
+@@ -170,17 +170,22 @@ def limitCone {J : Type v} [SmallCategory J] (F : J ⥤ CompHaus.{max v u}) : Li
+ def limitConeIsLimit {J : Type v} [SmallCategory J] (F : J ⥤ CompHaus.{max v u}) :
+     Limits.IsLimit.{v} (limitCone.{v,u} F) :=
+   letI FF : J ⥤ TopCat := F ⋙ compHausToTop
+-  { lift := fun S => (TopCat.limitConeIsLimit FF).lift (compHausToTop.mapCone S)
+-    fac := fun S => (TopCat.limitConeIsLimit FF).fac (compHausToTop.mapCone S)
+-    uniq := fun S => (TopCat.limitConeIsLimit FF).uniq (compHausToTop.mapCone S) }
++  { lift := fun S => InducedCategory.homMk
++      ((TopCat.limitConeIsLimit FF).lift (compHausToTop.mapCone S))
++    fac := fun S j => by aesop
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+
+--- candidate 18 (sim=0.691, past_pr=#11334, file=Mathlib/Topology/Instances/AddCircle.lean) ---
+PAST HUNK:
+```
+@@ -11,6 +11,7 @@ import Mathlib.Algebra.Order.Floor
+ import Mathlib.Algebra.Order.ToIntervalMod
+ import Mathlib.Topology.Instances.Real
+ import Mathlib.Topology.Connected.PathConnected
++import Mathlib.Topology.IsLocalHomeomorph
+```
+PAST COMMENT (from reviewer):
+can you run `#minimize_imports` on this file? I think there is some redundancy here
+
+--- candidate 19 (sim=0.689, past_pr=#22278, file=Mathlib/CategoryTheory/Sums/Basic.lean) ---
+PAST HUNK:
+```
+@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
+ Authors: Kim Morrison, Robin Carlier
+ -/
+ import Mathlib.CategoryTheory.Equivalence
++import Mathlib.CategoryTheory.Products.Basic
+```
+PAST COMMENT (from reviewer):
+The new code should probably go in a separate file `CategoryTheory.Sums.Products`.
+
+--- candidate 20 (sim=0.689, past_pr=#26446, file=Mathlib/Topology/Category/CompHaus/Basic.lean) ---
+PAST HUNK:
+```
+@@ -170,17 +170,22 @@ def limitCone {J : Type v} [SmallCategory J] (F : J ⥤ CompHaus.{max v u}) : Li
+ def limitConeIsLimit {J : Type v} [SmallCategory J] (F : J ⥤ CompHaus.{max v u}) :
+     Limits.IsLimit.{v} (limitCone.{v,u} F) :=
+   letI FF : J ⥤ TopCat := F ⋙ compHausToTop
+-  { lift := fun S => (TopCat.limitConeIsLimit FF).lift (compHausToTop.mapCone S)
+-    fac := fun S => (TopCat.limitConeIsLimit FF).fac (compHausToTop.mapCone S)
+-    uniq := fun S => (TopCat.limitConeIsLimit FF).uniq (compHausToTop.mapCone S) }
++  { lift := fun S => InducedCategory.homMk
++      ((TopCat.limitConeIsLimit FF).lift (compHausToTop.mapCone S))
++    fac := fun S j => by aesop
++    uniq := fun S m hm => InducedCategory.hom_ext
++      ((TopCat.limitConeIsLimit FF).uniq (compHausToTop.mapCone S) _ (fun j ↦ by
++        dsimp
++        rw [← hm]
++        rfl )) }
+```
+PAST COMMENT (from reviewer):
+```suggestion
+        simp [← hm]
+        rfl )) }
+```
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "summary": "The new file’s import list is excessive and even duplicated; past reviews advise trimming and deduplicating imports, possibly relying on transitive imports and using #minimize_imports.",
+  "confidence": "high",
+  "strong_matches": [
+    {
+      "past_pr": 4593,
+      "past_file": "Mathlib/Topology/Order/FrameAdjunction.lean",
+      "past_comment_excerpt": "Looks like we only need the last import, and it provides the rest transitively.",
+      "applies_because": "This file has many imports (one even duplicated). Prior advice was to keep only the necessary import if it re-exports the rest.",
+      "suggested_adaptation": "Trim and deduplicate the imports; check if a single TopCat.* import (e.g., TopCat.Limits.Basic) provides others transitively.",
+      "supporting_past_prs": [
+        4593,
+        2508,
+        11334
+      ]
+    },
+    {
+      "past_pr": 2508,
+      "past_file": "Mathlib/Topology/Order/ScottTopology.lean",
+      "past_comment_excerpt": "Can you trim down the imports? Only a few are actually needed.",
+      "applies_because": "The new hunk introduces a long list of imports; some are likely unnecessary for the module and one is repeated.",
+      "suggested_adaptation": "Remove unnecessary imports and keep only those actually used by the file.",
+      "supporting_past_prs": [
+        2508,
+        11334
+      ]
+    },
+    {
+      "past_pr": 11334,
+      "past_file": "Mathlib/Topology/Instances/AddCircle.lean",
+      "past_comment_excerpt": "can you run `#minimize_imports` on this file? I think there is some redundancy here",
+      "applies_because": "There appears to be redundancy (including a duplicate import). Using #minimize_imports will find the minimal necessary set.",
+      "suggested_adaptation": "Run #minimize_imports to produce a minimal, non-duplicated import list.",
+      "supporting_past_prs": [
+        11334,
+        2508
+      ]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "Duplicate import: Mathlib.Topology.Category.TopCat.Limits.Basic appears twice; deduplicate.",
+      "supporting_past_prs": [
+        11334,
+        2508
+      ]
+    }
+  ]
+}

@@ -1,0 +1,686 @@
+====================================================================================================
+CASE E  PR #28349  (open-pr, v2 prompt)
+file: Mathlib/Tactic/Ring/NamePolyVars.lean  line: 288.0
+reviewer: @eric-wieser  on 2025-08-19T09:01:40Z
+advice_kind: design smell: string output
+prompt_tokens: 6922  completion_tokens: 1966
+HUMAN reviewer (ground truth):
+  > Returning this as a string feels like a wart to me; can you explain in a comment why `Syntax` is no good?
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Compared to a naive matcher you must do TWO extra things, because the answer is often only derivable by combining evidence:
+
+A. STRUCTURAL PATTERN EXTRACTION. Past comments often contain `suggestion` code blocks (```suggestion ... ```) or inline code-shape rewrites. These suggested code snippets ARE concrete advice, not just commentary. Treat them as first-class evidence about preferred Lean/mathlib idioms (e.g.: term-mode constructor `:= ⟨_, _, _⟩` vs `by use _; exact _`, `instance` vs `theorem` for class-membership statements, `refine ⟨..., ?_⟩` vs `use ...; constructor`, `@[simp]` / `@[to_additive]` attributes, naming conventions, docstring phrasing, etc.).
+
+B. CROSS-CANDIDATE SYNTHESIS. The applicable advice for the new hunk may require combining evidence from multiple candidates. Example: candidate X's context tells you that an identifier in the new hunk is a `class`; candidate Y shows the term-mode `instance ... := ⟨...⟩` template for proving class membership. Together they support the conclusion: "the new theorem proving class membership should be rewritten as an `instance` with a term-mode constructor". List supporting PRs for any synthesised finding.
+
+Reasoning protocol (do this internally before producing JSON):
+
+  1. STRUCTURAL FEATURES OF THE NEW HUNK. Identify each: tactic-mode vs term-mode? Uses `by use ...; exact ...`? Uses `use ...; constructor`? Declares an `instance` / a `theorem` / a `lemma` / a `def` / a `class`? Has `@[simp]`, `@[to_additive]`, `@[deprecated]`? Uses anonymous functions `fun x =>` vs `↦`? Has a docstring `/-- ... -/` of any specific shape?
+
+  2. PATTERN INVENTORY FROM CANDIDATES. For each candidate, note any concrete pattern shown in its suggested-code or comment (term-mode template, attribute recommendation, naming convention, idiomatic rewrite, terminology preference, etc.). Also note which candidates' past hunks define or use identifiers that appear in the new hunk (these are clues about whether something is a class, an instance, an alias, etc.).
+
+  3. APPLICABILITY CHECK. For each pattern from step 2, ask: does the new hunk's structure (step 1) instantiate the same shape that this pattern was applied to? If yes, that's a STRONG match. If two patterns combine to support a finding, list both supporting PRs.
+
+  4. STRICT REFUSAL. If after this analysis no candidate (alone or in combination) gives concrete, well-grounded advice for the specific code in the new hunk, output an empty `strong_matches` list. Do not paper over with generic advice. Generic style observations belong in `weak_observations`, clearly marked. Do not invent advice that isn't traceable to specific past PRs in the retrieval pool.
+
+Confidence:
+  - "high"  — at least one strong match is grounded in concrete suggested-code or explicit prose from a candidate, and the new hunk clearly fits the same shape
+  - "medium" — at least one strong match exists but requires synthesis or adaptation; OR a single candidate gives related but not identical advice
+  - "low"   — only loose stylistic patterns; nothing actionable
+  - "none"  — retrieved pool is unrelated; do not press an answer
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Be precise about which PR(s) support each finding via supporting_past_prs.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #28349 (file: Mathlib/Tactic/Ring/NamePolyVars.lean):
+```
+@@ -1,60 +1,346 @@
+ /-
+ Copyright (c) 2025 Adam Topaz. All rights reserved.
+ Released under Apache 2.0 license as described in the file LICENSE.
+-Authors: Adam Topaz
++Authors: Adam Topaz, Kenny Lau
+ -/
+-import Mathlib.Algebra.MvPolynomial.Basic
++import Lean
+ 
+ /-!
+-The command `name_poly_vars` names variables in
+-`MvPolynomial (Fin n) R` for the appropriate value of `n`.
+-The notation introduced by this command is local.
++The command `name_poly_vars` names variables in any combination of `Polynomial`, `MvPolynomial`,
++`RatFunc`, `PowerSeries`, `MvPowerSeries`, and `LaurentSeries`, where the `Mv` is restricted to
++`Fin n`.
++
++The notation introduced by `name_poly_vars` is local.
+ 
+ Usage:
+ 
+ ```lean
+ variable (R : Type) [CommRing R]
+ 
+-name_poly_vars X, Y, Z over R
++name_poly_vars R[[X,Y]][t]⸨a⸩(u)
+ 
+-#check Y -- Y : MvPolynomial (Fin 3) R
++#check X -- X : R[[X,Y]][t]⸨a⸩(u)
++#check t -- t : R[[X,Y]][t]⸨a⸩(u)
+ ```
++
++For the edge case of `MvPolynomial (Fin 1) R`, use the syntax `R[u,]` with a trailing comma.
++
++To register new polynomial-like functors, use the command `register_poly_vars`:
++
++```lean
++register_poly_vars "[" X "]" Polynomial Polynomial.C Polynomial.X
++register_poly_vars "[" X, ... "]" MvPolynomial MvPolynomial.C MvPolynomial.X
++```
++
++The registration is global and should only be done once for each functor.
+ -/
+ 
+ open Lean Elab Command
+ 
+-namespace Mathlib.Tactic
++initialize registerTraceClass `name_poly_vars
+ 
+-/--
+-The command `name_poly_vars` names variables in
+-`MvPolynomial (Fin n) R` for the appropriate value of `n`.
+-The notation introduced by this command is local.
++namespace Mathlib.Tactic.NamePolyVars
+ 
+-Usage:
++/-- The signature of a polynomial-like notation, consisting of the opening and closing brackets,
++and a `Bool` to declare if it is multivariate. -/
++structure NotationSignature where
++  /-- The opening bracket. -/
++  opening : String
++  /-- The closing bracket. -/
++  closing : String
++  /-- Whether the notation is multivariate. -/
++  mv? : Bool
++deriving Inhabited, DecidableEq, Hashable, Repr
++
++/-- A polynomial-like notation, consisting of the opening and closing brackets, a `Bool` to declare
++if it is multivariate, the `type` (e.g. `Polynomial`), the constant term `c` (e.g. `Polynomial.C`),
++and the formal variable(s) `x` (e.g. `Polynomial.X`). -/
++structure Notation where
++  /-- The opening bracket. -/
++  opening : String
++  /-- The closing bracket. -/
++  closing : String
++  /-- Whether the notation is mul
+... [truncated]
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.759, past_pr=#34582, file=Mathlib/Tactic/Ring/NamePolyVars.lean) ---
+PAST HUNK:
+```
+@@ -44,7 +44,7 @@ name_poly_vars X, Y, Z over R
+ #check Y -- Y : MvPolynomial (Fin 3) R
+ ```
+ -/
+-syntax (name := namePolyVarsOver) "name_poly_vars " ident,+ " over " term : command
++syntax (name := namePolyVarsOver) "name_poly_vars" ppSpace (ident ppSpace),+ " over " term : command
+```
+PAST COMMENT (from reviewer):
+Does `over` need the same treatment? Doesn't this lead to `ppSpace` followed by `" over "`, that is, two spaces?
+
+--- candidate 2 (sim=0.668, past_pr=#9480, file=Mathlib/SetTheory/Cardinal/FieldEmb.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,606 @@
++/-
++Copyright (c) 2024 Junyan Xu. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Junyan Xu
++-/
++import Mathlib.FieldTheory.MvPolynomial
+```
+PAST COMMENT (from reviewer):
+I think this file should probably be somewhere in the `FieldTheory` folder rather than the `SetTheory` folder. 
+
+--- candidate 3 (sim=0.657, past_pr=#13845, file=Mathlib/Algebra/Polynomial/Bivariate.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,73 @@
++/-
++Copyright (c) 2024 Junyan Xu. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Junyan Xu
++-/
++import Mathlib.Algebra.Polynomial.AlgebraMap
++
++/-!
++# Bivariate polynomials
++
++This file introduces the notation `R[X][Y]` for the polynomial ring `R[X][X]` in two variables,
++and the notation `Y` for the second variable, in the `PolynomialPolynomial` scope.
+```
+PAST COMMENT (from reviewer):
+Maybe make a poll on Zulip, yeah
+
+--- candidate 4 (sim=0.657, past_pr=#13845, file=Mathlib/Algebra/Polynomial/Bivariate.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,73 @@
++/-
++Copyright (c) 2024 Junyan Xu. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Junyan Xu
++-/
++import Mathlib.Algebra.Polynomial.AlgebraMap
++
++/-!
++# Bivariate polynomials
++
++This file introduces the notation `R[X][Y]` for the polynomial ring `R[X][X]` in two variables,
++and the notation `Y` for the second variable, in the `PolynomialPolynomial` scope.
+```
+PAST COMMENT (from reviewer):
+I don't mind changing it to `Polynomial2` since `Sum3` exists. I would think it's unlikely that someone will create `R[X][Y][Z]` - I observed many months ago that working in this ring was really slow, but maybe that is a lot better now.
+
+--- candidate 5 (sim=0.656, past_pr=#80, file=Mathlib/Mathport/Syntax.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,737 @@
++/-
++Copyright (c) 2021 Microsoft Corporation. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Mario Carneiro
++-/
++import Lean.Elab.Command
++import Lean.Elab.Quotation
++import Mathlib.Tactic.Ext
++import Mathlib.Tactic.Find
++import Mathlib.Tactic.LibrarySearch
++import Mathlib.Tactic.NormNum
++import Mathlib.Tactic.Ring
++import Mathlib.Tactic.ShowTerm
++import Mathlib.Tactic.SolveByElim
++
++-- To fix upstream:
++-- * bracketedExplicitBinders doesn't support optional types
++
++namespace Lean
++
++namespace Parser.Term
++
++@[termParser default+1] def Command.quot : Parser :=
++  leading_parser "`(command|" >> incQuotDepth commandParser >> ")"
++
++end Parser.Term
++
++namespace Elab.Term
++
++open Lean Elab Term Quotation in
++@[termElab Command.quot] def elabCommandQuot : TermElab := adaptExpander stxQuot.expand
++
++end Elab.Term
++
++namespace Parser.Command
++
++syntax (name := include) "include " ident+ : command
++syntax (name := omit) "omit " ident+ : command
++syntax (name := parameter) "parameter " bracketedBinder+ : command
++syntax (name := noncomputableTheory) (docComment)? "noncomputable " "theory" : command
++syntax (name := runCmd) "run_cmd " doSeq : command
++
++syntax bindersItem := "(" "..." ")"
++
++syntax identScope := ":" "(" "scoped " ident " => " term ")"
++
++syntax notation3Item := strLit <|> bindersItem <|> (ident (identScope)?)
++
++macro ak:Term.attrKind "notation3 "
++  prec:optPrecedence name:optNamedName prio:optNamedPrio
++  lits:((ppSpace notation3Item)+) " => " val:term : command => do
++  let arg
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+It's not a match:
+```lean
+syntax (name := openPrivate) "open private" ident* ("in" ident*)? ("from" ident*)? : command
+```
+so instead you should leave this one uncommented until mathport is retargeted to use `open private` syntax instead.
+
+--- candidate 6 (sim=0.655, past_pr=#10866, file=Mathlib/RingTheory/MvPowerSeries/Basic.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,946 @@
++/-
++Copyright (c) 2019 Johan Commelin. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Johan Commelin, Kenny Lau
++-/
++
++import Mathlib.LinearAlgebra.StdBasis
++import Mathlib.Tactic.Linarith
++import Mathlib.Data.Finset.PiAntidiagonal
++import Mathlib.Data.MvPolynomial.Basic
++
++#align_import ring_theory.power_series.basic from "leanprover-community/mathlib"@"2d5739b61641ee4e7e53eca5688a08f66f2e6a60"
++
++/-!
++# Formal (multivariate) power series
++
++This file defines multivariate formal power series
++and develops the basic properties of these objects.
++
++A formal power series is to a polynomial like an infinite sum is to a finite sum.
++
++We provide the natural inclusion from polynomials to formal power series.
++
++## Note
++
++This file sets up the (semi)ring structure on multivariate power series:
++additional results are in:
++* `Mathlib.RingTheory.MvPowerSeries.Inverse` : invertibility,
++  formal power series over a local ring form a local ring
++* `Mathlib.RingTheory.MvPowerSeries.Trunc`: truncation of power series
++
++In `Mathlib.RingTheory.PowerSeries.Basic`, formal power series in one variable
++will be obtained as a particular case, defined by
++  `PowerSeries R := MvPowerSeries Unit R`.
++See that file for a specific description.
++
++## Implementation notes
++
++In this file we define multivariate formal power series with
++variables indexed by `σ` and coefficients in `R` as
++`MvPowerSeries σ R := (σ →₀ ℕ) → R`.
++Unfortunately there is not yet enough API to show that they are the completion
++of the r
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+
+```suggestion
+/-- The coercion from multivariable polynomials to multivarite power series
+as a ring homomorphism.
+-/
+```
+Here and below, multivariable should become multivariate in accordance with the beginning of the file.
+
+--- candidate 7 (sim=0.648, past_pr=#80, file=Mathlib/Mathport/Syntax.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,727 @@
++/-
++Copyright (c) 2021 Microsoft Corporation. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Mario Carneiro
++-/
++import Lean.Elab.Command
++import Lean.Elab.Quotation
++import Mathlib.Tactic.Core
++import Mathlib.Tactic.Ext
++import Mathlib.Tactic.Find
++import Mathlib.Tactic.LibrarySearch
++import Mathlib.Tactic.NormNum
++import Mathlib.Tactic.Ring
++import Mathlib.Tactic.ShowTerm
++import Mathlib.Tactic.SolveByElim
++
++-- To fix upstream:
++-- * bracketedExplicitBinders doesn't support optional types
++
++namespace Lean
++
++namespace Parser.Term
++
++@[termParser default+1] def Command.quot : Parser :=
++  leading_parser "`(command|" >> incQuotDepth commandParser >> ")"
++
++end Parser.Term
++
++namespace Elab.Term
++
++open Lean Elab Term Quotation in
++@[termElab Command.quot] def elabCommandQuot : TermElab := adaptExpander stxQuot.expand
++
++end Elab.Term
++
++namespace Parser.Command
++
++syntax (name := include) "include " ident+ : command
++syntax (name := omit) "omit " ident+ : command
++syntax (name := parameter) "parameter " bracketedBinder+ : command
++syntax (name := noncomputableTheory) (docComment)? "noncomputable " "theory" : command
++syntax (name := runCmd) "run_cmd " doSeq : command
++
++syntax bindersItem := "(" "..." ")"
++
++syntax identScope := ":" "(" "scoped " ident " => " term ")"
++
++syntax notation3Item := strLit <|> bindersItem <|> (ident (identScope)?)
++
++macro ak:Term.attrKind "notation3 "
++  prec:optPrecedence name:optNamedName prio:optNamedPrio
++  lits:((ppSpace notation3Item)+) " => " val:ter
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+syntax (name := ext) "ext" (ppSpace ident)? : attr
+```
+I know it's not used with a name right now, but this is part of the original tactic. Note that it is already simplified from the original syntax which used a list of names and `(->)`, this was PR leanprover-community/mathlib#8785 . But the name argument is actually useful in principle and I could not find a reason to drop the feature, although porting will be trivial since the feature isn't used.
+
+In other words, this is a mathlib4 todo list for us to design the lean 4 tactic language we want to support with attention to lean 3 parity, not just a basis for synport. Removing the argument and erroring on any use of the with-argument form in synport is an option, but I don't want such decreases in functio
+... [truncated]
+
+--- candidate 8 (sim=0.630, past_pr=#33188, file=Mathlib/RingTheory/MvPowerSeries/Rename.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,309 @@
++/-
++Copyright (c) 2026 Bingyu Xia. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Bingyu Xia
++-/
++module
++
++public import Mathlib.Order.Filter.Cofinite
++public import Mathlib.RingTheory.MvPowerSeries.Basic
++public import Mathlib.Algebra.MvPolynomial.Rename
++
++/-!
++# Renaming variables of power series
++
++This file establishes the `rename` operation on multivariate power series
+```
+PAST COMMENT (from reviewer):
+Can you add a comment explaining that a condition is needed? I like the example from power series of infinitely many variables to one variable power series. You cannot rename each `X_i` to `X` since `X_0 + X_1 + ...` is a power series.
+
+--- candidate 9 (sim=0.628, past_pr=#14866, file=Mathlib/RingTheory/MvPowerSeries/Basic.lean) ---
+PAST HUNK:
+```
+@@ -19,6 +21,34 @@ A formal power series is to a polynomial like an infinite sum is to a finite sum
+ 
+ We provide the natural inclusion from multivariate polynomials to multivariate formal power series.
+ 
++## Main definitions
+```
+PAST COMMENT (from reviewer):
+I'm happy with the changes to this file. If you split it into a separate PR, then it could be merged already.
+
+--- candidate 10 (sim=0.627, past_pr=#25925, file=Mathlib/Algebra/MvPolynomial/NoZeroDivisors.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,210 @@
++/-
++Copyright (c) 2025 Bolton Bailey. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Bolton Bailey
++-/
++module
++
++public import Mathlib.Algebra.MvPolynomial.Variables
++public import Mathlib.Algebra.MvPolynomial.Equiv
++public import Mathlib.RingTheory.MvPolynomial.MonomialOrder.DegLex
++
++/-!
++# Multivariate polynomials over `NoZeroDivisors`
+```
+PAST COMMENT (from reviewer):
+```suggestion
+# Multivariate polynomials over integral domains
+```
+I know the title is not 100% accurate, but for a mathematician is surely fine.
+
+--- candidate 11 (sim=0.625, past_pr=#10866, file=Mathlib/RingTheory/MvPowerSeries/Trunc.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,113 @@
++/-
++Copyright (c) 2019 Johan Commelin. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Johan Commelin, Kenny Lau
++-/
++
++import Mathlib.RingTheory.MvPowerSeries.Basic
++import Mathlib.Data.Finsupp.Interval
++-- import Mathlib.LinearAlgebra.StdBasis
++-- import Mathlib.Tactic.Linarith
++-- import Mathlib.Data.MvPolynomial.Basic
++-- import Mathlib.RingTheory.Multiplicity
++-- import Mathlib.Data.Finset.PiAntidiagonal
+```
+PAST COMMENT (from reviewer):
+Please remove these. And also elsewhere (I didn't check if this is the only place).
+
+--- candidate 12 (sim=0.624, past_pr=#14454, file=Mathlib/RingTheory/MvPowerSeries/NoZeroDivisors.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,72 @@
++/-
++Copyright (c) 2024 Antoine Chambert-Loir. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Antoine Chambert-Loir
++-/
++
++import Mathlib.RingTheory.MvPowerSeries.Basic
++import Mathlib.RingTheory.MvPolynomial.Homogeneous
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+
+--- candidate 13 (sim=0.624, past_pr=#17580, file=Mathlib/Tactic/Linter/Common.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,36 @@
++/-
++Copyright (c) 2024 Moritz Firsching All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Damiano Testa, Moritz Firsching
++-/
++
++import Lean.Elab.Command
++open Lean Parser Elab Command Meta
+```
+PAST COMMENT (from reviewer):
+The style linter complains: you should put the module docstring before any open statements.
+
+--- candidate 14 (sim=0.621, past_pr=#15158, file=Mathlib/RingTheory/MvPowerSeries/Substitution.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,977 @@
++/-
++Copyright (c) 2024 Antoine Chambert-Loir, María Inés de Frutos Fernández. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Antoine Chambert-Loir, María Inés de Frutos Fernández
++-/
++
++import Mathlib.Algebra.MvPolynomial.CommRing
++import Mathlib.LinearAlgebra.Finsupp.Pi
++import Mathlib.RingTheory.MvPowerSeries.Evaluation
++import Mathlib.RingTheory.MvPowerSeries.LinearTopology
++import Mathlib.RingTheory.MvPowerSeries.Trunc
++import Mathlib.RingTheory.PowerSeries.Basic
++import Mathlib.RingTheory.Nilpotent.Basic
++import Mathlib.Topology.Algebra.Algebra
++import Mathlib.Topology.UniformSpace.DiscreteUniformity
+```
+PAST COMMENT (from reviewer):
+```suggestion
+import Mathlib.LinearAlgebra.Finsupp.Pi
+import Mathlib.RingTheory.MvPowerSeries.Evaluation
+import Mathlib.RingTheory.MvPowerSeries.LinearTopology
+import Mathlib.RingTheory.PowerSeries.Basic
+import Mathlib.RingTheory.Nilpotent.Basic
+import Mathlib.Topology.UniformSpace.DiscreteUniformity
+```
+
+--- candidate 15 (sim=0.616, past_pr=#21539, file=Mathlib/LinearAlgebra/SymmetricAlgebra/MvPolynomial.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,80 @@
++/-
++Copyright (c) 2025 Raphael Douglas Giles. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Raphael Douglas Giles, Zhixuan Dai, Zhenyan Fu, Yiming Fu, Jingting Wang
++-/
++import Mathlib.LinearAlgebra.SymmetricAlgebra.Basic
++import Mathlib.LinearAlgebra.Dimension.Basic
++import Mathlib.RingTheory.MvPolynomial
++
++/-!
+```
+PAST COMMENT (from reviewer):
+Sure! That's a good idea.
+
+--- candidate 16 (sim=0.616, past_pr=#21539, file=Mathlib/LinearAlgebra/SymmetricAlgebra/MvPolynomial.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,80 @@
++/-
++Copyright (c) 2025 Raphael Douglas Giles. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Raphael Douglas Giles, Zhixuan Dai, Zhenyan Fu, Yiming Fu, Jingting Wang
++-/
++import Mathlib.LinearAlgebra.SymmetricAlgebra.Basic
++import Mathlib.LinearAlgebra.Dimension.Basic
++import Mathlib.RingTheory.MvPolynomial
++
++/-!
++# Main Definitions
+```
+PAST COMMENT (from reviewer):
+Well, I didn't remember having copied that from another file, and I'll fix this now according to your comment below. But since you mentioned this, I just ctrl+F `\n# Main Definitions` and ` #Main Definitions` in VS Code, and checked every file with this appearing.
+I found only `Mathlib.FieldTheory.Galois.GaloisClosure` starting with the first title being `# Main definitions and results`.
+
+--- candidate 17 (sim=0.615, past_pr=#7728, file=Mathlib/Data/Polynomial/Module.lean) ---
+PAST HUNK:
+```
+@@ -3,28 +3,95 @@ Copyright (c) 2022 Andrew Yang. All rights reserved.
+ Released under Apache 2.0 license as described in the file LICENSE.
+ Authors: Andrew Yang
+ -/
+-import Mathlib.RingTheory.FiniteType
+-
+-#align_import data.polynomial.module from "leanprover-community/mathlib"@"63417e01fbc711beaf25fa73b6edb395c0cfddd0"
+```
+PAST COMMENT (from reviewer):
+This line should be preserved 
+
+--- candidate 18 (sim=0.614, past_pr=#17580, file=Mathlib/Tactic/Linter/Common.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,32 @@
++/-
++Copyright (c) 2024 Moritz Firsching All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Damiano Testa, Moritz Firsching
++-/
++
++import Lean.Elab.Command
+```
+PAST COMMENT (from reviewer):
+```suggestion
+import Lean.DeclarationRange
+```
+not too important, since it is hard not to import `Lean.Elab.Command`, but this file seems to only need this earlier import.
+
+--- candidate 19 (sim=0.612, past_pr=#23552, file=Mathlib/RingTheory/PowerSeries/Substitution.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,293 @@
++/-
++Copyright (c) 2025 Antoine Chambert-Loir, María Inés de Frutos Fernández. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Antoine Chambert-Loir, María Inés de Frutos Fernández
++-/
++
++import Mathlib.LinearAlgebra.Finsupp.Pi
++import Mathlib.RingTheory.MvPowerSeries.Substitution
++import Mathlib.RingTheory.PowerSeries.Evaluation
++import Mathlib.RingTheory.PowerSeries.Basic
+```
+PAST COMMENT (from reviewer):
+```suggestion
+import Mathlib.RingTheory.MvPowerSeries.Substitution
+import Mathlib.RingTheory.PowerSeries.Evaluation
+```
+I don't know why `shake` does not flag this.
+
+--- candidate 20 (sim=0.612, past_pr=#7271, file=Mathlib/RingTheory/PowerSeries/Basic.lean) ---
+PAST HUNK:
+```
+@@ -2680,3 +2680,143 @@ theorem algebraMap_apply'' :
+ #align power_series.algebra_map_apply'' PowerSeries.algebraMap_apply''
+ 
+ end PowerSeries
++
++
++
++
++namespace PowerSeries
++
++open Nat hiding pow_succ pow_zero
++open Polynomial BigOperators Finset Finset.Nat
++
++/--
++`R⟦X⟧` is notation for `PowerSeries R`,
++the semiring of formal power series in one variable over a semiring `R`.
++-/
++scoped notation:9000 R "⟦X⟧" => PowerSeries R
++
++variable {R : Type*} [CommSemiring R]
++
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "summary": "No past reviewer feedback clearly applies to the new NamePolyVars rewrite; the retrieved comments address unrelated syntax or style issues.",
+  "confidence": "none",
+  "strong_matches": [],
+  "weak_observations": [
+    {
+      "observation": "Consider importing only needed Lean modules (e.g., Lean.Elab.Command) instead of the umbrella Lean, if feasible.",
+      "supporting_past_prs": [
+        17580
+      ]
+    }
+  ]
+}

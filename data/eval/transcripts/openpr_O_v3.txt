@@ -1,0 +1,633 @@
+====================================================================================================
+CASE O  PR #23929  (open-pr, v3 prompt)
+file: Mathlib/Computability/NFA.lean  line: 194.0
+reviewer: @meithecatte  on 2025-05-30T16:06:51Z
+advice_kind: naming (lemma rename)
+prompt_tokens: 8009  completion_tokens: 4426
+HUMAN reviewer (ground truth):
+  > Okay, I assume I should also rename `Path.evalFrom_iff_nonempty` to `mem_evalFrom_iff_exists_path`.
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Your single most important task is to AVOID "axis-miss" false positives: cases where a past comment and the new code LOOK similar on the surface, but the past reviewer was raising a different KIND of concern than anything the new hunk actually has. A correct silent output is far more valuable than a confident wrong-axis answer.
+
+Read carefully before producing JSON. Follow the four steps below in order.
+
+STEP 1 — STRUCTURAL + SEMANTIC READING OF THE NEW HUNK.
+  1a. Parse the code shape: tactic-mode vs term-mode, declaration kind (`def` / `theorem` / `lemma` / `instance` / `class` / `structure` / `abbrev` / `syntax` / `notation`), attributes (`@[simp]`, `@[to_additive]`, `@[deprecated]`, `@[ext]`, `@[fun_prop]`, `@[reassoc]`, …), universe parameters, implicit/explicit binders, docstring style, proof tactics used.
+  1b. Inventory what *could* be criticized about THIS specific hunk. Pick as many as apply from this list of "concern axes":
+     - correctness-bug        (code doesn't typecheck / is logically wrong)
+     - naming                  (lemma/def name doesn't follow conventions)
+     - docstring               (missing, unclear, typo, wrong phrasing)
+     - attribute               (missing/wrong `@[simp]` / `@[to_additive]` …)
+     - style-syntax            (`fun x ↦` vs `fun x =>`, `by use _; exact _` vs `⟨_, _⟩`, whitespace/`ppSpace`, notation preference)
+     - proof-golf              (the proof tactics could be shorter/nicer)
+     - refactor-simplify       (same statement provable with less machinery)
+     - generalize-signature    (hypotheses too strong; remove/weaken a typeclass)
+     - design-smell-architectural (this API shape is wrong; returning a string, unnecessary instance, redundant definition, etc.)
+     - imports-module          (superfluous imports, module structure)
+     - namespace-organization  (`_root_`, namespace boundary, file placement)
+     - automation-tactic       (should use / should teach `aesop_cat`, `gcongr`, `positivity`, etc.)
+     - instance-diamond        (this instance creates an ambiguity / defeq diamond with another)
+     - unify-with-existing     (a similar definition/lemma already exists)
+     - junk-value              (docstring should note behavior at the "undefined" input; handled via `0`/`⊥`/`⊤`)
+  List the concerns that PLAUSIBLY apply to the new hunk. If none are obviously present, say so — don't invent them.
+
+STEP 2 — PER-CANDIDATE CONCERN CLASSIFICATION.
+  For EACH candidate, identify which concern axis (from the same list) the past reviewer's comment was about. Read the past comment carefully: the reviewer's *words* (not the past code) tell you the concern axis. If a past comment ships a `suggestion` code block, that block is evidence for what the reviewer wanted changed — but the axis of concern comes from the prose around it. Ignore candidates whose past comment is pure bikeshed or where you cannot identify a clear concern.
+
+STEP 3 — AXIS MATCH + APPLICABILITY CHECK.
+  A candidate is eligible for `strong_matches` ONLY if BOTH:
+    (a) Its axis (from step 2) is among the new hunk's plausible concerns (from step 1b).
+    (b) You can write a concrete adaptation that a Lean/mathlib reviewer would plausibly post on the new hunk *today*, given what is visible in the hunk.
+  Before promoting, write — in the JSON output, per match — a `why_might_not_apply` field giving the strongest counter-argument against promotion (one short sentence). If this counter-argument is actually compelling (e.g. "the new code does not have that pattern", "the new code *does* have an ext lemma, so this doesn't apply"), DO NOT promote; demote to `weak_observations` or drop.
+  Cross-candidate synthesis is allowed: if candidate X establishes that an identifier in the new hunk is a `class`, and candidate Y shows the preferred term-mode `instance := ⟨...⟩` template, they jointly support a promotion. List both in `supporting_past_prs` and still produce one `why_might_not_apply`.
+
+STEP 4 — CONFIDENCE AND OUTPUT.
+  Confidence scale:
+    - "high"   — ≥1 strong match survives step 3 AND the adaptation is a near-verbatim application of a past comment; the counter-argument is weak.
+    - "medium" — ≥1 strong match survives step 3 BUT needs adaptation or synthesis; counter-argument is plausible but not decisive.
+    - "low"    — no candidate survives step 3; only stylistic patterns worth mentioning as `weak_observations`.
+    - "none"   — retrieved pool's axes don't match anything plausible about the new hunk; state this and stop.
+  When in doubt between "medium" and "low" on a single uncertain candidate, prefer "low" and put that candidate in `weak_observations`. "Confident but wrong-axis" is the #1 failure we are trying to eliminate.
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "new_hunk_plausible_concerns": [<one or more axis labels from Step 1b, or []>],
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_concern_axis": "<axis label from the list>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure AND explaining why the concern axis matches>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "why_might_not_apply": "<one short sentence — strongest counter-argument against this promotion>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "axis": "<axis label>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Do not invent axis labels outside the list. Do not promote a candidate whose axis is not in `new_hunk_plausible_concerns`.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #23929 (file: Mathlib/Computability/NFA.lean):
+```
+@@ -104,6 +152,150 @@ def accepts : Language α := {x | ∃ S ∈ M.accept, S ∈ M.eval x}
+... [3 lines above hidden]
+ 
++variable (M) in
++/-- `M.Path` represents a concrete path through the NFA from a start state to an end state
++for a particular word.
++
++Note that due to the non-deterministic nature of the automata, the can be more than one `Path`
++for a given word.
++
++Also note that this is `Type` and not a `Prop`, so that we can speak about the properties
++of a particular `Path`, such as the set of states visited along the way (defined as `Path.supp`). -/
++inductive Path : σ → σ → List α → Type (max u v)
++  | nil (s : σ) : Path s s []
++  | cons (t s u : σ) (a : α) (x : List α) :
++      t ∈ M.step s a → Path t u x → Path s u (a :: x)
++
++/-- Set of states visited by a path. -/
++@[simp]
++def Path.supp [DecidableEq σ] {s t : σ} {x : List α} (p : M.Path s t x) : Finset σ :=
++  match p with
++  | nil s => {s}
++  | cons _ _ _ _ _ _ p => {s} ∪ p.supp
++
++theorem Path.evalFrom_iff_nonempty {s t : σ} {x : List α} :
++    t ∈ M.evalFrom {s} x ↔ Nonempty (M.Path s t x) where
++  mp h := match x with
++    | [] =>
++      have h : s = t := by simp at h; tauto
++      ⟨h ▸ Path.nil s⟩
++    | a :: x =>
++      have h : ∃ s' ∈ M.step s a, t ∈ M.evalFrom {s'} x :=
++        by rw [evalFrom_cons, mem_evalFrom_iff_exists, stepSet_singleton] at h; exact h
++      let ⟨s', h₁, h₂⟩ := h
++      let ⟨p'⟩ := Path.evalFrom_iff_nonempty.1 h₂
++      ⟨Path.cons s' _ _ _ _ h₁ p'⟩
++  mpr p := match p with
++    | ⟨nil s⟩ => by simp
++    | ⟨cons s' s t a x h₁ h₂⟩ => by
++      rw [evalFrom_cons, stepSet_singleton, mem_evalFrom_iff_exists]
++      exact ⟨s', h₁, Path.evalFrom_iff_nonempty.2 ⟨h₂⟩⟩
++
++theorem Path.accepts_iff_nonempty {x : List α} :
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.977, past_pr=#25321, file=Mathlib/Computability/NFA.lean) ---
+PAST HUNK:
+```
+@@ -104,6 +152,49 @@ def accepts : Language α := {x | ∃ S ∈ M.accept, S ∈ M.eval x}
+... [13 lines above hidden]
++inductive Path : σ → σ → List α → Type (max u v)
++  | nil (s : σ) : Path s s []
++  | cons (t s u : σ) (a : α) (x : List α) :
++      t ∈ M.step s a → Path t u x → Path s u (a :: x)
++
++/-- Set of states visited by a path. -/
++@[simp]
++def Path.supp [DecidableEq σ] {s t : σ} {x : List α} : M.Path s t x → Finset σ
++  | nil s => {s}
++  | cons _ _ _ _ _ _ p => {s} ∪ p.supp
++
++theorem mem_evalFrom_iff_exists_path {s t : σ} {x : List α} :
++    t ∈ M.evalFrom {s} x ↔ Nonempty (M.Path s t x) where
+```
+PAST COMMENT (from reviewer):
+```suggestion
+theorem mem_evalFrom_iff_nonempty_path {s t : σ} {x : List α} :
+    t ∈ M.evalFrom {s} x ↔ Nonempty (M.Path s t x) where
+```
+
+--- candidate 2 (sim=0.882, past_pr=#20645, file=Mathlib/Computability/EpsilonNFA.lean) ---
+PAST HUNK:
+```
+@@ -124,6 +144,109 @@ theorem eval_append_singleton (x : List α) (a : α) : M.eval (x ++ [a]) = M.ste
+... [9 lines above hidden]
++      t ∈ M.step s a → Path t u x → Path s u (a :: x)
++
++theorem Path.eq_of_nil (s t : σ) : M.Path s t [] → s = t := by
++  intro h
++  cases h
++  rfl
++
++@[simp]
++theorem path_singleton {s t : σ} {a : Option α} : M.Path s t [a] ↔ t ∈ M.step s a where
++  mp := by
++    rintro (_ | ⟨_, _, _, _, _, _, h⟩)
++    apply Path.eq_of_nil at h
++    subst t
++    assumption
++  mpr := by tauto
++
+```
+PAST COMMENT (from reviewer):
+With the previous suggestion and unicode input,
+```suggestion
+
+alias \<_, IsPath.singleton\> := isPath_singleton
+
+```
+
+--- candidate 3 (sim=0.881, past_pr=#20645, file=Mathlib/Computability/EpsilonNFA.lean) ---
+PAST HUNK:
+```
+@@ -124,6 +150,112 @@ theorem eval_append_singleton (x : List α) (a : α) : M.eval (x ++ [a]) = M.ste
+... [4 lines above hidden]
++/-- An `M.Path` represents a traversal in `M` from a start state to an end state by following a list
++  of transitions in order. -/
++inductive Path : σ → σ → List (Option α) → Prop
++  | nil : ∀ s, Path s s []
++  | cons (t s u : σ) (a : Option α) (x : List (Option α)) :
++      t ∈ M.step s a → Path t u x → Path s u (a :: x)
++
++theorem Path_nil_eq (s t : σ) : M.Path s t [] → s = t := by
++  intro h
++  cases h
++  rfl
++
++theorem Path_singleton_iff (s t : σ) (a : Option α) : M.Path s t [a] ↔ t ∈ M.step s a:= by
+```
+PAST COMMENT (from reviewer):
+* Lemma names are in `snake_case`
+* Arguments to `Iff`s should (generally) be implicit
+* The `_eq` or `_iff` suffix in lemma names is usually redundant
+```
+@[simp]
+theorem path_singleton {s t : σ} {a : Option α} : M.Path s t [a] ↔ t ∈ M.step s a := by
+```
+
+--- candidate 4 (sim=0.779, past_pr=#31038, file=Mathlib/Computability/NFA.lean) ---
+PAST HUNK:
+```
+@@ -124,6 +150,79 @@ theorem mem_evalFrom_iff_exists {s : σ} {S : Set σ} {x : List α} :
+... [9 lines above hidden]
++variable (M) in
++theorem mem_acceptsFrom {S : Set σ} {x : List α} :
++    x ∈ M.acceptsFrom S ↔ ∃ s ∈ M.accept, s ∈ M.evalFrom S x := by
++  rfl
++
++variable (M) in
++@[simp]
++theorem mem_acceptsFrom_nil {S : Set σ} : [] ∈ M.acceptsFrom S ↔ ∃ s ∈ S, s ∈ M.accept := by
++  simp only [mem_acceptsFrom, evalFrom_nil]; tauto
++
++variable (M) in
++@[simp]
++theorem mem_acceptsFrom_cons {S : Set σ} {a : α} {x : List α} :
+```
+PAST COMMENT (from reviewer):
+```suggestion
+theorem cons_mem_acceptsFrom {S : Set σ} {a : α} {x : List α} :
+```
+
+--- candidate 5 (sim=0.779, past_pr=#31038, file=Mathlib/Computability/NFA.lean) ---
+PAST HUNK:
+```
+@@ -124,6 +150,79 @@ theorem mem_evalFrom_iff_exists {s : σ} {S : Set σ} {x : List α} :
+... [4 lines above hidden]
++variable (M) in
++/-- `M.acceptsFrom S` is the language of `x` such that there is an accept state
++in `M.evalFrom S x`. -/
++def acceptsFrom (S : Set σ) : Language α := {x | ∃ s ∈ M.accept, s ∈ M.evalFrom S x}
++
++variable (M) in
++theorem mem_acceptsFrom {S : Set σ} {x : List α} :
++    x ∈ M.acceptsFrom S ↔ ∃ s ∈ M.accept, s ∈ M.evalFrom S x := by
++  rfl
++
++variable (M) in
++@[simp]
++theorem mem_acceptsFrom_nil {S : Set σ} : [] ∈ M.acceptsFrom S ↔ ∃ s ∈ S, s ∈ M.accept := by
+```
+PAST COMMENT (from reviewer):
+```suggestion
+theorem nil_mem_acceptsFrom {S : Set σ} : [] ∈ M.acceptsFrom S ↔ ∃ s ∈ S, s ∈ M.accept := by
+```
+
+--- candidate 6 (sim=0.756, past_pr=#11311, file=Mathlib/Computability/DFA.lean) ---
+PAST HUNK:
+```
+@@ -91,8 +92,14 @@ theorem evalFrom_of_append (start : σ) (x y : List α) :
+... [3 lines above hidden]
+ 
++/-- `M.acceptsFrom` is the language of `x` such that `M.evalFrom start x` is an accept state. -/
++def acceptsFrom (start : σ) : Language α := {x | M.evalFrom start x ∈ M.accept}
++
++theorem mem_acceptsFrom (start : σ) (x : List α) :
++    x ∈ M.acceptsFrom start ↔ M.evalFrom start x ∈ M.accept := by rfl
++
+ /-- `M.accepts` is the language of `x` such that `M.eval x` is an accept state. -/
+-def accepts : Language α := {x | M.eval x ∈ M.accept}
++def accepts : Language α := M.acceptsFrom M.start
+ #align DFA.accepts DFA.accepts
+ 
+ theorem mem_accepts (x : List α) : x ∈ M.accepts ↔ M.evalFrom M.start x ∈ M.accept := by rfl
+```
+PAST COMMENT (from reviewer):
+Can you make sure your new definition is defeq to the previous?
+```suggestion
+theorem mem_accepts (x : List α) : x ∈ M.accepts ↔ M.eval x ∈ M.accept := by rfl
+```
+
+--- candidate 7 (sim=0.749, past_pr=#6114, file=Mathlib/Computability/DFA.lean) ---
+PAST HUNK:
+```
+@@ -92,7 +92,7 @@ theorem evalFrom_of_append (start : σ) (x y : List α) :
+ #align DFA.eval_from_of_append DFA.evalFrom_of_append
+ 
+ /-- `M.accepts` is the language of `x` such that `M.eval x` is an accept state. -/
+-def accepts : Language α := fun x => M.eval x ∈ M.accept
++def accepts : Language α := {x | M.eval x ∈ M.accept}
+```
+PAST COMMENT (from reviewer):
+This is still a defeq abuse because `Language` and `Set` are not interchangeable.
+https://github.com/leanprover-community/mathlib/pull/18451 had a path to resolve this, but was more trouble that I cared to deal with.
+
+Having said that, this change is certainly not harmful, so fine to leave it
+
+--- candidate 8 (sim=0.749, past_pr=#6114, file=Mathlib/Computability/DFA.lean) ---
+PAST HUNK:
+```
+@@ -92,7 +92,7 @@ theorem evalFrom_of_append (start : σ) (x y : List α) :
+ #align DFA.eval_from_of_append DFA.evalFrom_of_append
+ 
+ /-- `M.accepts` is the language of `x` such that `M.eval x` is an accept state. -/
+-def accepts : Language α := fun x => M.eval x ∈ M.accept
++def accepts : Language α := {x | M.eval x ∈ M.accept}
+```
+PAST COMMENT (from reviewer):
+`Set.up` is pretty much exactly that function, as `SetSemiring` has all the same instances as `Language`.
+
+--- candidate 9 (sim=0.745, past_pr=#11372, file=Mathlib/Computability/DFA.lean) ---
+PAST HUNK:
+```
+@@ -91,12 +92,22 @@ theorem evalFrom_of_append (start : σ) (x y : List α) :
+... [10 lines above hidden]
++    x ∈ M.acceptsFrom start ↔ M.evalFrom start x ∈ M.accept := by rfl
++
+ /-- `M.accepts` is the language of `x` such that `M.eval x` is an accept state. -/
+-def accepts : Language α := {x | M.eval x ∈ M.accept}
++def accepts : Language α := M.acceptsFrom M.start
+ #align DFA.accepts DFA.accepts
+ 
+-theorem mem_accepts (x : List α) : x ∈ M.accepts ↔ M.evalFrom M.start x ∈ M.accept := by rfl
+-#align DFA.mem_accepts DFA.mem_accepts
++theorem mem_accepts (x : List α) : x ∈ M.accepts ↔ M.eval x ∈ M.accept := by rfl
++
++theorem mem_accepts' (x : List α) : x ∈ M.accepts ↔ M.evalFrom M.start x ∈ M.accept := by rfl
++#align DFA.mem_accepts DFA.mem_accepts'
+```
+PAST COMMENT (from reviewer):
+I don't think you need `mem_accepts'`
+```suggestion
+theorem mem_accepts (x : List α) : x ∈ M.accepts ↔ M.eval x ∈ M.accept := by rfl
+#align DFA.mem_accepts DFA.mem_accepts
+```
+
+--- candidate 10 (sim=0.743, past_pr=#11372, file=Mathlib/Computability/DFA.lean) ---
+PAST HUNK:
+```
+@@ -91,11 +92,19 @@ theorem evalFrom_of_append (start : σ) (x y : List α) :
+... [6 lines above hidden]
++-/
++def acceptsFrom (start : σ) : Language α := {x | M.evalFrom start x ∈ M.accept}
++
++theorem mem_acceptsFrom (start : σ) (x : List α) :
++    x ∈ M.acceptsFrom start ↔ M.evalFrom start x ∈ M.accept := by rfl
++
+ /-- `M.accepts` is the language of `x` such that `M.eval x` is an accept state. -/
+-def accepts : Language α := {x | M.eval x ∈ M.accept}
++def accepts : Language α := M.acceptsFrom M.start
+ #align DFA.accepts DFA.accepts
+ 
+-theorem mem_accepts (x : List α) : x ∈ M.accepts ↔ M.evalFrom M.start x ∈ M.accept := by rfl
++theorem mem_accepts (x : List α) : x ∈ M.accepts ↔ M.eval x ∈ M.accept := by rfl
+```
+PAST COMMENT (from reviewer):
+```suggestion
+theorem mem_accepts {x : List α} : x ∈ M.accepts ↔ M.eval x ∈ M.accept := by rfl
+```
+Similarly, should that be simp?
+
+--- candidate 11 (sim=0.645, past_pr=#23820, file=Mathlib/Computability/DFA.lean) ---
+PAST HUNK:
+```
+@@ -11,11 +11,26 @@ import Mathlib.Tactic.NormNum
+... [10 lines above hidden]
++decides membership in a particular regular language, by following a path
++uniquely determined by an input string.
++
++We define regular languages to be ones for which a DFA exists, other formulations
++are then proved equivalent.
++
++Note that this definition allows for automata with infinite states,
++a `Fintype` instance must be supplied for true DFAs.
++
++## Main definitions
++
++- `DFA α σ` : automaton over alphabet `α` and set of states `σ`
++- `M.accepts` : language accepted by `M`
+```
+PAST COMMENT (from reviewer):
+```suggestion
+- `M.accepts`: the language accepted by the DFA `M`
+```
+
+--- candidate 12 (sim=0.641, past_pr=#21573, file=Mathlib/Computability/NFA.lean) ---
+PAST HUNK:
+```
+@@ -146,3 +157,60 @@ theorem toNFA_correct (M : DFA α σ) : M.toNFA.accepts = M.accepts := by
+... [39 lines above hidden]
++theorem disjoint_evalFrom_reverse_iff {x : List α} {S S' : Set σ} :
++    Disjoint S (M.reverse.evalFrom S' x) ↔ Disjoint S' (M.evalFrom S x.reverse) :=
++  ⟨disjoint_evalFrom_reverse, fun h ↦ List.reverse_reverse x ▸ disjoint_evalFrom_reverse h⟩
++
++@[simp]
++theorem mem_accepts_reverse {x : List α} : x ∈ M.reverse.accepts ↔ x.reverse ∈ M.accepts := by
++  simp [mem_accepts, ← Set.not_disjoint_iff, not_iff_not, disjoint_evalFrom_reverse_iff]
++
++end NFA
++
++namespace Language
++
++theorem IsRegular.reverse {L : Language α} (h : L.IsRegular) : L.reverse.IsRegular :=
+```
+PAST COMMENT (from reviewer):
+```suggestion
+protected theorem IsRegular.reverse {L : Language α} (h : L.IsRegular) : L.reverse.IsRegular :=
+```
+
+--- candidate 13 (sim=0.636, past_pr=#23820, file=Mathlib/Computability/DFA.lean) ---
+PAST HUNK:
+```
+@@ -11,11 +11,26 @@ import Mathlib.Tactic.NormNum
+... [3 lines above hidden]
+ 
+-This file contains the definition of a Deterministic Finite Automaton (DFA), a state machine which
+-determines whether a string (implemented as a list over an arbitrary alphabet) is in a regular set
+-in linear time.
+-Note that this definition allows for Automaton with infinite states, a `Fintype` instance must be
+-supplied for true DFA's.
++A Deterministic Finite Automaton (DFA) is a state machine which
++decides membership in a particular regular language, by following a path
++uniquely determined by an input string.
++
++We define regular languages to be ones for which a DFA exists, other formulations
++are then proved equivalent.
++
+```
+PAST COMMENT (from reviewer):
+```suggestion
+A Deterministic Finite Automaton (DFA) is a state machine which
+decides membership in a particular language, by following a path
+uniquely determined by an input string.
+
+We define regular languages to be ones for which a DFA exists, other formulations
+are then proved equivalent.
+
+```
+This new docstring is an improvement, but my suggestion makes it clearer that this isn't a circular definition!
+I think it'd also be nice to preserve the "string (implemented as a list over an arbitrary alphabet)" bit, since `String` in Lean can mean something else, and the list clarification is helpful.
+
+--- candidate 14 (sim=0.634, past_pr=#21573, file=Mathlib/Computability/NFA.lean) ---
+PAST HUNK:
+```
+@@ -143,3 +154,60 @@ theorem toNFA_correct (M : DFA α σ) : M.toNFA.accepts = M.accepts := by
+... [41 lines above hidden]
++  ⟨disjoint_evalFrom_reverse, fun h ↦ List.reverse_reverse x ▸ disjoint_evalFrom_reverse h⟩
++
++@[simp]
++theorem mem_accepts_reverse {x : List α} : x ∈ M.reverse.accepts ↔ x.reverse ∈ M.accepts := by
++  simp [mem_accepts, ← Set.not_disjoint_iff, not_iff_not, disjoint_evalFrom_reverse_iff]
++
++end NFA
++
++namespace Language
++
++theorem IsRegular.reverse {L : Language α} (h : L.IsRegular) : L.reverse.IsRegular :=
++  have ⟨σ, x, M, hM⟩ := h
++  ⟨_, inferInstance, M.toNFA.reverse.toDFA, by ext x; simp [hM]⟩
+```
+PAST COMMENT (from reviewer):
+I slightly prefer `x` to be removed.
+
+--- candidate 15 (sim=0.622, past_pr=#11798, file=Mathlib/Combinatorics/SimpleGraph/Connectivity.lean) ---
+PAST HUNK:
+```
+@@ -914,6 +915,8 @@ structure IsPath {u v : V} (p : G.Walk u v) extends IsTrail p : Prop where
+   support_nodup : p.support.Nodup
+ #align simple_graph.walk.is_path SimpleGraph.Walk.IsPath
+ 
++set_option autoImplicit true
+```
+PAST COMMENT (from reviewer):
+The `set_option autoImplicit true` might be a TODO enough. That's how I reviewed all `autoImplicit` motion for this PR.
+
+--- candidate 16 (sim=0.622, past_pr=#11798, file=Mathlib/Combinatorics/SimpleGraph/Connectivity.lean) ---
+PAST HUNK:
+```
+@@ -914,6 +915,8 @@ structure IsPath {u v : V} (p : G.Walk u v) extends IsTrail p : Prop where
+   support_nodup : p.support.Nodup
+ #align simple_graph.walk.is_path SimpleGraph.Walk.IsPath
+ 
++set_option autoImplicit true
+```
+PAST COMMENT (from reviewer):
+Should we add a TODO to remove this? A few of the following lemmas feel like they abuse autoImplicits.
+
+--- candidate 17 (sim=0.619, past_pr=#30219, file=Mathlib/Combinatorics/SimpleGraph/Paths.lean) ---
+PAST HUNK:
+```
+@@ -94,6 +94,10 @@ theorem IsPath.mk' {u v : V} {p : G.Walk u v} (h : p.support.Nodup) : p.IsPath :
+ theorem isPath_def {u v : V} (p : G.Walk u v) : p.IsPath ↔ p.support.Nodup :=
+   ⟨IsPath.support_nodup, IsPath.mk'⟩
+ 
++theorem isPath_iff_support_get_injective {u v : V} {p : G.Walk u v} :
+```
+PAST COMMENT (from reviewer):
+```suggestion
+theorem isPath_iff_injective_get_support {u v : V} {p : G.Walk u v} :
+```
+
+--- candidate 18 (sim=0.614, past_pr=#27461, file=Mathlib/Combinatorics/SimpleGraph/Paths.lean) ---
+PAST HUNK:
+```
+@@ -238,6 +238,20 @@ theorem IsPath.concat {p : G.Walk u v} (hp : p.IsPath) (hw : w ∉ p.support)
+... [4 lines above hidden]
++lemma IsPath.mem_support_iff_exists_append {u v w : V} {p : G.Walk u v} (hp : p.IsPath) :
++    w ∈ p.support ↔ ∃ (q : G.Walk u w) (r : G.Walk w v), q.IsPath ∧ r.IsPath ∧ p = q.append r := by
++  apply Iff.intro
++  · intro hw
++    obtain ⟨q, r, hqr⟩ := p.mem_support_iff_exists_append.mp hw
++    have hqr' : (q.append r).IsPath := by
++      rw [← hqr]
++      exact hp
++    have hq : q.IsPath := hqr'.of_append_left
++    have hr : r.IsPath := hqr'.of_append_right
++    exact ⟨q, r, hq, hr, hqr⟩
++  · intro ⟨q, r, hq, hr, hqr⟩
++    exact p.mem_support_iff_exists_append.mpr ⟨q, r, hqr⟩
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  refine ⟨fun hw ↦ ?_, fun ⟨q, r, hq, hr, hqr⟩ ↦ p.mem_support_iff_exists_append.mpr ⟨q, r, hqr⟩⟩
+  obtain ⟨q, r, hqr⟩ := p.mem_support_iff_exists_append.mp hw
+  have : (q.append r).IsPath := hqr ▸ hp
+  exact ⟨q, r, this.of_append_left, this.of_append_right, hqr⟩
+```
+
+--- candidate 19 (sim=0.613, past_pr=#35600, file=Mathlib/Computability/EpsilonNFA.lean) ---
+PAST HUNK:
+```
+@@ -362,3 +366,498 @@ theorem accept_one : (1 : εNFA α σ).accept = univ :=
+... [59 lines above hidden]
++
++/-- The extended state space with a new start state and accept state. -/
++inductive ExtendedState (σ : Type*)
++  | start : ExtendedState σ
++  | accept : ExtendedState σ
++  | state (s : σ) : ExtendedState σ
++  deriving DecidableEq, Fintype
++
++variable (M) in
++/-- Transform any `εNFA` into an `εNFA` with a single start state and accept state. -/
++@[simps]
++def toSingleεNFA : εNFA α (ExtendedState σ) where
++  step q oa := match q, oa with
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  step
+```
+
+--- candidate 20 (sim=0.612, past_pr=#12648, file=Mathlib/Computability/GNFA.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,383 @@
+... [52 lines above hidden]
++will always be available. -/
++instance : Inhabited (GNFA α σ) :=
++  ⟨GNFA.mk fun _ _ ↦ 0⟩
++
++/-- A `trace` of an internal state and a string of a GNFA represents the possibility of getting to
++the state via transitions that match the elements of some partitioning of the string.
++This can be interpreted as the `Set` of strings that reach a certain inner state;
++i.e. its `Language`.
++-/
++inductive trace (M : GNFA α σ) : σ → Language α
++  | start : ∀ {x} q, x ∈ (M.step none (some q)).matches' → M.trace q x
++  | step : ∀ {x y z} p q,
++    y ∈ M.trace p → z ∈ (M.step (some p) (some q)).matches' → x = y ++ z → M.trace q x
+```
+PAST COMMENT (from reviewer):
+It would be tempting to write this as
+```suggestion
+    y ∈ M.trace p → z ∈ (M.step (some p) (some q)).matches' → M.trace q (y ++ z)
+```
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "new_hunk_plausible_concerns": [
+    "naming",
+    "correctness-bug",
+    "docstring",
+    "proof-golf"
+  ],
+  "summary": "The new lemma name likely conflicts with established naming conventions for mem_evalFrom lemmas; minor docstring grammar and proof-style tweaks might help.",
+  "confidence": "medium",
+  "strong_matches": [
+    {
+      "past_pr": 25321,
+      "past_file": "Mathlib/Computability/NFA.lean",
+      "past_concern_axis": "naming",
+      "past_comment_excerpt": "theorem mem_evalFrom_iff_nonempty_path {s t : σ} {x : List α} :",
+      "applies_because": "The past comment suggests the canonical name for this exact equivalence is mem_evalFrom_iff_nonempty_path. The new code proves t ∈ M.evalFrom {s} x ↔ Nonempty (M.Path s t x) but names it Path.evalFrom_iff_nonempty.",
+      "suggested_adaptation": "Please rename to mem_evalFrom_iff_nonempty_path (or add an alias) for consistency with mem_evalFrom_* lemmas.",
+      "why_might_not_apply": "The author may have intentionally placed the lemma under Path.* to group path-related results.",
+      "supporting_past_prs": [
+        31038
+      ]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "Docstring typo: “the can be more than one `Path`” → “there can be more than one `Path`”.",
+      "axis": "docstring",
+      "supporting_past_prs": [
+        23820
+      ]
+    },
+    {
+      "observation": "The []-case proof could avoid tauto and use simpa/rewrites (e.g., derive t = s by simpa using h, then use h.symm).",
+      "axis": "proof-golf",
+      "supporting_past_prs": [
+        27461
+      ]
+    }
+  ]
+}

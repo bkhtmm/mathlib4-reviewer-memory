@@ -1,0 +1,602 @@
+====================================================================================================
+CASE W  PR #34007  (open-pr, v3.1 prompt)
+file: Mathlib/Algebra/Module/Submodule/Dual.lean  line: 49.0
+reviewer: @joelriou  on 2026-01-30T19:34:13Z
+advice_kind: generalize: two modules M₁/M₂ not one
+prompt_tokens: 7911  completion_tokens: 3049
+HUMAN reviewer (ground truth):
+  > We already have similar definitions in a slightly less general context at https://leanprover-community.github.io/mathlib4_docs/Mathlib/LinearAlgebra/SesquilinearForm/Basic.html#Submodule.orthogonalBilin and https://leanprover-community.github.io/mathlib4_docs/Mathlib/LinearAlgebra/BilinearForm/Orthogonal.html#LinearMap.BilinForm.orthogonal
+  > It would seem sensible to me to unify all of these.
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Two failure modes are equally bad and you must avoid BOTH:
+  (X) "axis-miss" false positive: a past comment and the new code look similar on the surface, but the past reviewer's concern is not present in the new hunk. (Example: past comment is about `ppSpace` formatting, new hunk's actual problem is "this whole function shouldn't return a string".)
+  (Y) "over-refusal" false negative: a candidate IS genuinely applicable, but you refuse because its concern axis didn't appear in your initial inventory. (Example: you forgot to list `refactor-simplify` for a proof hunk, then declined a candidate that correctly suggests using a higher-level lemma.)
+
+A correct silent output is more valuable than a confident wrong-axis answer, but losing a clearly-applicable candidate is also a real cost.
+
+Read carefully before producing JSON. Follow the four steps below in order.
+
+STEP 1 — STRUCTURAL + SEMANTIC READING OF THE NEW HUNK.
+  1a. Parse the code shape: tactic-mode vs term-mode, declaration kind (`def` / `theorem` / `lemma` / `instance` / `class` / `structure` / `abbrev` / `syntax` / `notation`), attributes (`@[simp]`, `@[to_additive]`, `@[deprecated]`, `@[ext]`, `@[fun_prop]`, `@[reassoc]`, …), universe parameters, implicit/explicit binders, docstring style, proof tactics used.
+  1b. Inventory what *could* be criticized about THIS specific hunk. Pick as many as apply from this list of "concern axes":
+     - correctness-bug        (code doesn't typecheck / is logically wrong)
+     - naming                  (lemma/def name doesn't follow conventions)
+     - docstring               (missing, unclear, typo, wrong phrasing)
+     - attribute               (missing/wrong `@[simp]` / `@[to_additive]` …)
+     - style-syntax            (`fun x ↦` vs `fun x =>`, `by use _; exact _` vs `⟨_, _⟩`, whitespace/`ppSpace`, notation preference)
+     - proof-golf              (the proof tactics could be shorter/nicer)
+     - refactor-simplify       (same statement provable with less machinery, e.g. use a dedicated higher-level lemma instead of manual rewriting)
+     - generalize-signature    (hypotheses too strong; remove/weaken a typeclass)
+     - design-smell-architectural (this API shape is wrong; returning a string, unnecessary instance, redundant definition, etc.)
+     - imports-module          (superfluous imports, module structure)
+     - namespace-organization  (`_root_`, namespace boundary, file placement)
+     - automation-tactic       (should use / should teach `aesop_cat`, `gcongr`, `positivity`, etc.)
+     - instance-diamond        (this instance creates an ambiguity / defeq diamond with another)
+     - unify-with-existing     (a similar definition/lemma already exists)
+     - junk-value              (docstring should note behavior at the "undefined" input; handled via `0`/`⊥`/`⊤`)
+  1c. DEFAULT-INCLUDE RULE. For ANY non-trivial proof or definition hunk (i.e. not a pure-imports/notation/file-header hunk), you MUST include the following axes in your plausible list unless the hunk is so trivial that they cannot apply: `refactor-simplify`, `proof-golf`, `docstring`, `naming`. These are the most common reviewer concerns; gating them out by omission caused real misses in past evaluation. Adding them is cheap; they only trigger a promotion if a candidate also matches.
+  1d. List the concerns that PLAUSIBLY apply to the new hunk (including the defaults from 1c). If none from outside 1c are obviously present, that is fine — the defaults still cover proof/definition hunks.
+
+STEP 2 — PER-CANDIDATE CONCERN CLASSIFICATION.
+  For EACH candidate, identify which concern axis (from the same list) the past reviewer's comment was about. Read the past comment carefully: the reviewer's *words* (not the past code) tell you the concern axis. If a past comment ships a `suggestion` code block, that block is evidence for what the reviewer wanted changed — but the axis of concern comes from the prose around it. Ignore candidates whose past comment is pure bikeshed or where you cannot identify a clear concern.
+
+STEP 3 — AXIS MATCH + APPLICABILITY CHECK.
+  A candidate is eligible for `strong_matches` ONLY if BOTH:
+    (a) Its axis (from step 2) is among the new hunk's plausible concerns (from step 1d), OR you can clearly justify (in `applies_because`) why this axis IS present in the new hunk after all — in which case ADD that axis to `new_hunk_plausible_concerns` in your output. Late additions are allowed but should be the exception, not the rule.
+    (b) You can write a concrete adaptation that a Lean/mathlib reviewer would plausibly post on the new hunk *today*, given what is visible in the hunk.
+  Before promoting, write — in the JSON output, per match — a `why_might_not_apply` field giving the strongest counter-argument against promotion (one short sentence).
+
+  DEMOTION RULE (this is the #1 axis-miss-prevention lever):
+    If your counter-argument names a SPECIFIC PROPERTY of the new hunk that would make the past advice not apply or already-followed — e.g. "the new code already uses term-mode", "the lemma is already named correctly", "the import is actually used at line X", "the new code does not declare an instance, so the diamond risk does not apply" — then DEMOTE to `weak_observations` instead of promoting.
+    Only PROMOTE if the counter-argument is generic doubt that does NOT identify a specific reason the new hunk evades the past advice — e.g. "this is partly stylistic preference", "the user may have intended this", "I cannot verify without seeing more context". Generic doubt does not block promotion; specific evasion does.
+
+  Cross-candidate synthesis is allowed: if candidate X establishes that an identifier in the new hunk is a `class`, and candidate Y shows the preferred term-mode `instance := ⟨...⟩` template, they jointly support a promotion. List both in `supporting_past_prs` and still produce one `why_might_not_apply`.
+
+STEP 4 — CONFIDENCE AND OUTPUT.
+  Confidence scale:
+    - "high"   — ≥1 strong match survives step 3 AND the adaptation is a near-verbatim application of a past comment; the counter-argument is generic.
+    - "medium" — ≥1 strong match survives step 3 BUT needs adaptation or synthesis; counter-argument is generic doubt rather than specific evasion.
+    - "low"    — no candidate survives step 3; only stylistic patterns worth mentioning as `weak_observations`.
+    - "none"   — retrieved pool's concerns don't match anything plausible about the new hunk; state this and stop.
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "new_hunk_plausible_concerns": [<axis labels from Step 1d, plus any added in Step 3a>],
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_concern_axis": "<axis label from the list>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure AND explaining why the concern axis matches>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "why_might_not_apply": "<one short sentence — strongest counter-argument against this promotion>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "axis": "<axis label>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Do not invent axis labels outside the list.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #34007 (file: Mathlib/Algebra/Module/Submodule/Dual.lean):
+```
+@@ -0,0 +1,235 @@
+... [9 lines above hidden]
++public import Mathlib.LinearAlgebra.Pi
++
++/-!
++# The algebraic dual of a submodule
++
++Given a bilinear pairing `p` between two `R`-modules `M` and `N` and a set `s` in `M`, we define
++`Submodule.dual p s` to be the submodule in `N` consisting of all points `y` such that
++`0 = p x y` for all `x ∈ s`.
++
++See also `PointedCone.dual`.
++
++## Main declarations
++
++- `Submodule.dual` is the dual submodule of a set `s` w.r.t. a bilinear pairing `p`.
++
++## Notes
++
++- In case that the pairing is `Dual.eval R M`, the dual of a submodule `S` is identical to the
++  dual annihilator `S` (see `dual_dualAnnihilator`).
++- In case that the pairing is `LinealMap.id`, the dual of a submodule `S` is identical to the
++  dual coannihilator `S` (see `dual_dualCoannihilator`).
++
++-/
++
++@[expose] public section
++
++assert_not_exists TopologicalSpace Real Cardinal
++
++open Module Set LinearMap
++
++namespace Submodule
++
++variable {R : Type*} [CommSemiring R]
++variable {M : Type*} [AddCommMonoid M] [Module R M]
++variable {N : Type*} [AddCommMonoid N] [Module R N]
++variable {p : M →ₗ[R] N →ₗ[R] R} {s t : Set M}
++
++variable (p s) in
++/-- The dual span of a set `s` with respect to a bilinear pairing `p` is the submodule
++  consisting of the points `y` such that for all points `x ∈ s` we have `0 = p x y`. -/
++def dual : Submodule R N where
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.794, past_pr=#24149, file=Mathlib/Geometry/Convex/Cone/Dual.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,90 @@
+... [67 lines above hidden]
++/-- The dual cone of `s` equals the intersection of dual cones of the points in `s`. -/
++lemma dual_eq_iInter_dual_singleton (s : Set M) :
++    dual p s = ⋂ i : s, (dual p {i.val} : Set N) := by ext; simp
++
++/-- Any set is a subset of its double dual cone. -/
++lemma subset_dual_dual : s ⊆ dual p.flip (dual p s) := fun _x hx _y hy ↦ hy hx
++
++variable (s) in
++@[simp] lemma dual_dual_flip_dual : dual p (dual p.flip (dual p s)) = dual p s :=
++  le_antisymm (dual_le_dual subset_dual_dual) subset_dual_dual
++
++@[simp] lemma dual_flip_dual_dual_flip (s : Set N) :
++    dual p.flip (dual p (dual p.flip s)) = dual p.flip s := dual_dual_flip_dual _
+```
+PAST COMMENT (from reviewer):
+Is there some way to phrase these instead as "the double dual of every Y cone is itself" (in both forms), and "every dual is Y", rather than as a triple dual? (I'm guessing the answer is "yes it's coming", in which case let's have a TODO for it)
+
+--- candidate 2 (sim=0.793, past_pr=#8997, file=Mathlib/LinearAlgebra/BilinearForm/DualLattice.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,130 @@
+... [45 lines above hidden]
++/-- The natural paring of `B.dualSubmodule N` and `N`.
++This is bundled as a bilinear map in `BilinForm.dualSubmoduleToDual`. -/
++noncomputable
++def dualSubmoduleParing {N : Submodule R M} (x : B.dualSubmodule N) (y : N) : R :=
++  (x.prop y y.prop).choose
++
++@[simp]
++lemma dualSubmoduleParing_spec {N : Submodule R M} (x : B.dualSubmodule N) (y : N) :
++    algebraMap R S (B.dualSubmoduleParing x y) = B x y :=
++  (x.prop y y.prop).choose_spec
++
++/-- The natural paring of `B.dualSubmodule N` and `N`. -/
++-- TODO: Show that this is perfect when `N` is a lattice.
+```
+PAST COMMENT (from reviewer):
+```suggestion
+-- TODO: Show that this is perfect when `N` is a lattice and `B` is nondegenerate.
+```
+Or something like that.
+
+--- candidate 3 (sim=0.785, past_pr=#8997, file=Mathlib/LinearAlgebra/BilinearForm/DualLattice.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,130 @@
+... [70 lines above hidden]
++      (by simp [← Algebra.smul_def]) }
++
++lemma dualSubmoduleToDual_injective (hB : B.Nondegenerate) [NoZeroSMulDivisors R S]
++    (N : Submodule R M) (hN : Submodule.span S (N : Set M) = ⊤) :
++    Function.Injective (B.dualSubmoduleToDual N) := by
++  intro x y e
++  ext
++  apply LinearMap.ker_eq_bot.mp hB.ker_eq_bot
++  apply LinearMap.ext_on hN
++  intro z hz
++  simpa using congr_arg (algebraMap R S) (LinearMap.congr_fun e ⟨z, hz⟩)
++
++lemma dualSubmodule_span_of_basis {ι} [Fintype ι] [DecidableEq ι] [FiniteDimensional S M]
+```
+PAST COMMENT (from reviewer):
+You can write
+```
+let _ : FiniteDimensional S M := ...
+```
+before the `:` and it should be happy (not 100% sure the syntax is exactly that, but it is similar, and I forgot if we want `let` or `letI` here).
+
+--- candidate 4 (sim=0.774, past_pr=#6437, file=Mathlib/Analysis/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,191 @@
++/-
++Copyright (c) 2023 Apurva Nakade All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Apurva Nakade
++-/
++import Mathlib.Analysis.Convex.Cone.Dual
++import Mathlib.Algebra.Order.Nonneg.Module
++import Mathlib.Algebra.Module.Submodule.Basic
++
++
+```
+PAST COMMENT (from reviewer):
+```suggestion
+
+```
+
+--- candidate 5 (sim=0.759, past_pr=#32920, file=Mathlib/Algebra/Module/Submodule/Union.lean) ---
+PAST HUNK:
+```
+@@ -7,7 +7,7 @@ module
+ 
+ public import Mathlib.Algebra.Module.Submodule.Lattice
+ public import Mathlib.Data.Set.Card
+-public import Mathlib.LinearAlgebra.Dual.Defs
++public import Mathlib.LinearAlgebra.Dual.Lemmas
+```
+PAST COMMENT (from reviewer):
+Can you keep `Mathlib.LinearAlgebra.Dual.Defs` as public and then privately import `Mathlib.LinearAlgebra.Dual.Lemmas` since it's only used in the proof?
+
+Reason for this is that importing `.Lemmas` could cause problems downstream if this gets imported somewhere (probably because of too many instances?). For example, `RingTheory/Spectrum/Prime/Polynomial` is one of those files that gets problems.
+This came up in https://github.com/leanprover-community/mathlib4/pull/32671/files#r2616327511.
+
+--- candidate 6 (sim=0.757, past_pr=#32920, file=Mathlib/Algebra/Module/Submodule/Union.lean) ---
+PAST HUNK:
+```
+@@ -7,7 +7,7 @@ module
+ 
+ public import Mathlib.Algebra.Module.Submodule.Lattice
+ public import Mathlib.Data.Set.Card
+-public import Mathlib.LinearAlgebra.Dual.Defs
++public import Mathlib.LinearAlgebra.Dual.Lemmas
+```
+PAST COMMENT (from reviewer):
+What made you change your mind? :eyes:
+
+--- candidate 7 (sim=0.744, past_pr=#20084, file=Mathlib/Analysis/Normed/Module/Dual.lean) ---
+PAST HUNK:
+```
+@@ -152,9 +152,19 @@ def polar (𝕜 : Type*) [NontriviallyNormedField 𝕜] {E : Type*} [SeminormedA
+... [3 lines above hidden]
+ 
++/-- Given a subset `s` in a normed space `E` (over a field `𝕜`) closed under scalar multiplication,
++ the polar `polarSubmodule 𝕜 s` is the submodule of `Dual 𝕜 E` consisting of those functionals which
++evaluate to zero at all points `z ∈ s`. -/
++def polarSubmodule (𝕜 : Type*) [NontriviallyNormedField 𝕜] {E : Type*} [SeminormedAddCommGroup E]
++    [NormedSpace 𝕜 E] {S : Type*} [SetLike S E] [SMulMemClass S 𝕜 E] (m : S) :
++    Submodule 𝕜 (Dual 𝕜 E) := (dualPairing 𝕜 E).flip.polarSubmodule m
++
+ variable (𝕜 : Type*) [NontriviallyNormedField 𝕜]
+ variable {E : Type*} [SeminormedAddCommGroup E] [NormedSpace 𝕜 E]
+ 
++lemma polarSubmodule_eq_polar (m : SubMulAction 𝕜 E) :
++    SetLike.coe (polarSubmodule 𝕜 m) = polar 𝕜 m := rfl
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    (polarSubmodule 𝕜 m : Set (Submodule 𝕜 (Dual 𝕜 E))) = polar 𝕜 m := rfl
+```
+
+--- candidate 8 (sim=0.741, past_pr=#24244, file=Mathlib/RingTheory/Regular/Depth.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,163 @@
++/-
++Copyright (c) 2025 Nailin Guan. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Nailin Guan, Yi Song
++-/
++import Mathlib.Algebra.Module.FinitePresentation
++import Mathlib.LinearAlgebra.Dual.Lemmas
+```
+PAST COMMENT (from reviewer):
+This (`Mathlib.LinearAlgebra.Dual.Lemmas`) is a common superfluous import by `#min_import`. Can you confirm if this is actually necessary or not?
+
+--- candidate 9 (sim=0.740, past_pr=#16707, file=Mathlib/Analysis/InnerProductSpace/Dual.lean) ---
+PAST HUNK:
+```
+@@ -69,6 +70,61 @@ variable {E}
+ theorem toDualMap_apply {x y : E} : toDualMap 𝕜 E x y = ⟪x, y⟫ :=
+   rfl
+ 
++section NullSubmodule
++
++open SeparationQuotient LinearMap
++
++variable (E)
++
++/-- The null space with respect to the norm. -/
++def nullSubmodule : Submodule 𝕜 E where
+```
+PAST COMMENT (from reviewer):
+Because you've defined this here, you're assuming that `E` is an inner product space and `𝕜` is `RCLike`, but there's no reason the definition needs to be anywhere near this restrictive. You're going to want to define `nullSubmodule` in a separate file, and then prove the results specific to inner product spaces here. In fact, I think it's only the `ker` results that stay in this file.
+
+--- candidate 10 (sim=0.739, past_pr=#27645, file=Mathlib/Geometry/Convex/Cone/TensorProduct.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,102 @@
++/-
++Copyright (c) 2025 Bjørn Solheim. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Bjørn Solheim
++-/
++import Mathlib.Geometry.Convex.Cone.Dual
++import Mathlib.LinearAlgebra.TensorProduct.Basic
++import Mathlib.LinearAlgebra.Dual.Lemmas
+```
+PAST COMMENT (from reviewer):
+```suggestion
+import Mathlib.LinearAlgebra.Dual.Lemmas
+import Mathlib.LinearAlgebra.TensorProduct.Basic
+```
+
+--- candidate 11 (sim=0.730, past_pr=#29241, file=Mathlib/Analysis/Convex/Cone/Dual.lean) ---
+PAST HUNK:
+```
+@@ -139,7 +139,7 @@ theorem hyperplane_separation_point (C : ProperCone ℝ E) (hx₀ : x₀ ∉ C)
+ @[simp] theorem dual_flip_dual (p : E →ₗ[ℝ] F →ₗ[ℝ] ℝ) [p.IsContPerfPair] (C : ProperCone ℝ E) :
+     dual p.flip (dual p (C : Set E)) = C := by
+   refine le_antisymm (fun x ↦ ?_) subset_dual_dual
+-  simp only [mem_toPointedCone, mem_dual, SetLike.mem_coe]
++  simp only [ClosedSubmodule.mem_toSubmodule_iff, mem_dual, SetLike.mem_coe, flip_apply]
+```
+PAST COMMENT (from reviewer):
+I'd prefer to keep the original `simp only` because the lemma it uses is more meaningful in this context.
+
+--- candidate 12 (sim=0.728, past_pr=#23945, file=Mathlib/LinearAlgebra/Dual/Lemmas.lean) ---
+PAST HUNK:
+```
+@@ -289,6 +289,11 @@ namespace Submodule
+ 
+ open Module
+ 
++@[simp]
++theorem dualCoannihilator_top {K M : Type*} [Field K] [AddCommGroup M] [Module K M] :
++    (⊤ : Submodule K (Module.Dual K M)).dualCoannihilator = ⊥ := by
++  rw [dualCoannihilator, dualAnnihilator_top, comap_bot, Module.eval_ker]
++
+ variable {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M] {p : Submodule R M}
+```
+PAST COMMENT (from reviewer):
+Let's move this down so that we can use the `variable`s and generalise as follows:
+```suggestion
+variable {R M : Type*} [CommRing R] [AddCommGroup M] [Module R M] {p : Submodule R M}
+
+@[simp]
+theorem dualCoannihilator_top [Projective R M] :
+    (⊤ : Submodule R (Module.Dual R M)).dualCoannihilator = ⊥ := by
+  rw [dualCoannihilator, dualAnnihilator_top, comap_bot, Module.eval_ker]
+```
+
+--- candidate 13 (sim=0.722, past_pr=#16707, file=Mathlib/Analysis/InnerProductSpace/Dual.lean) ---
+PAST HUNK:
+```
+@@ -69,6 +70,61 @@ variable {E}
+ theorem toDualMap_apply {x y : E} : toDualMap 𝕜 E x y = ⟪x, y⟫ :=
+   rfl
+ 
++section NullSubmodule
++
++open SeparationQuotient LinearMap
++
++variable (E)
++
+```
+PAST COMMENT (from reviewer):
+You don't want this to be explicit everywhere. Similarly, `𝕜` should only be explicit when the hypotheses don't mention `𝕜`, but the conclusion does (e.g., `inner_eq_zero_of_left`.
+```suggestion
+variable (E) in
+```
+
+--- candidate 14 (sim=0.721, past_pr=#18559, file=Mathlib/LinearAlgebra/PerfectPairing.lean) ---
+PAST HUNK:
+```
+@@ -129,6 +161,135 @@ include p in
+... [27 lines above hidden]
++      simpa only [apply_toDualLeft_symm_apply] using hg _ (LinearMap.mem_range_self j n)
++    rw [hm, ← LinearEquiv.symm_apply_eq, map_add, LinearEquiv.symm_symm,
++      toDualLeft_apply] at hm'
++    simpa [← hF, ← LinearMap.congr_fun hm' (j n)]
++
++/-- The restriction of a perfect pairing to submodules (expressed as injections to provide
++definitional control). -/
++@[simps]
++def restrict {M' N' : Type*} [AddCommGroup M'] [Module R M'] [AddCommGroup N'] [Module R N']
++    (i : M' →ₗ[R] M) (hi : Injective i)
++    (j : N' →ₗ[R] N) (hj : Injective j)
++    (hM : IsCompl (LinearMap.range i) ((LinearMap.range j).dualAnnihilator.map p.toDualLeft.symm))
++    (hN : IsCompl (LinearMap.range j) ((LinearMap.range i).dualAnnihilator.map p.toDualRight.symm)):
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    (hN : IsCompl (LinearMap.range j) ((LinearMap.range i).dualAnnihilator.map p.toDualRight.symm)) :
+```
+
+--- candidate 15 (sim=0.718, past_pr=#35323, file=Mathlib/Geometry/Convex/Cone/Dual.lean) ---
+PAST HUNK:
+```
+@@ -86,20 +89,45 @@ lemma dual_eq_iInter_dual_singleton (s : Set M) :
+... [30 lines above hidden]
+   | mem _y h => exact hx h
+   | zero => simp
+   | add y z _hy _hz hy hz => rw [map_add, add_apply]; exact add_nonneg hy hz
+   | smul t y _hy hy => rw [map_smul_of_tower, Nonneg.mk_smul, smul_apply]; exact mul_nonneg t.2 hy
+ 
++@[simp] lemma dual_sup (C D : PointedCone R M) : dual p (C ⊔ D : PointedCone R M) = dual p (C ∪ D)
++  := by simp [← dual_span]
++
++lemma dual_id (s : Set M) : dual p s = dual .id (p '' s) := by ext; simp
++
++lemma dual_id_map (C : PointedCone R M) : dual p C = dual .id (map p C) := by ext; simp
++
++lemma dual_eval (s : Set M) : dual p s = comap p.flip (dual (Module.Dual.eval R M) s) := by
+```
+PAST COMMENT (from reviewer):
+Surely the RHS is more complicated than the RHS, so this should be turned around?
+
+--- candidate 16 (sim=0.717, past_pr=#27699, file=Mathlib/Topology/Algebra/Module/StrongDual.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,168 @@
+... [2 lines above hidden]
++Copyright (c) 2020 Heather Macbeth. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Heather Macbeth
++-/
++import Mathlib.Topology.Algebra.Module.LinearMap
++import Mathlib.Analysis.LocallyConvex.Polar
++
++/-!
++# The topological strong dual of a module
++
++## Main definitions
++
++- `strongDualPairing`: The StrongDual pairing as a bilinear form.
+```
+PAST COMMENT (from reviewer):
+```suggestion
+- `strongDualPairing`: The strong dual pairing as a bilinear form.
+```
+
+--- candidate 17 (sim=0.717, past_pr=#35323, file=Mathlib/Geometry/Convex/Cone/Dual.lean) ---
+PAST HUNK:
+```
+@@ -86,20 +89,45 @@ lemma dual_eq_iInter_dual_singleton (s : Set M) :
+... [30 lines above hidden]
+   | mem _y h => exact hx h
+   | zero => simp
+   | add y z _hy _hz hy hz => rw [map_add, add_apply]; exact add_nonneg hy hz
+   | smul t y _hy hy => rw [map_smul_of_tower, Nonneg.mk_smul, smul_apply]; exact mul_nonneg t.2 hy
+ 
++@[simp] lemma dual_sup (C D : PointedCone R M) : dual p (C ⊔ D : PointedCone R M) = dual p (C ∪ D)
++  := by simp [← dual_span]
++
++lemma dual_id (s : Set M) : dual p s = dual .id (p '' s) := by ext; simp
++
++lemma dual_id_map (C : PointedCone R M) : dual p C = dual .id (map p C) := by ext; simp
++
++lemma dual_eval (s : Set M) : dual p s = comap p.flip (dual (Module.Dual.eval R M) s) := by
+```
+PAST COMMENT (from reviewer):
+If your lemma aren't standard simplification lemmas, then I would highly suggest:
+1. You explain how they are supposed to be used in their docstring
+2. You follow the semantic naming convention rather than the syntactic one
+
+--- candidate 18 (sim=0.713, past_pr=#27699, file=Mathlib/Topology/Algebra/Module/StrongDual.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,173 @@
+... [44 lines above hidden]
++
++@[simp]
++theorem dualPairing_apply {v : StrongDual R M} {x : M} : strongDualPairing R M v x = v x :=
++  rfl
++
++@[deprecated (since := "2025-08-3")] alias NormedSpace.dualPairing_apply := dualPairing_apply
++
++end
++
++section
++
++variable (R : Type*) [SeminormedCommRing R]
++variable (M : Type*) [TopologicalSpace M] [AddCommGroup M] [Module R M]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+variable (R M : Type*) [SeminormedCommRing R] [TopologicalSpace M] [AddCommGroup M] [Module R M]
+```
+
+--- candidate 19 (sim=0.712, past_pr=#20084, file=Mathlib/Analysis/Normed/Module/Dual.lean) ---
+PAST HUNK:
+```
+@@ -152,12 +152,26 @@ def polar (𝕜 : Type*) [NontriviallyNormedField 𝕜] {E : Type*} [SeminormedA
+... [10 lines above hidden]
++
+ variable (𝕜 : Type*) [NontriviallyNormedField 𝕜]
+ variable {E : Type*} [SeminormedAddCommGroup E] [NormedSpace 𝕜 E]
+ 
++lemma polarSubmodule_eq_polar (m : SubMulAction 𝕜 E) :
++    (polarSubmodule 𝕜 m : Set (Dual 𝕜 E)) = polar 𝕜 m := rfl
++
+ theorem mem_polar_iff {x' : Dual 𝕜 E} (s : Set E) : x' ∈ polar 𝕜 s ↔ ∀ z ∈ s, ‖x' z‖ ≤ 1 :=
+   Iff.rfl
+ 
++lemma mem_polarSubmodule {S : Type*} [SetLike S E] [SMulMemClass S 𝕜 E] (m : S) :
++    polarSubmodule 𝕜 m = { y : Dual 𝕜 E | ∀ x ∈ m, y x  = 0 } :=
++  (dualPairing 𝕜 E).flip.polar_subMulAction _
+```
+PAST COMMENT (from reviewer):
+```suggestion
+lemma polarSubmodule_eq_setOf {S : Type*} [SetLike S E] [SMulMemClass S 𝕜 E] (m : S) :
+    polarSubmodule 𝕜 m = { y : Dual 𝕜 E | ∀ x ∈ m, y x = 0 } :=
+  (dualPairing 𝕜 E).flip.polar_subMulAction _
+
+lemma mem_polarSubmodule {S : Type*} [SetLike S E] [SMulMemClass S 𝕜 E] (m : S) (y : Dual 𝕜 E) :
+    y ∈ polarSubmodule 𝕜 m ↔ ∀ x ∈ m, y x  = 0 :=
+  Iff.rfl
+```
+
+(untested)
+
+--- candidate 20 (sim=0.705, past_pr=#33323, file=Mathlib/Algebra/Module/Submodule/Lattice.lean) ---
+PAST HUNK:
+```
+@@ -22,7 +22,8 @@ This file defines the lattice structure on submodules, `Submodule.CompleteLattic
+ defined as `{0}` and `⊓` defined as intersection of the underlying carrier.
+ If `p` and `q` are submodules of a module, `p ≤ q` means that `p ⊆ q`.
+ 
+-Many results about operations on this lattice structure are defined in `LinearAlgebra/Basic.lean`,
++Many results about operations on this lattice structure are defined in
++`Mathlib/LinearAlgebra/Span/Defs.lean`,
+ most notably those which use `span`.
+```
+PAST COMMENT (from reviewer):
+I don't think this comment is really helping anyone and is in danger of breaking again, let's just excise it.
+```suggestion
+```
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "new_hunk_plausible_concerns": [
+    "docstring",
+    "naming",
+    "refactor-simplify",
+    "proof-golf"
+  ],
+  "summary": "No past review comment maps cleanly; only minor docstring/style echoes (typo/capitalization and variable-binder explicitness already followed) are observable.",
+  "confidence": "low",
+  "strong_matches": [],
+  "weak_observations": [
+    {
+      "observation": "Docstring polish: there’s a likely typo “LinealMap.id” → “LinearMap.id”; similar small docstring wording/capitalization tweaks are common.",
+      "axis": "docstring",
+      "supporting_past_prs": [
+        27699
+      ]
+    },
+    {
+      "observation": "Good use of `variable (p s) in` to localize explicitness; this matches guidance to avoid making parameters explicit globally.",
+      "axis": "style-syntax",
+      "supporting_past_prs": [
+        16707
+      ]
+    }
+  ]
+}

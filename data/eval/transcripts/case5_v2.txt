@@ -1,0 +1,507 @@
+====================================================================================================
+CASE 5  PR #37009  (heldout-closed)
+file: Mathlib/Algebra/Algebra/StrictPositivity.lean  line: 83.0
+prompt_version: v2
+prompt_tokens: 7032  completion_tokens: 3088  latency: 33.23s
+HUMAN reviewer (ground truth):
+  > ```suggestion
+  >     {a : A} : IsStrictlyPositive a := iff_of_unital.mpr ⟨by simp, isUnit_of_subsingleton _⟩
+  > ```
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Compared to a naive matcher you must do TWO extra things, because the answer is often only derivable by combining evidence:
+
+A. STRUCTURAL PATTERN EXTRACTION. Past comments often contain `suggestion` code blocks (```suggestion ... ```) or inline code-shape rewrites. These suggested code snippets ARE concrete advice, not just commentary. Treat them as first-class evidence about preferred Lean/mathlib idioms (e.g.: term-mode constructor `:= ⟨_, _, _⟩` vs `by use _; exact _`, `instance` vs `theorem` for class-membership statements, `refine ⟨..., ?_⟩` vs `use ...; constructor`, `@[simp]` / `@[to_additive]` attributes, naming conventions, docstring phrasing, etc.).
+
+B. CROSS-CANDIDATE SYNTHESIS. The applicable advice for the new hunk may require combining evidence from multiple candidates. Example: candidate X's context tells you that an identifier in the new hunk is a `class`; candidate Y shows the term-mode `instance ... := ⟨...⟩` template for proving class membership. Together they support the conclusion: "the new theorem proving class membership should be rewritten as an `instance` with a term-mode constructor". List supporting PRs for any synthesised finding.
+
+Reasoning protocol (do this internally before producing JSON):
+
+  1. STRUCTURAL FEATURES OF THE NEW HUNK. Identify each: tactic-mode vs term-mode? Uses `by use ...; exact ...`? Uses `use ...; constructor`? Declares an `instance` / a `theorem` / a `lemma` / a `def` / a `class`? Has `@[simp]`, `@[to_additive]`, `@[deprecated]`? Uses anonymous functions `fun x =>` vs `↦`? Has a docstring `/-- ... -/` of any specific shape?
+
+  2. PATTERN INVENTORY FROM CANDIDATES. For each candidate, note any concrete pattern shown in its suggested-code or comment (term-mode template, attribute recommendation, naming convention, idiomatic rewrite, terminology preference, etc.). Also note which candidates' past hunks define or use identifiers that appear in the new hunk (these are clues about whether something is a class, an instance, an alias, etc.).
+
+  3. APPLICABILITY CHECK. For each pattern from step 2, ask: does the new hunk's structure (step 1) instantiate the same shape that this pattern was applied to? If yes, that's a STRONG match. If two patterns combine to support a finding, list both supporting PRs.
+
+  4. STRICT REFUSAL. If after this analysis no candidate (alone or in combination) gives concrete, well-grounded advice for the specific code in the new hunk, output an empty `strong_matches` list. Do not paper over with generic advice. Generic style observations belong in `weak_observations`, clearly marked. Do not invent advice that isn't traceable to specific past PRs in the retrieval pool.
+
+Confidence:
+  - "high"  — at least one strong match is grounded in concrete suggested-code or explicit prose from a candidate, and the new hunk clearly fits the same shape
+  - "medium" — at least one strong match exists but requires synthesis or adaptation; OR a single candidate gives related but not identical advice
+  - "low"   — only loose stylistic patterns; nothing actionable
+  - "none"  — retrieved pool is unrelated; do not press an answer
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Be precise about which PR(s) support each finding via supporting_past_prs.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #37009 (file: Mathlib/Algebra/Algebra/StrictPositivity.lean):
+```
+@@ -76,6 +76,12 @@ lemma _root_.Units.isStrictlyPositive_iff [LE A] [Monoid A] [Zero A] {a : Aˣ} :
+ lemma _root_.Units.isStrictlyPositive_of_le [LE A] [Monoid A] [Zero A] {a : Aˣ}
+     (h : (0 : A) ≤ a) : IsStrictlyPositive (a : A) := a.isStrictlyPositive_iff.mpr h
+ 
++@[nontriviality]
++lemma isStrictlyPositive_of_subsingleton [PartialOrder A] [Monoid A] [Zero A] [Subsingleton A]
++    {a : A} : IsStrictlyPositive a := by
++  rw [IsStrictlyPositive.iff_of_unital]
++  exact ⟨by simp, isUnit_of_subsingleton _⟩
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.803, past_pr=#29087, file=Mathlib/Analysis/CStarAlgebra/ContinuousFunctionalCalculus/Order.lean) ---
+PAST HUNK:
+```
+@@ -372,6 +372,20 @@ lemma rpow_neg_one_le_one {a : A} (ha : 1 ≤ a) : a ^ (-1 : ℝ) ≤ 1 := by
+   rw [rpow_neg_one_eq_inv a (zero_le_one.trans ha)]
+   exact inv_le_one ha
+ 
++protected lemma _root_.IsStrictlyPositive.of_le {a b : A} (ha : IsStrictlyPositive a)
++    (hab : a ≤ b) : IsStrictlyPositive b :=
++  ⟨ha.1.trans hab, CStarAlgebra.isUnit_of_le ha.2 ha.1 hab⟩
++
++@[grind ←, aesop 90% apply]
++lemma _root_.isStrictlyPositive_add {a b : A}
+```
+PAST COMMENT (from reviewer):
+Hmm... to me, it feels like it might be annoying to do `(IsStrictlyPositive (a + b) := by grind)` instead of `ha.add_nonneg hb`. Plus, the second case would just be `add_comm a b ▸ hb.add_nonneg ha` if they're separated. I.e.,
+
+```lean
+theorem _root_.IsStrictlyPositive.add_nonneg {a b : A}
+    (ha : IsStrictlyPositive a) (hb : 0 ≤ b) : IsStrictlyPositive (a + b) :=
+  IsStrictlyPositive.of_le ha ((le_add_iff_nonneg_right a).mpr hb)
+
+theorem _root_.IsStrictlyPositive.nonneg_add {a b : A}
+    (ha : 0 ≤ a) (hb : IsStrictlyPositive b) : IsStrictlyPositive (a + b) :=
+  add_comm a b ▸ hb.add_nonneg ha
+```
+
+--- candidate 2 (sim=0.802, past_pr=#29087, file=Mathlib/Analysis/CStarAlgebra/ContinuousFunctionalCalculus/Order.lean) ---
+PAST HUNK:
+```
+@@ -372,6 +372,20 @@ lemma rpow_neg_one_le_one {a : A} (ha : 1 ≤ a) : a ^ (-1 : ℝ) ≤ 1 := by
+   rw [rpow_neg_one_eq_inv a (zero_le_one.trans ha)]
+   exact inv_le_one ha
+ 
++protected lemma _root_.IsStrictlyPositive.of_le {a b : A} (ha : IsStrictlyPositive a)
++    (hab : a ≤ b) : IsStrictlyPositive b :=
++  ⟨ha.1.trans hab, CStarAlgebra.isUnit_of_le ha.2 ha.1 hab⟩
++
++@[grind ←, aesop 90% apply]
++lemma _root_.isStrictlyPositive_add {a b : A}
+```
+PAST COMMENT (from reviewer):
+would it not be better to separate this into two lemmas? Something like `IsStrictlyPositive.add_nonneg` and `.nonneg_add` maybe?
+
+--- candidate 3 (sim=0.743, past_pr=#27436, file=Mathlib/Algebra/Order/GroupWithZero/WithZero.lean) ---
+PAST HUNK:
+```
+@@ -91,6 +91,12 @@ lemma WithZero.withZeroUnitsEquiv_strictMono :
+   cases a <;> cases b <;>
+   simp
+ 
++lemma WithZero.withZeroUnitsEquiv_symm_strictMono :
++    StrictMono (withZeroUnitsEquiv (G := α)).symm := by
++  intro a b h
++  rw [← withZeroUnitsEquiv_strictMono.lt_iff_lt]
++  simp only [MulEquiv.apply_symm_apply, h]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+lemma WithZero.withZeroUnitsEquiv_symm_strictMono :
+    StrictMono (withZeroUnitsEquiv (G := α)).symm :=
+  OrderIso.withZeroUnits.symm.strictMono
+```
+by moving below
+
+--- candidate 4 (sim=0.738, past_pr=#26110, file=Mathlib/Algebra/Group/Units/Defs.lean) ---
+PAST HUNK:
+```
+@@ -425,9 +427,23 @@ lemma IsUnit.exists_left_inv {a : M} (h : IsUnit a) : ∃ b, b * a = 1 := by
+ @[to_additive] lemma IsUnit.pow (n : ℕ) : IsUnit a → IsUnit (a ^ n) := by
+   rintro ⟨u, rfl⟩; exact ⟨u ^ n, rfl⟩
+ 
++variable (M) in
++/-- A monoid is sharp iff its only unit is `1`. -/
++@[to_additive /-- A monoid is sharp iff its only unit is `0`. -/]
++abbrev IsSharpMonoid := Subsingleton Mˣ
+```
+PAST COMMENT (from reviewer):
+I agree. It's redundant because you know that `1` is (syntactically) a unit already.
+
+--- candidate 5 (sim=0.737, past_pr=#26110, file=Mathlib/Algebra/Group/Units/Defs.lean) ---
+PAST HUNK:
+```
+@@ -425,9 +427,23 @@ lemma IsUnit.exists_left_inv {a : M} (h : IsUnit a) : ∃ b, b * a = 1 := by
+ @[to_additive] lemma IsUnit.pow (n : ℕ) : IsUnit a → IsUnit (a ^ n) := by
+   rintro ⟨u, rfl⟩; exact ⟨u ^ n, rfl⟩
+ 
++variable (M) in
++/-- A monoid is sharp iff its only unit is `1`. -/
++@[to_additive /-- A monoid is sharp iff its only unit is `0`. -/]
++abbrev IsSharpMonoid := Subsingleton Mˣ
+```
+PAST COMMENT (from reviewer):
+The definition here states something slightly different. What about adding an `IsSharpMonoid M → Unique Mˣ` instance?
+
+--- candidate 6 (sim=0.725, past_pr=#30262, file=Mathlib/RingTheory/Valuation/ValuativeRel/Basic.lean) ---
+PAST HUNK:
+```
+@@ -137,16 +153,18 @@ lemma rel_mul {x x' y y' : R} (h1 : x ≤ᵥ y) (h2 : x' ≤ᵥ y') : (x * x') 
+ theorem rel_add_cases (x y : R) : x + y ≤ᵥ x ∨ x + y ≤ᵥ y :=
+   (rel_total y x).imp (fun h => rel_add .rfl h) (fun h => rel_add h .rfl)
+ 
++lemma zero_rel_lt_mul_of_zero_rel_lt {x y : R} (hx : 0 <ᵥ x) (hy : 0 <ᵥ y) : 0 <ᵥ x * y := by
++  contrapose! hy
++  rw [not_rel_lt_iff] at hy ⊢
++  rw [show (0 : R) = x * 0 by simp, mul_comm x y, mul_comm x 0] at hy
++  exact rel_mul_cancel hx hy
++
+ variable (R) in
+ /-- The submonoid of elements `x : R` whose valuation is positive. -/
+ def posSubmonoid : Submonoid R where
+-  carrier := { x | ¬ x ≤ᵥ 0}
+-  mul_mem' {x y} hx hy := by
+-    dsimp only [Set.mem_setOf_eq] at hx hy ⊢
+-    contrapose! hy
+-    rw [show (0 : R) = x * 0 by simp, mul_comm x y, mul_comm x 0] at hy
+-    exact rel_mul_cancel hx hy
+-  one_mem' := not_rel_one_zero
++  carrier := { x | 0 <ᵥ x}
++  mul_mem' := zero_rel_lt_mul_of_zero_rel_lt
++  one_mem' := zero_rel_lt_one
+ 
+ @[simp]
+ lemma posSubmonoid_def (x : R) : x ∈ posSubmonoid R ↔ ¬ x ≤ᵥ 0 := Iff.refl _
+```
+PAST COMMENT (from reviewer):
+Shall this be changed as well?
+
+--- candidate 7 (sim=0.722, past_pr=#30050, file=Mathlib/Analysis/SpecialFunctions/ContinuousFunctionalCalculus/Rpow/Basic.lean) ---
+PAST HUNK:
+```
+@@ -689,6 +689,12 @@ omit [T2Space A] [IsTopologicalRing A] in
+ lemma _root_.IsStrictlyPositive.rpow {a : A} {y : ℝ} (ha : IsStrictlyPositive a) :
+     IsStrictlyPositive (a ^ y) := by grind
+ 
++omit [T2Space A] [IsTopologicalRing A] in
++theorem _root_.IsStrictlyPositive.commute_iff {a b : A} (ha : IsStrictlyPositive a)
++    (hb : IsStrictlyPositive b) : Commute a b ↔ IsStrictlyPositive (a * b) := by
++  rw [commute_iff_mul_nonneg ha.nonneg hb.nonneg]
++  exact ⟨fun h => ha.isUnit.mul hb.isUnit |>.isStrictlyPositive h, fun h => h.nonneg⟩
+```
+PAST COMMENT (from reviewer):
+This feels like it should be possible to move it somewhere else, maybe even out of this file?
+
+Perhaps this is here as a vestige from before `commute_iff_mul_nonneg` moved.
+
+--- candidate 8 (sim=0.720, past_pr=#30262, file=Mathlib/RingTheory/Valuation/ValuativeRel/Basic.lean) ---
+PAST HUNK:
+```
+@@ -137,16 +153,18 @@ lemma rel_mul {x x' y y' : R} (h1 : x ≤ᵥ y) (h2 : x' ≤ᵥ y') : (x * x') 
+ theorem rel_add_cases (x y : R) : x + y ≤ᵥ x ∨ x + y ≤ᵥ y :=
+   (rel_total y x).imp (fun h => rel_add .rfl h) (fun h => rel_add h .rfl)
+ 
++lemma zero_rel_lt_mul_of_zero_rel_lt {x y : R} (hx : 0 <ᵥ x) (hy : 0 <ᵥ y) : 0 <ᵥ x * y := by
++  contrapose! hy
++  rw [not_rel_lt_iff] at hy ⊢
++  rw [show (0 : R) = x * 0 by simp, mul_comm x y, mul_comm x 0] at hy
++  exact rel_mul_cancel hx hy
++
+ variable (R) in
+ /-- The submonoid of elements `x : R` whose valuation is positive. -/
+ def posSubmonoid : Submonoid R where
+-  carrier := { x | ¬ x ≤ᵥ 0}
+-  mul_mem' {x y} hx hy := by
+-    dsimp only [Set.mem_setOf_eq] at hx hy ⊢
+-    contrapose! hy
+-    rw [show (0 : R) = x * 0 by simp, mul_comm x y, mul_comm x 0] at hy
+-    exact rel_mul_cancel hx hy
+-  one_mem' := not_rel_one_zero
++  carrier := { x | 0 <ᵥ x}
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  carrier := { x | 0 <ᵥ x }
+```
+
+--- candidate 9 (sim=0.720, past_pr=#31783, file=Mathlib/RingTheory/Valuation/ValuativeRel/Basic.lean) ---
+PAST HUNK:
+```
+@@ -172,14 +184,14 @@ def posSubmonoid : Submonoid R where
+   mul_mem' := zero_srel_mul
+   one_mem' := zero_srel_one
+ 
++@[simp] lemma zero_srel_posSubmonoid_def (x : posSubmonoid R) : 0 <ᵥ x.val := x.prop
++
+ @[simp]
+ lemma posSubmonoid_def (x : R) : x ∈ posSubmonoid R ↔ 0 <ᵥ x := Iff.rfl
+ 
+-@[simp]
+ lemma right_cancel_posSubmonoid (x y : R) (u : posSubmonoid R) :
+     x * u ≤ᵥ y * u ↔ x ≤ᵥ y := ⟨rel_mul_cancel u.prop, rel_mul_right _⟩
+ 
+-@[simp]
+ lemma left_cancel_posSubmonoid (x y : R) (u : posSubmonoid R) :
+```
+PAST COMMENT (from reviewer):
+I can't tell. I personally think we should never work with bundled `posSubmonoid R` so I don't use this lemma. Maybe keep it for now.
+
+--- candidate 10 (sim=0.720, past_pr=#31783, file=Mathlib/RingTheory/Valuation/ValuativeRel/Basic.lean) ---
+PAST HUNK:
+```
+@@ -172,14 +184,14 @@ def posSubmonoid : Submonoid R where
+   mul_mem' := zero_srel_mul
+   one_mem' := zero_srel_one
+ 
++@[simp] lemma zero_srel_posSubmonoid_def (x : posSubmonoid R) : 0 <ᵥ x.val := x.prop
++
+ @[simp]
+ lemma posSubmonoid_def (x : R) : x ∈ posSubmonoid R ↔ 0 <ᵥ x := Iff.rfl
+ 
+-@[simp]
+ lemma right_cancel_posSubmonoid (x y : R) (u : posSubmonoid R) :
+     x * u ≤ᵥ y * u ↔ x ≤ᵥ y := ⟨rel_mul_cancel u.prop, rel_mul_right _⟩
+ 
+-@[simp]
+ lemma left_cancel_posSubmonoid (x y : R) (u : posSubmonoid R) :
+```
+PAST COMMENT (from reviewer):
+Is this now `by simp`? If so could you change the proof?
+
+--- candidate 11 (sim=0.719, past_pr=#14060, file=Mathlib/Algebra/Order/Monoid/Canonical/Defs.lean) ---
+PAST HUNK:
+```
+@@ -175,6 +175,9 @@ end CanonicallyOrderedCommMonoid
+ theorem pos_of_gt {M : Type*} [CanonicallyOrderedAddCommMonoid M] {n m : M} (h : n < m) : 0 < m :=
+   lt_of_le_of_lt (zero_le _) h
+ 
++theorem pos_of_gt' {M : Type*} [Preorder M] [OrderBot M] {n m : M} (h : n < m) : ⊥ < m :=
+```
+PAST COMMENT (from reviewer):
+I think this was already discussed, but this theorem already exists as `bot_lt_of_lt`.
+
+--- candidate 12 (sim=0.718, past_pr=#22100, file=Mathlib/Algebra/Order/AbsoluteValue/Basic.lean) ---
+PAST HUNK:
+```
+@@ -373,6 +384,58 @@ lemma IsNontrivial.exists_abv_lt_one (h : v.IsNontrivial) : ∃ x ≠ 0, v x < 1
+   rw [map_inv₀]
+   exact (inv_lt_one₀ <| v.pos hy₀).mpr hy
+ 
++theorem inv_pos {x : R} (h : 0 < v x) : 0 < v x⁻¹ := by
++  rwa [map_inv₀, _root_.inv_pos]
++
++omit [ExistsAddOfLE S] in
++theorem ne_zero_of_one_lt {x : R} (hv : 1 < v x) : x ≠ 0 := by
++  contrapose! hv
++  simp [hv]
++
++theorem isNontrivial_iff_exists_abv_one_lt :
++    v.IsNontrivial ↔ ∃ x, 1 < v x := by
++  refine ⟨fun h => h.exists_abv_gt_one, fun ⟨x, hx⟩ => ⟨x⁻¹, ?_, ?_⟩⟩
++  · simpa only [ne_eq, inv_eq_zero] using ne_zero_of_one_lt hx
++  · simpa only [map_inv₀, ne_eq, inv_eq_one] using ne_of_gt hx
++
++omit [ExistsAddOfLE S] [IsStrictOrderedRing S] in
++theorem nonpos_iff {x : R} : v x ≤ 0 ↔ v x = 0 := by
+```
+PAST COMMENT (from reviewer):
+
+```suggestion
+theorem abv_nonpos_iff {x : R} : v x ≤ 0 ↔ v x = 0 := by
+```
+
+--- candidate 13 (sim=0.715, past_pr=#28317, file=Mathlib/Algebra/Order/Monoid/Unbundled/Units.lean) ---
+PAST HUNK:
+```
+@@ -13,26 +13,81 @@ import Mathlib.Algebra.Order.Monoid.Unbundled.Basic
+ 
+ variable {M : Type*} [Monoid M] [LE M]
+ 
+-theorem Units.mulLECancellable_val [MulLeftMono M] (a : Mˣ) :
+-    MulLECancellable (↑a : M) := fun _ _ h ↦ by
+-  simpa using mul_le_mul_left' h ↑a⁻¹
++section MulLeftMono
++variable [MulLeftMono M] (u : Mˣ) {a b c : M} (ha : IsUnit a)
+ 
+-theorem Units.mul_le_mul_left [MulLeftMono M] (a : Mˣ) {b c : M} :
+-    a * b ≤ a * c ↔ b ≤ c :=
+-  a.mulLECancellable_val.mul_le_mul_iff_left
++namespace Units
+```
+PAST COMMENT (from reviewer):
+... and none of the other ones
+
+--- candidate 14 (sim=0.715, past_pr=#28317, file=Mathlib/Algebra/Order/Monoid/Unbundled/Units.lean) ---
+PAST HUNK:
+```
+@@ -13,26 +13,81 @@ import Mathlib.Algebra.Order.Monoid.Unbundled.Basic
+ 
+ variable {M : Type*} [Monoid M] [LE M]
+ 
+-theorem Units.mulLECancellable_val [MulLeftMono M] (a : Mˣ) :
+-    MulLECancellable (↑a : M) := fun _ _ h ↦ by
+-  simpa using mul_le_mul_left' h ↑a⁻¹
++section MulLeftMono
++variable [MulLeftMono M] (u : Mˣ) {a b c : M} (ha : IsUnit a)
+ 
+-theorem Units.mul_le_mul_left [MulLeftMono M] (a : Mˣ) {b c : M} :
+-    a * b ≤ a * c ↔ b ≤ c :=
+-  a.mulLECancellable_val.mul_le_mul_iff_left
++namespace Units
+```
+PAST COMMENT (from reviewer):
+I wouldn't have any lemma about `Units`, only lemmas about `IsUnit`
+
+--- candidate 15 (sim=0.713, past_pr=#30837, file=Mathlib/Algebra/GroupWithZero/NonZeroDivisors.lean) ---
+PAST HUNK:
+```
+@@ -150,6 +150,9 @@ theorem mul_right_coe_nonZeroDivisors_eq_zero_iff {c : M₀⁰} : x * c = 0 ↔
+ lemma IsUnit.mem_nonZeroDivisors (hx : IsUnit x) : x ∈ M₀⁰ :=
+   ⟨fun _ ↦ hx.mul_right_eq_zero.mp, fun _ ↦ hx.mul_left_eq_zero.mp⟩
+ 
++variable (M₀) in
++lemma isUnit_le_nonZeroDivisors : IsUnit.submonoid M₀ ≤ M₀⁰ := fun _ ↦ (·.mem_nonZeroDivisors)
+```
+PAST COMMENT (from reviewer):
+Do we really need this? It's *very close* to `mem_nonZeroDivisors`.
+
+--- candidate 16 (sim=0.712, past_pr=#35302, file=Mathlib/Algebra/Order/Ring/Unbundled/Basic.lean) ---
+PAST HUNK:
+```
+@@ -723,6 +723,22 @@ lemma eq_zero_of_mul_self_add_mul_self_eq_zero [NoZeroDivisors R]
+     (h : a * a + b * b = 0) : a = 0 :=
+   (mul_self_add_mul_self_eq_zero.mp h).left
+ 
++theorem pos_of_right_mul_lt_le [ExistsAddOfLE R] [PosMulMono R]
++    [AddRightMono R] [AddRightReflectLE R]
++    (h : a * b < a * c) (hbc : b ≤ c) :
++    0 < a := by
++  by_cases! ha : 0 < a
++  · exact ha
++  · grind [mul_le_mul_of_nonpos_left hbc ha]
+```
+PAST COMMENT (from reviewer):
+Huh, why does it not work? I would have expected that that to work as well
+
+--- candidate 17 (sim=0.712, past_pr=#35302, file=Mathlib/Algebra/Order/Ring/Unbundled/Basic.lean) ---
+PAST HUNK:
+```
+@@ -723,6 +723,22 @@ lemma eq_zero_of_mul_self_add_mul_self_eq_zero [NoZeroDivisors R]
+     (h : a * a + b * b = 0) : a = 0 :=
+   (mul_self_add_mul_self_eq_zero.mp h).left
+ 
++theorem pos_of_right_mul_lt_le [ExistsAddOfLE R] [PosMulMono R]
++    [AddRightMono R] [AddRightReflectLE R]
++    (h : a * b < a * c) (hbc : b ≤ c) :
++    0 < a := by
++  by_cases! ha : 0 < a
++  · exact ha
++  · grind [mul_le_mul_of_nonpos_left hbc ha]
+```
+PAST COMMENT (from reviewer):
+Does this work? Same below.
+```suggestion
+  by_contra! ha
+  grind [mul_le_mul_of_nonpos_left hbc ha]
+```
+
+--- candidate 18 (sim=0.710, past_pr=#5369, file=Mathlib/Algebra/Invertible.lean) ---
+PAST HUNK:
+```
+@@ -358,6 +365,56 @@ instance (priority := 100) Invertible.ne_zero [MulZeroOneClass α] [Nontrivial 
+   ⟨nonzero_of_invertible a⟩
+ #align invertible.ne_zero Invertible.ne_zero
+ 
++section Monoid
++
++variable [Monoid α]
++
++/-- This is the `invertible` version of `units.is_unit_units_mul` -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- This is the `invertible` version of `Units.isUnit_units_mul`. -/
+```
+And similarly elsewhere.
+
+--- candidate 19 (sim=0.708, past_pr=#27964, file=Mathlib/Algebra/Order/AbsoluteValue/Basic.lean) ---
+PAST HUNK:
+```
+@@ -113,6 +113,14 @@ protected theorem pos_iff {x : R} : 0 < abv x ↔ x ≠ 0 :=
+   (abv.nonneg x).lt_iff_ne'.trans abv.ne_zero_iff
+ protected alias ⟨_, pos⟩ := AbsoluteValue.pos_iff
+ 
++@[simp]
++protected theorem nonpos_iff {x : R} : abv x ≤ 0 ↔ abv x = 0 := by
++  simp [le_antisymm_iff, abv.nonneg]
++
++variable {abv} in
++theorem pos_of_pos (abv' : AbsoluteValue R S) {a : R} (hv : 0 < abv a) : 0 < abv' a := by
++  rwa [AbsoluteValue.pos_iff] at hv ⊢
+```
+PAST COMMENT (from reviewer):
+Again, neither the hypothesis nor the conclusion are in simp normal and the lemma becomes trivial once you simplify them. Are you sure we need this lemma?
+
+--- candidate 20 (sim=0.707, past_pr=#23034, file=Mathlib/Algebra/Order/Ring/Defs.lean) ---
+PAST HUNK:
+```
+@@ -191,11 +191,16 @@ instance (priority := 100) IsStrictOrderedRing.toIsOrderedRing : IsOrderedRing R
+   mul_le_mul_of_nonneg_right _ _ _ := mul_le_mul_of_nonneg_right
+ 
+ -- see Note [lower instance priority]
+-instance (priority := 100) IsStrictOrderedRing.toCharZero :
+-    CharZero R where
++instance (priority := 100) AddMonoidWithOne.toCharZero {R}
++    [AddMonoidWithOne R] [PartialOrder R] [ZeroLEOneClass R]
++    [NeZero (1 : R)] [AddLeftStrictMono R] : CharZero R where
+```
+PAST COMMENT (from reviewer):
+This forms a loop with `NeZero.charZero_one`
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "summary": "No past comment directly targets this lemma; the only echo is a general style hint to prefer a simp/simpa proof over rw; exact.",
+  "confidence": "low",
+  "strong_matches": [],
+  "weak_observations": [
+    {
+      "observation": "Consider shortening the proof to a one-liner with simpa instead of rw; exact, e.g. `simpa [IsStrictlyPositive.iff_of_unital] using ⟨by simp, isUnit_of_subsingleton _⟩`.",
+      "supporting_past_prs": [
+        31783
+      ]
+    }
+  ]
+}

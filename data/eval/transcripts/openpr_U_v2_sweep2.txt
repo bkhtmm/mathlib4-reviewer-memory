@@ -1,0 +1,434 @@
+====================================================================================================
+CASE U  PR #22308  (open-pr, v2 prompt, sweep2)
+file: Mathlib/Analysis/Convex/Gauge.lean  line: 209.0
+reviewer: @Paul-Lez  on 2025-02-28T10:05:50Z
+advice_kind: suggestion: add helper lemma
+prompt_tokens: 6597  completion_tokens: 4044
+HUMAN reviewer (ground truth):
+  > Maybe it would also be worth adding the lemma 
+  > ```
+  > StarConvex.zero_smul {𝕜 E : Type *} [OrderedCommSemiring 𝕜] [AddCommMonoid E] [Module 𝕜 E] {x : E}
+  >   {s : Set E} (hs : StarConvex 𝕜 0 s) (c : 𝕜) : StarConvex 𝕜 0 (c • s) := sorry
+  > ```
+  > and then applying it here?
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Compared to a naive matcher you must do TWO extra things, because the answer is often only derivable by combining evidence:
+
+A. STRUCTURAL PATTERN EXTRACTION. Past comments often contain `suggestion` code blocks (```suggestion ... ```) or inline code-shape rewrites. These suggested code snippets ARE concrete advice, not just commentary. Treat them as first-class evidence about preferred Lean/mathlib idioms (e.g.: term-mode constructor `:= ⟨_, _, _⟩` vs `by use _; exact _`, `instance` vs `theorem` for class-membership statements, `refine ⟨..., ?_⟩` vs `use ...; constructor`, `@[simp]` / `@[to_additive]` attributes, naming conventions, docstring phrasing, etc.).
+
+B. CROSS-CANDIDATE SYNTHESIS. The applicable advice for the new hunk may require combining evidence from multiple candidates. Example: candidate X's context tells you that an identifier in the new hunk is a `class`; candidate Y shows the term-mode `instance ... := ⟨...⟩` template for proving class membership. Together they support the conclusion: "the new theorem proving class membership should be rewritten as an `instance` with a term-mode constructor". List supporting PRs for any synthesised finding.
+
+Reasoning protocol (do this internally before producing JSON):
+
+  1. STRUCTURAL FEATURES OF THE NEW HUNK. Identify each: tactic-mode vs term-mode? Uses `by use ...; exact ...`? Uses `use ...; constructor`? Declares an `instance` / a `theorem` / a `lemma` / a `def` / a `class`? Has `@[simp]`, `@[to_additive]`, `@[deprecated]`? Uses anonymous functions `fun x =>` vs `↦`? Has a docstring `/-- ... -/` of any specific shape?
+
+  2. PATTERN INVENTORY FROM CANDIDATES. For each candidate, note any concrete pattern shown in its suggested-code or comment (term-mode template, attribute recommendation, naming convention, idiomatic rewrite, terminology preference, etc.). Also note which candidates' past hunks define or use identifiers that appear in the new hunk (these are clues about whether something is a class, an instance, an alias, etc.).
+
+  3. APPLICABILITY CHECK. For each pattern from step 2, ask: does the new hunk's structure (step 1) instantiate the same shape that this pattern was applied to? If yes, that's a STRONG match. If two patterns combine to support a finding, list both supporting PRs.
+
+  4. STRICT REFUSAL. If after this analysis no candidate (alone or in combination) gives concrete, well-grounded advice for the specific code in the new hunk, output an empty `strong_matches` list. Do not paper over with generic advice. Generic style observations belong in `weak_observations`, clearly marked. Do not invent advice that isn't traceable to specific past PRs in the retrieval pool.
+
+Confidence:
+  - "high"  — at least one strong match is grounded in concrete suggested-code or explicit prose from a candidate, and the new hunk clearly fits the same shape
+  - "medium" — at least one strong match exists but requires synthesis or adaptation; OR a single candidate gives related but not identical advice
+  - "low"   — only loose stylistic patterns; nothing actionable
+  - "none"  — retrieved pool is unrelated; do not press an answer
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Be precise about which PR(s) support each finding via supporting_past_prs.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #22308 (file: Mathlib/Analysis/Convex/Gauge.lean):
+```
+@@ -194,12 +194,22 @@ theorem self_subset_gauge_le_one : s ⊆ { x | gauge s x ≤ 1 } := fun _ => gau
+ theorem Convex.gauge_le (hs : Convex ℝ s) (h₀ : (0 : E) ∈ s) (absorbs : Absorbent ℝ s) (a : ℝ) :
+     Convex ℝ { x | gauge s x ≤ a } := by
+   by_cases ha : 0 ≤ a
+-  · rw [gauge_le_eq hs h₀ absorbs ha]
++  · rw [gauge_le_eq (hs.starConvex h₀) absorbs ha]
+     exact convex_iInter fun i => convex_iInter fun _ => hs.smul _
+   · -- Porting note: `convert` needed help
+     convert convex_empty (𝕜 := ℝ) (E := E)
+     exact eq_empty_iff_forall_not_mem.2 fun x hx => ha <| (gauge_nonneg _).trans hx
+ 
++theorem StarConvex.gauge_le (hs : StarConvex ℝ 0 s) (absorbs : Absorbent ℝ s) (a : ℝ) :
++    StarConvex ℝ 0 { x | gauge s x ≤ a } := by
++  by_cases ha : 0 ≤ a
++  · rw [gauge_le_eq hs absorbs ha]
++    refine starConvex_iInter fun i => starConvex_iInter fun _ => ?_
++    rw [← smul_zero i]
++    exact hs.smul i
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.850, past_pr=#30508, file=Mathlib/Analysis/Convex/Gauge.lean) ---
+PAST HUNK:
+```
+@@ -142,9 +142,7 @@ theorem gauge_le_eq (hs₁ : Convex ℝ s) (hs₀ : (0 : E) ∈ s) (hs₂ : Abso
+     refine hs₁.smul_mem_of_zero_mem hs₀ hδ ⟨by positivity, ?_⟩
+     rw [inv_mul_le_iff₀ hr', mul_one]
+     exact hδr.le
+-  · have hε' := (lt_add_iff_pos_right a).2 (half_pos hε)
+-    exact
+-      (gauge_le_of_mem (ha.trans hε'.le) <| h _ hε').trans_lt (add_lt_add_left (half_lt_self hε) _)
++  · linarith [gauge_le_of_mem (by linarith) <| h (a + ε / 2) (by linarith)]
+```
+PAST COMMENT (from reviewer):
+Let's benchmark this, just in case it's slower. (Otherwise, looks very nice.)
+
+--- candidate 2 (sim=0.753, past_pr=#22383, file=Mathlib/Analysis/Convex/Star.lean) ---
+PAST HUNK:
+```
+@@ -109,6 +109,10 @@ theorem starConvex_iInter {ι : Sort*} {s : ι → Set E} (h : ∀ i, StarConvex
+     StarConvex 𝕜 x (⋂ i, s i) :=
+   sInter_range s ▸ starConvex_sInter <| forall_mem_range.2 h
+ 
++theorem starConvex_iInter₂ {ι : Sort*} {κ : ι → Sort*} {s : ∀ i, κ i → Set E}
+```
+PAST COMMENT (from reviewer):
+I slightly prefer to reserve `∀` for propositional terms so how about:
+```suggestion
+theorem starConvex_iInter₂ {ι : Sort*} {κ : ι → Sort*} {s : (i : ι) → κ i → Set E}
+```
+
+--- candidate 3 (sim=0.746, past_pr=#22421, file=Mathlib/Analysis/Convex/Star.lean) ---
+PAST HUNK:
+```
+@@ -268,6 +268,9 @@ variable [AddCommMonoid E] [AddCommMonoid F] [Module 𝕜 E] [Module 𝕜 F] {x
+ theorem StarConvex.smul (hs : StarConvex 𝕜 x s) (c : 𝕜) : StarConvex 𝕜 (c • x) (c • s) :=
+   hs.linear_image <| LinearMap.lsmul _ _ c
+ 
++theorem StarConvex.smul_zero (hs : StarConvex 𝕜 0 s) (c : 𝕜) : StarConvex 𝕜 0 (c • s) := by
+```
+PAST COMMENT (from reviewer):
+Shouldn't it be `zero_smul`?
+
+--- candidate 4 (sim=0.746, past_pr=#22421, file=Mathlib/Analysis/Convex/Star.lean) ---
+PAST HUNK:
+```
+@@ -268,6 +268,9 @@ variable [AddCommMonoid E] [AddCommMonoid F] [Module 𝕜 E] [Module 𝕜 F] {x
+ theorem StarConvex.smul (hs : StarConvex 𝕜 x s) (c : 𝕜) : StarConvex 𝕜 (c • x) (c • s) :=
+   hs.linear_image <| LinearMap.lsmul _ _ c
+ 
++theorem StarConvex.smul_zero (hs : StarConvex 𝕜 0 s) (c : 𝕜) : StarConvex 𝕜 0 (c • s) := by
+```
+PAST COMMENT (from reviewer):
+Yes, I agree with Ruben here.
+
+--- candidate 5 (sim=0.740, past_pr=#16735, file=Mathlib/Analysis/Convex/Gauge.lean) ---
+PAST HUNK:
+```
+@@ -110,8 +110,7 @@ theorem gauge_of_subset_zero (h : s ⊆ 0) : gauge s = 0 := by
+   exacts [gauge_empty, gauge_zero']
+ 
+ /-- The gauge is always nonnegative. -/
+-theorem gauge_nonneg (x : E) : 0 ≤ gauge s x :=
+-  Real.sInf_nonneg _ fun _ hx => hx.1.le
++theorem gauge_nonneg (x : E) : 0 ≤ gauge s x := Real.sInf_nonneg fun _ hx => hx.1.le
+```
+PAST COMMENT (from reviewer):
+I don't see the point of putting this on one line: it just makes it harder to see when the statement stops and when the proof starts. In general, unless the proof is `rfl` or `by simp`, I like it better on a separate line even if it would fit on one line. Same thing several times in the PR.
+
+--- candidate 6 (sim=0.738, past_pr=#31180, file=Mathlib/Analysis/LocallyConvex/Separation.lean) ---
+PAST HUNK:
+```
+@@ -5,9 +5,11 @@ Authors: Bhavik Mehta, Yaël Dillies
+ -/
+ import Mathlib.Analysis.Convex.Cone.Extension
+ import Mathlib.Analysis.Convex.Gauge
++import Mathlib.Analysis.Normed.Module.Convex
+```
+PAST COMMENT (from reviewer):
+I think this is a bit of a heavy import for this file. What result did you need from it?
+
+--- candidate 7 (sim=0.738, past_pr=#30331, file=Mathlib/Analysis/Convex/EGauge.lean) ---
+PAST HUNK:
+```
+@@ -152,6 +152,22 @@ lemma egauge_le_one (h : x ∈ s) : egauge 𝕜 s x ≤ 1 := by
+ 
+ variable {𝕜}
+ 
++lemma le_egauge_of_forall_ne_zero [(𝓝[≠] (0 : 𝕜)).NeBot] {r : ℝ≥0∞}
++    (hs₀ : 0 ∈ s) (h : ∀ c : 𝕜, c ≠ 0 → x ∈ c • s → r ≤ ‖c‖ₑ) : r ≤ egauge 𝕜 s x := by
+```
+PAST COMMENT (from reviewer):
+`𝕜` is a TVS here, right? Do we really have no better spelling for `(𝓝[≠] (0 : 𝕜)).NeBot`?
+
+--- candidate 8 (sim=0.732, past_pr=#20595, file=Mathlib/Analysis/Convex/Star.lean) ---
+PAST HUNK:
+```
+@@ -68,7 +67,9 @@ variable (𝕜) [SMul 𝕜 E] [SMul 𝕜 F] (x : E) (s : Set E)
+ 
+ /-- Star-convexity of sets. `s` is star-convex at `x` if every segment from `x` to a point in `s` is
+ contained in `s`. -/
+-def StarConvex : Prop :=
++@[nolint unusedArguments]
++def StarConvex (𝕜 : Type*) {E : Type*} [Semiring 𝕜] [PartialOrder 𝕜] [IsOrderedRing 𝕜]
+```
+PAST COMMENT (from reviewer):
+Again I would be tempted to drop `IsOrderedRing` in this definition and then pick up the pieces rather than using `nolint`. You can add a `TODO` or whatever saying "this file probably needs reordering because we have 30 `omit`s", and leave it for another PR, but basically this is the system telling us that the file needs reordering.
+
+If you really do not want to do this, then at least you should put a `TODO` in the module doc saying that `IsOrderedRing` should be dropped from the def of `StarConvex`. But adding `nolint` is adding technical debt and we would ideally avoid this; I think a mountain of `omit`s is better.
+
+--- candidate 9 (sim=0.731, past_pr=#28609, file=Mathlib/Analysis/LocallyConvex/AbsConvex.lean) ---
+PAST HUNK:
+```
+@@ -309,3 +310,12 @@ end
+ lemma zero_mem_absConvexHull {s : Set E} [SeminormedRing 𝕜] [AddCommGroup E] [Module ℝ E]
+     [Module 𝕜 E] [Nonempty s] : 0 ∈ absConvexHull 𝕜 s :=
+   balanced_absConvexHull.zero_mem (Nonempty.mono subset_absConvexHull Set.Nonempty.of_subtype)
++
++/- TVS III.8 -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- [Bourbaki, *Topological Vector Spaces*, III §1.6][bourbaki1987] -/
+```
+(I know Bourbaki also use pages in references, but I think this is more stable with respects to translations)
+
+--- candidate 10 (sim=0.726, past_pr=#22344, file=Mathlib/Analysis/Convex/Star.lean) ---
+PAST HUNK:
+```
+@@ -109,6 +109,11 @@ theorem starConvex_iInter {ι : Sort*} {s : ι → Set E} (h : ∀ i, StarConvex
+     StarConvex 𝕜 x (⋂ i, s i) :=
+   sInter_range s ▸ starConvex_sInter <| forall_mem_range.2 h
+ 
++theorem starConvex_iInter₂ {ι : Sort*} {κ : ι → Sort*} {s : ∀ i, κ i → Set E}
++    (h : ∀ i j, StarConvex 𝕜 x (s i j)) :
++    StarConvex 𝕜 x (⋂ (i) (j), s i j) :=
+```
+PAST COMMENT (from reviewer):
+I think it might be a little better to have these on the same line:
+```suggestion
+    (h : ∀ i j, StarConvex 𝕜 x (s i j)) : StarConvex 𝕜 x (⋂ (i) (j), s i j) :=
+```
+
+--- candidate 11 (sim=0.722, past_pr=#23845, file=Mathlib/Analysis/LocallyConvex/AbsConvex.lean) ---
+PAST HUNK:
+```
+@@ -305,3 +305,11 @@ theorem totallyBounded_absConvexHull (hs : TotallyBounded s) :
+   exact ⟨hs, totallyBounded_neg hs⟩
+ 
+ end
++
++lemma zero_mem_absConvexHull {s : Set E} [SeminormedRing 𝕜] [NormOneClass 𝕜]
++    [AddCommGroup E] [Module ℝ E] [Module 𝕜 E] [Nonempty s] : 0 ∈ absConvexHull 𝕜 s := by
++  obtain ⟨w, hw⟩ := (inferInstance : Nonempty s)
++  rw [← add_neg_cancel ((1/2 : ℝ) • w), ← smul_neg]
++  exact convex_absConvexHull (subset_absConvexHull hw)
++    ((Balanced.neg_mem_iff balanced_absConvexHull).mpr (subset_absConvexHull hw))
++    (le_of_lt one_half_pos) (le_of_lt one_half_pos) (add_halves 1)
+```
+PAST COMMENT (from reviewer):
+`absConvexHull` is balanced, so you could use that 0 belongs to any nonempty balanced set (which seems to be a missing lemma):
+```lean
+lemma Balanced.zero_mem {E 𝕜 : Type*} [SeminormedRing 𝕜] [AddCommMonoid E] [Module 𝕜 E] {s : Set E}
+    (hs_nonempty : s.Nonempty) (hs : Balanced 𝕜 s) : 0 ∈ s := by
+  have : (0 : E) = (0 : 𝕜) • (hs_nonempty.some : E) := by simp
+  rw [this]
+  exact hs.smul_mem (by simp) hs_nonempty.some_mem
+```
+
+--- candidate 12 (sim=0.722, past_pr=#17029, file=Mathlib/Analysis/LocallyConvex/AbsConvex.lean) ---
+PAST HUNK:
+```
+@@ -183,6 +183,12 @@ theorem absConvexHull_eq_convexHull_balancedHull [SMulCommClass ℝ 𝕜 E] {s :
+     ((balanced_absConvexHull 𝕜 s).balancedHull_subset_of_subset (subset_absConvexHull 𝕜 s))
+       (convex_absConvexHull 𝕜 s))
+ 
++/- In general equality doesn't hold here - e.g. consider `s := {(-1,1),(1,1)}` in `ℝ²` -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- In general, equality doesn't hold here - e.g. consider `s := {(-1, 1), (1, 1)}` in `ℝ²`. -/
+```
+
+--- candidate 13 (sim=0.716, past_pr=#29033, file=Mathlib/Analysis/Convex/Basic.lean) ---
+PAST HUNK:
+```
+@@ -590,6 +609,11 @@ protected theorem convex (K : Submodule 𝕜 E) : Convex 𝕜 (↑K : Set E) :=
+ protected theorem starConvex (K : Submodule 𝕜 E) : StarConvex 𝕜 (0 : E) K :=
+   K.convex K.zero_mem
+ 
++theorem Convex.semilinear_range {𝕜' : Type*} [Semiring 𝕜'] {σ : 𝕜' →+* 𝕜}
++  [RingHomSurjective σ] {F' : Type*} [AddCommMonoid F'] [Module 𝕜' F']
++  (f : F' →ₛₗ[σ] E) : Convex 𝕜 (LinearMap.range f : Set E) := Submodule.convex ..
++
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+
+--- candidate 14 (sim=0.716, past_pr=#17029, file=Mathlib/Analysis/LocallyConvex/AbsConvex.lean) ---
+PAST HUNK:
+```
+@@ -183,6 +183,12 @@ theorem absConvexHull_eq_convexHull_balancedHull [SMulCommClass ℝ 𝕜 E] {s :
+     ((balanced_absConvexHull 𝕜 s).balancedHull_subset_of_subset (subset_absConvexHull 𝕜 s))
+       (convex_absConvexHull 𝕜 s))
+ 
++/- In general equality doesn't hold here - e.g. consider `s := {(-1,1),(1,1)}` in `ℝ²` -/
++theorem absConvexHull_eq_balancedHull_convexHull {s : Set E} :
++    balancedHull 𝕜 (convexHull ℝ s) ⊆ absConvexHull 𝕜 s :=
++  Balanced.balancedHull_subset_of_subset (balanced_absConvexHull 𝕜 s)
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  (balanced_absConvexHull 𝕜 s).balancedHull_subset_of_subset
+```
+
+--- candidate 15 (sim=0.715, past_pr=#29033, file=Mathlib/Analysis/LocallyConvex/Basic.lean) ---
+PAST HUNK:
+```
+@@ -278,6 +282,29 @@ protected theorem Balanced.convexHull (hs : Balanced 𝕜 s) : Balanced 𝕜 (co
+   simp only [smul_add, ← smul_comm]
+   exact convex_convexHull ℝ s (hx a ha) (hy a ha) hu hv huv
+ 
++variable {F ℱ 𝕜₂ : Type*} [Field 𝕜₂] {σ : 𝕜₂ →+* 𝕜}
++variable [AddCommGroup F] [Module 𝕜₂ F]
++variable [FunLike ℱ F E] [SemilinearMapClass ℱ σ F E]
++
++theorem Absorbent.module_univ {V : Submodule 𝕜 E} (hV : Absorbent 𝕜 (V : Set E)) :
+```
+PAST COMMENT (from reviewer):
+```suggestion
+theorem Absorbent.submodule_eq_top {V : Submodule 𝕜 E} (hV : Absorbent 𝕜 (V : Set E)) :
+```
+
+--- candidate 16 (sim=0.714, past_pr=#22773, file=Mathlib/Analysis/Convex/Basic.lean) ---
+PAST HUNK:
+```
+@@ -598,7 +598,7 @@ theorem convex_stdSimplex : Convex 𝕜 (stdSimplex 𝕜 ι) := by
+   refine fun f hf g hg a b ha hb hab => ⟨fun x => ?_, ?_⟩
+   · apply_rules [add_nonneg, mul_nonneg, hf.1, hg.1]
+   · erw [Finset.sum_add_distrib]
+-    simp only [Pi.smul_apply] -- Porting note: `erw` failed to rewrite with `← Finset.smul_sum`
++    simp only [Pi.smul_apply]
+     rw [← Finset.smul_sum, ← Finset.smul_sum, hf.2, hg.2, smul_eq_mul,
+       smul_eq_mul, mul_one, mul_one]
+```
+PAST COMMENT (from reviewer):
+Could be
+```lean
+  · simp_rw [Pi.add_apply, Pi.smul_apply]
+    rw [Finset.sum_add_distrib, ← Finset.smul_sum, ← Finset.smul_sum, hf.2, hg.2, smul_eq_mul,
+      smul_eq_mul, mul_one, mul_one]
+```
+
+--- candidate 17 (sim=0.714, past_pr=#32824, file=Mathlib/Analysis/Normed/Module/Convex.lean) ---
+PAST HUNK:
+```
+@@ -66,10 +66,9 @@ theorem convex_ball (a : E) (r : ℝ) : Convex ℝ (Metric.ball a r) := by
+ theorem convex_closedBall (a : E) (r : ℝ) : Convex ℝ (Metric.closedBall a r) := by
+   simpa only [Metric.closedBall, sep_univ] using (convexOn_univ_dist a).convex_le r
+ 
+-variable {F : Type*} [NormedAddCommGroup F] [NormedSpace ℝ F]
+-
+ open Pointwise in
+-theorem convexHull_sphere_eq_closedBall [Nontrivial F] (x : F) {r : ℝ} (hr : 0 ≤ r) :
++theorem convexHull_sphere_eq_closedBall {F : Type*}
++    [NormedAddCommGroup F] [NormedSpace ℝ F] [Nontrivial F] (x : F) {r : ℝ} (hr : 0 ≤ r) :
+```
+PAST COMMENT (from reviewer):
+just a style edit:
+```suggestion
+theorem convexHull_sphere_eq_closedBall {F : Type*} [NormedAddCommGroup F] [NormedSpace ℝ F]
+    [Nontrivial F] (x : F) {r : ℝ} (hr : 0 ≤ r) :
+```
+
+--- candidate 18 (sim=0.708, past_pr=#20806, file=Mathlib/Analysis/Convex/EGauge.lean) ---
+PAST HUNK:
+```
+@@ -206,13 +207,13 @@ lemma egauge_ball_le_of_one_lt_norm (hc : 1 < ‖c‖) (h₀ : r ≠ 0 ∨ ‖x
+       simp [mem_smul_set_iff_inv_smul_mem₀ hc, norm_smul, hx, hr]
+     · rcases rescale_to_shell_semi_normed hc hr hx with ⟨a, ha₀, har, -, hainv⟩
+       calc
+-        egauge 𝕜 (ball 0 r) x ≤ ‖a‖ₑ⁻¹ :=
++        egauge 𝕜 (ball 0 r) x ≤ ↑(‖a‖₊⁻¹) :=
+```
+PAST COMMENT (from reviewer):
+Is the coercion arrow necessary?
+
+--- candidate 19 (sim=0.706, past_pr=#31180, file=Mathlib/Analysis/LocallyConvex/Separation.lean) ---
+PAST HUNK:
+```
+@@ -312,4 +316,80 @@ theorem iInter_halfSpaces_eq (hs₁ : Convex ℝ s) (hs₂ : IsClosed s) :
+   obtain ⟨l, s, hlA, hl⟩ := geometric_hahn_banach_closed_point (𝕜 := 𝕜) hs₁ hs₂ h
+   obtain ⟨y, hy, hxy⟩ := hx l
+   exact ((hxy.trans_lt (hlA y hy)).trans hl).false
++
++end
++
++section Countable
++
++variable [NormedAddCommGroup E] [NormedSpace ℝ E] [Module 𝕜 E] [ContinuousSMul 𝕜 E]
+```
+PAST COMMENT (from reviewer):
+To me, these assumptions are pretty strange. I wonder what kind of situations you envision where you have a normed `ℝ`-vector space that is also a complex vector space with a continuous scalar multiplication, but *not* a *normed* complex vector space. In other words, why not `NormedSpace 𝕜 E`?
+
+
+
+--- candidate 20 (sim=0.703, past_pr=#37392, file=Mathlib/Geometry/Convex/Cone/Basic.lean) ---
+PAST HUNK:
+```
+@@ -685,36 +686,50 @@ def toCone (s : Set M) (hs : Convex 𝕜 s) : ConvexCone 𝕜 M := by
+ 
+ variable {s : Set M} (hs : Convex 𝕜 s) {x : M}
+ 
++set_option linter.deprecated false in
+```
+PAST COMMENT (from reviewer):
+After adding the deprecation on `Convex.toCone` above these lemmas now refer to a deprecated definition.
+
+I think we could fix this by having the deprecated linter not fire on lemmas which are themselves deprecated but using `set_option linter.deprecated false in` for now seems fine.
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "summary": "Use the dedicated StarConvex.smul_zero lemma instead of rewriting with smul_zero before applying hs.smul.",
+  "confidence": "medium",
+  "strong_matches": [
+    {
+      "past_pr": 22421,
+      "past_file": "Mathlib/Analysis/Convex/Star.lean",
+      "past_comment_excerpt": "Shouldn't it be `zero_smul`?",
+      "applies_because": "In the new proof you rewrite 0 via smul_zero to fit hs.smul; PR #22421 introduced a dedicated lemma for the 0-center case, making the rewrite unnecessary.",
+      "suggested_adaptation": "Replace the rw [← smul_zero i]; exact hs.smul i with exact hs.smul_zero i.",
+      "supporting_past_prs": [
+        22421
+      ]
+    }
+  ],
+  "weak_observations": []
+}

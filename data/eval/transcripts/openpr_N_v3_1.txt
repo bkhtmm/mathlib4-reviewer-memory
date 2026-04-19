@@ -1,0 +1,601 @@
+====================================================================================================
+CASE N  PR #24627  (open-pr, v3.1 prompt)
+file: Mathlib/Topology/Algebra/Valued/ValuedField.lean  line: 410.0
+reviewer: @loefflerd  on 2025-05-29T14:09:54Z
+advice_kind: suggestion block (proof rewrite)
+prompt_tokens: 8038  completion_tokens: 4648
+HUMAN reviewer (ground truth):
+  > 🏌️ 
+  > ```suggestion
+  >   refine ⟨fun _ ↦ singletons_open_iff_discrete.mp fun x ↦ ?_, fun _ ↦ inferInstance⟩
+  >   have hk : IsOpen (𝒪[K] : Set K) := isOpen_integer K
+  >   rcases le_total (Valued.v x) 1 with hx | hx
+  >   · simpa using hk.isOpenMap_subtype_val _ (show IsOpen {⟨x, hx⟩} from isOpen_discrete _)
+  >   · have hx0 : x ≠ 0 := v.pos_iff.mp <| hx.trans_lt' zero_lt_one
+  >     replace hx : Valued.v x⁻¹ ≤ 1 := by rwa [map_inv₀, inv_le_one₀ (zero_lt_one.trans_le hx)]
+  >     have h1 : IsOpen ({⟨x⁻¹, hx⟩} : Set 𝒪[K]) := isOpen_discrete _
+  >     have h2 : IsOpen {x⁻¹} := by simpa using hk.isOpenMap_subtype_val _ h1   
+  >     simp only [isOpen_iff_mem_nhds, Set.mem_singleton_iff, forall_eq] at h2
+  >     simpa [isOpen_iff_mem_nhds, -Filter.map_inv] using continuousAt_inv₀ hx0 h2
+  > ```
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Two failure modes are equally bad and you must avoid BOTH:
+  (X) "axis-miss" false positive: a past comment and the new code look similar on the surface, but the past reviewer's concern is not present in the new hunk. (Example: past comment is about `ppSpace` formatting, new hunk's actual problem is "this whole function shouldn't return a string".)
+  (Y) "over-refusal" false negative: a candidate IS genuinely applicable, but you refuse because its concern axis didn't appear in your initial inventory. (Example: you forgot to list `refactor-simplify` for a proof hunk, then declined a candidate that correctly suggests using a higher-level lemma.)
+
+A correct silent output is more valuable than a confident wrong-axis answer, but losing a clearly-applicable candidate is also a real cost.
+
+Read carefully before producing JSON. Follow the four steps below in order.
+
+STEP 1 — STRUCTURAL + SEMANTIC READING OF THE NEW HUNK.
+  1a. Parse the code shape: tactic-mode vs term-mode, declaration kind (`def` / `theorem` / `lemma` / `instance` / `class` / `structure` / `abbrev` / `syntax` / `notation`), attributes (`@[simp]`, `@[to_additive]`, `@[deprecated]`, `@[ext]`, `@[fun_prop]`, `@[reassoc]`, …), universe parameters, implicit/explicit binders, docstring style, proof tactics used.
+  1b. Inventory what *could* be criticized about THIS specific hunk. Pick as many as apply from this list of "concern axes":
+     - correctness-bug        (code doesn't typecheck / is logically wrong)
+     - naming                  (lemma/def name doesn't follow conventions)
+     - docstring               (missing, unclear, typo, wrong phrasing)
+     - attribute               (missing/wrong `@[simp]` / `@[to_additive]` …)
+     - style-syntax            (`fun x ↦` vs `fun x =>`, `by use _; exact _` vs `⟨_, _⟩`, whitespace/`ppSpace`, notation preference)
+     - proof-golf              (the proof tactics could be shorter/nicer)
+     - refactor-simplify       (same statement provable with less machinery, e.g. use a dedicated higher-level lemma instead of manual rewriting)
+     - generalize-signature    (hypotheses too strong; remove/weaken a typeclass)
+     - design-smell-architectural (this API shape is wrong; returning a string, unnecessary instance, redundant definition, etc.)
+     - imports-module          (superfluous imports, module structure)
+     - namespace-organization  (`_root_`, namespace boundary, file placement)
+     - automation-tactic       (should use / should teach `aesop_cat`, `gcongr`, `positivity`, etc.)
+     - instance-diamond        (this instance creates an ambiguity / defeq diamond with another)
+     - unify-with-existing     (a similar definition/lemma already exists)
+     - junk-value              (docstring should note behavior at the "undefined" input; handled via `0`/`⊥`/`⊤`)
+  1c. DEFAULT-INCLUDE RULE. For ANY non-trivial proof or definition hunk (i.e. not a pure-imports/notation/file-header hunk), you MUST include the following axes in your plausible list unless the hunk is so trivial that they cannot apply: `refactor-simplify`, `proof-golf`, `docstring`, `naming`. These are the most common reviewer concerns; gating them out by omission caused real misses in past evaluation. Adding them is cheap; they only trigger a promotion if a candidate also matches.
+  1d. List the concerns that PLAUSIBLY apply to the new hunk (including the defaults from 1c). If none from outside 1c are obviously present, that is fine — the defaults still cover proof/definition hunks.
+
+STEP 2 — PER-CANDIDATE CONCERN CLASSIFICATION.
+  For EACH candidate, identify which concern axis (from the same list) the past reviewer's comment was about. Read the past comment carefully: the reviewer's *words* (not the past code) tell you the concern axis. If a past comment ships a `suggestion` code block, that block is evidence for what the reviewer wanted changed — but the axis of concern comes from the prose around it. Ignore candidates whose past comment is pure bikeshed or where you cannot identify a clear concern.
+
+STEP 3 — AXIS MATCH + APPLICABILITY CHECK.
+  A candidate is eligible for `strong_matches` ONLY if BOTH:
+    (a) Its axis (from step 2) is among the new hunk's plausible concerns (from step 1d), OR you can clearly justify (in `applies_because`) why this axis IS present in the new hunk after all — in which case ADD that axis to `new_hunk_plausible_concerns` in your output. Late additions are allowed but should be the exception, not the rule.
+    (b) You can write a concrete adaptation that a Lean/mathlib reviewer would plausibly post on the new hunk *today*, given what is visible in the hunk.
+  Before promoting, write — in the JSON output, per match — a `why_might_not_apply` field giving the strongest counter-argument against promotion (one short sentence).
+
+  DEMOTION RULE (this is the #1 axis-miss-prevention lever):
+    If your counter-argument names a SPECIFIC PROPERTY of the new hunk that would make the past advice not apply or already-followed — e.g. "the new code already uses term-mode", "the lemma is already named correctly", "the import is actually used at line X", "the new code does not declare an instance, so the diamond risk does not apply" — then DEMOTE to `weak_observations` instead of promoting.
+    Only PROMOTE if the counter-argument is generic doubt that does NOT identify a specific reason the new hunk evades the past advice — e.g. "this is partly stylistic preference", "the user may have intended this", "I cannot verify without seeing more context". Generic doubt does not block promotion; specific evasion does.
+
+  Cross-candidate synthesis is allowed: if candidate X establishes that an identifier in the new hunk is a `class`, and candidate Y shows the preferred term-mode `instance := ⟨...⟩` template, they jointly support a promotion. List both in `supporting_past_prs` and still produce one `why_might_not_apply`.
+
+STEP 4 — CONFIDENCE AND OUTPUT.
+  Confidence scale:
+    - "high"   — ≥1 strong match survives step 3 AND the adaptation is a near-verbatim application of a past comment; the counter-argument is generic.
+    - "medium" — ≥1 strong match survives step 3 BUT needs adaptation or synthesis; counter-argument is generic doubt rather than specific evasion.
+    - "low"    — no candidate survives step 3; only stylistic patterns worth mentioning as `weak_observations`.
+    - "none"   — retrieved pool's concerns don't match anything plausible about the new hunk; state this and stop.
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "new_hunk_plausible_concerns": [<axis labels from Step 1d, plus any added in Step 3a>],
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_concern_axis": "<axis label from the list>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure AND explaining why the concern axis matches>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "why_might_not_apply": "<one short sentence — strongest counter-argument against this promotion>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "axis": "<axis label>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Do not invent axis labels outside the list.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #24627 (file: Mathlib/Topology/Algebra/Valued/ValuedField.lean):
+```
+@@ -379,3 +379,32 @@ scoped notation "𝓀[" K "]" => ResidueField K
+ end Valued
+ 
+ end Notation
++
++open Valued
++lemma Valued.discreteTopology_valuationRing_iff_discreteTopology
++    {K Γ₀ : Type*} [Field K] [LinearOrderedCommGroupWithZero Γ₀] [Valued K Γ₀] :
++    DiscreteTopology 𝒪[K] ↔ DiscreteTopology K := by
++  have hk : IsOpen (𝒪[K] : Set K) := isOpen_integer K
++  constructor
++  · intro h
++    rw [← singletons_open_iff_discrete]
++    intro x
++    rcases le_total (Valued.v x) 1 with hx | hx
++    · have : IsOpen ({⟨x, hx⟩} : Set 𝒪[K]) := isOpen_discrete _
++      simpa using hk.isOpenMap_subtype_val _ this
++    · have hx0 : x ≠ 0 := by
++        rw [← Valued.v.pos_iff]
++        refine hx.trans_lt' ?_
++        norm_num
++      replace hx : Valued.v x⁻¹ ≤ 1 := by
++        rwa [map_inv₀, inv_le_one₀]
++        rwa [Valued.v.pos_iff]
++      suffices IsOpen {x⁻¹} by
++        simp only [isOpen_iff_mem_nhds, Set.mem_singleton_iff, forall_eq] at this ⊢
++        have := continuousAt_inv₀ hx0 this
++        rw [Filter.mem_map] at this
++        simpa using this
++      have : IsOpen ({⟨x⁻¹, hx⟩} : Set 𝒪[K]) := isOpen_discrete _
++      simpa using hk.isOpenMap_subtype_val _ this
++  · intro h
++    infer_instance
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.859, past_pr=#27265, file=Mathlib/Topology/Algebra/Valued/ValuationTopology.lean) ---
+PAST HUNK:
+```
+@@ -147,6 +147,39 @@ theorem loc_const {x : R} (h : (v x : Γ₀) ≠ 0) : { y : R | v y = v x } ∈
+... [6 lines above hidden]
++lemma discreteTopology_of_ne_zero_imp_v_eq_one (h : ∀ x : R, x ≠ 0 → v x = 1) :
++    DiscreteTopology R := by
++  simp only [discreteTopology_iff_isOpen_singleton_zero, isOpen_iff_mem_nhds, mem_singleton_iff,
++    forall_eq, mem_nhds_zero, subset_singleton_iff, mem_setOf_eq]
++  use 1
++  contrapose! h
++  obtain ⟨x, hx, hx'⟩ := h
++  exact ⟨x, hx', hx.ne⟩
++
++variable {K : Type*} [DivisionRing K] [Valued K Γ₀] [MulArchimedean Γ₀]
++
++lemma val_discrete_of_forall_lt {r : Γ₀} (hr : r ≠ 0) (h : ∀ x : K, v x ≠ 0 → r < v x)
++    (x : K) (hx : v x ≠ 0) : v x = 1 := by
+```
+PAST COMMENT (from reviewer):
+Should this be stated for any `Valuation` rather than just `Valued.v`?
+
+--- candidate 2 (sim=0.777, past_pr=#13508, file=Mathlib/Topology/Algebra/Valuation.lean) ---
+PAST HUNK:
+```
+@@ -184,3 +184,16 @@ theorem valuationSubring_isOpen (K : Type u) [Field K] [hv : Valued K Γ₀] :
+   integer_isOpen K
+ 
+ end Valued
++
++theorem Valuation.valuationSubring_isOpen {K : Type*} [Field K] {Γ : Type*}
+```
+PAST COMMENT (from reviewer):
+This has no difference to the theorem above it except having `K` as an implicit variable, and an additional hypothesis.
+
+--- candidate 3 (sim=0.746, past_pr=#8148, file=Mathlib/Topology/Algebra/Valuation.lean) ---
+PAST HUNK:
+```
+@@ -168,4 +168,23 @@ theorem cauchy_iff {F : Filter R} : Cauchy F ↔
+... [4 lines above hidden]
++variable (R)
++
++/-- The unit ball of a valued ring is open. -/
++theorem integer_isOpen : IsOpen (_i.v.integer : Set R) := by
++  rw [isOpen_iff_mem_nhds]
++  intro x hx
++  rw [SetLike.mem_coe, mem_integer_iff] at hx
++  rw [mem_nhds]
++  use (1 : Units Γ₀)
++  intro y hy
++  rw [Units.val_one, mem_setOf_eq] at hy
++  rw [SetLike.mem_coe, mem_integer_iff, ← sub_add_cancel y x]
++  exact le_trans (map_add _ _ _) (max_le (le_of_lt hy) hx)
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  rw [mem_nhds]
+  exact ⟨1,
+      fun y hy => (sub_add_cancel y x).symm ▸ le_trans (map_add _ _ _) (max_le (le_of_lt hy) hx)⟩
+```
+
+--- candidate 4 (sim=0.742, past_pr=#7779, file=Mathlib/Topology/Algebra/Valuation.lean) ---
+PAST HUNK:
+```
+@@ -166,4 +166,24 @@ theorem cauchy_iff {F : Filter R} : Cauchy F ↔
+     exact h γ
+ #align valued.cauchy_iff Valued.cauchy_iff
+ 
++variable (R)
++
++/-- The unit ball of a valued ring is open. -/
++theorem integer_isOpen :
++    IsOpen (_i.v.integer : Set R) := by
+```
+PAST COMMENT (from reviewer):
+Not that it matters but I'd be tempted to just put the statement on one line here
+
+--- candidate 5 (sim=0.742, past_pr=#7779, file=Mathlib/Topology/Algebra/Valuation.lean) ---
+PAST HUNK:
+```
+@@ -166,4 +166,24 @@ theorem cauchy_iff {F : Filter R} : Cauchy F ↔
+     exact h γ
+ #align valued.cauchy_iff Valued.cauchy_iff
+ 
++variable (R)
++
++/-- The unit ball of a valued ring is open. -/
++theorem integer_isOpen :
++    IsOpen (_i.v.integer : Set R) := by
+```
+PAST COMMENT (from reviewer):
+Maybe we can rename the variable `_i` too, it looks very strange using that in the statement of a theorem
+
+--- candidate 6 (sim=0.732, past_pr=#16733, file=Mathlib/Topology/Algebra/Valued/ValuationTopology.lean) ---
+PAST HUNK:
+```
+@@ -153,13 +153,39 @@ theorem cauchy_iff {F : Filter R} : Cauchy F ↔
+... [7 lines above hidden]
++theorem isOpen_ball (r : Γ₀) : IsOpen (X := R) {x | v x < r} := by
+   rw [isOpen_iff_mem_nhds]
++  rcases eq_or_ne r 0 with rfl|hr
++  · simp
+   intro x hx
+   rw [mem_nhds]
+-  exact ⟨1,
+-    fun y hy => (sub_add_cancel y x).symm ▸ le_trans (v.map_add _ _) (max_le (le_of_lt hy) hx)⟩
++  simp only [setOf_subset_setOf]
++  exact ⟨Units.mk0 _ hr,
++    fun y hy => (sub_add_cancel y x).symm ▸ (v.map_add _ x).trans_lt (max_lt hy hx)⟩
++
++/-- A closed ball of a valued ring is open. -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- A closed ball centred at the origin in a valued ring is open. -/
+```
+
+--- candidate 7 (sim=0.731, past_pr=#36532, file=Mathlib/RingTheory/Valuation/ValuativeRel/Basic.lean) ---
+PAST HUNK:
+```
+@@ -1091,41 +1092,33 @@ lemma uniformizer_inv_le_iff [IsDiscrete R] [IsNontrivial R] {a : ValueGroupWith
+... [11 lines above hidden]
+-    ∃ γ : (ValueGroupWithZero R)ˣ, (x + ·) '' { z | valuation _ z < γ } ⊆ s
+-
+-namespace ValuativeRel
+-
+ variable {R Γ : Type*} [CommRing R] [ValuativeRel R] [LinearOrderedCommGroupWithZero Γ]
+   (v : Valuation R Γ)
+ 
+-open MonoidWithZeroHom
++open MonoidWithZeroHom ValueGroup₀
++
++namespace ValueGroupWithZero
+ 
+ /-- Any valuation compatible with the valuative relation can be factored through
+```
+PAST COMMENT (from reviewer):
+I'm not sure that this doc really says what `embed` does. Moreover, I think that it would be useful to add a bit of docs to some of the lemmas below, because for someone not at ease with these objects (but who knows the Math) most results might look daunting.
+
+--- candidate 8 (sim=0.728, past_pr=#28211, file=Mathlib/Topology/Algebra/Valued/ValuativeRel.lean) ---
+PAST HUNK:
+```
+@@ -188,6 +189,16 @@ lemma isOpen_sphere {r : ValueGroupWithZero R} (hr : r ≠ 0) :
+ @[deprecated (since := "2025-08-01")]
+ alias _root_.ValuativeTopology.isOpen_sphere := isOpen_sphere
+ 
++open WithZeroTopology in
++lemma continuous_valuation : Continuous v := by
++  simp only [continuous_iff_continuousAt, ContinuousAt]
++  rintro x
++  by_cases hx : v x = 0
++  · simpa [hx, (hasBasis_nhds _).tendsto_iff WithZeroTopology.hasBasis_nhds_zero,
++      Valuation.map_sub_of_right_eq_zero _ hx] using fun i hi ↦ ⟨.mk0 i hi, fun y ↦ id⟩
++  · simpa [(hasBasis_nhds _).tendsto_iff (WithZeroTopology.hasBasis_nhds_of_ne_zero hx)]
++      using ⟨.mk0 (v x) hx, fun _ ↦ Valuation.map_eq_of_sub_lt _⟩
+```
+PAST COMMENT (from reviewer):
+Why use the botched `intro` tactic? It's one letter less and strictly worse
+
+--- candidate 9 (sim=0.728, past_pr=#28211, file=Mathlib/Topology/Algebra/Valued/ValuativeRel.lean) ---
+PAST HUNK:
+```
+@@ -188,6 +189,16 @@ lemma isOpen_sphere {r : ValueGroupWithZero R} (hr : r ≠ 0) :
+ @[deprecated (since := "2025-08-01")]
+ alias _root_.ValuativeTopology.isOpen_sphere := isOpen_sphere
+ 
++open WithZeroTopology in
++lemma continuous_valuation : Continuous v := by
++  simp only [continuous_iff_continuousAt, ContinuousAt]
++  rintro x
++  by_cases hx : v x = 0
++  · simpa [hx, (hasBasis_nhds _).tendsto_iff WithZeroTopology.hasBasis_nhds_zero,
++      Valuation.map_sub_of_right_eq_zero _ hx] using fun i hi ↦ ⟨.mk0 i hi, fun y ↦ id⟩
++  · simpa [(hasBasis_nhds _).tendsto_iff (WithZeroTopology.hasBasis_nhds_of_ne_zero hx)]
++      using ⟨.mk0 (v x) hx, fun _ ↦ Valuation.map_eq_of_sub_lt _⟩
+```
+PAST COMMENT (from reviewer):
+```suggestion
+lemma continuous_valuation : Continuous v := by
+  simp only [continuous_iff_continuousAt, ContinuousAt]
+  intro x
+  by_cases hx : v x = 0
+  · simpa [hx, (hasBasis_nhds _).tendsto_iff WithZeroTopology.hasBasis_nhds_zero,
+      (v).map_sub_of_right_eq_zero hx] using fun i hi ↦ ⟨.mk0 i hi, fun y ↦ id⟩
+  · simpa [(hasBasis_nhds _).tendsto_iff (WithZeroTopology.hasBasis_nhds_of_ne_zero hx)]
+      using ⟨.mk0 (v x) hx, fun _ ↦ (v).map_eq_of_sub_lt⟩
+```
+
+--- candidate 10 (sim=0.725, past_pr=#16733, file=Mathlib/Topology/Algebra/Valued/ValuationTopology.lean) ---
+PAST HUNK:
+```
+@@ -153,13 +153,39 @@ theorem cauchy_iff {F : Filter R} : Cauchy F ↔
+ 
+ variable (R)
+ 
+-/-- The unit ball of a valued ring is open. -/
+-theorem integer_isOpen : IsOpen (_i.v.integer : Set R) := by
++/-- A ball of a valued ring is open. -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- An open ball centred at the origin in a valued ring is open. -/
+```
+
+--- candidate 11 (sim=0.722, past_pr=#13508, file=Mathlib/RingTheory/DedekindDomain/AdicValuation.lean) ---
+PAST HUNK:
+```
+@@ -381,6 +381,11 @@ theorem mem_adicCompletionIntegers {x : v.adicCompletion K} :
+   Iff.rfl
+ #align is_dedekind_domain.height_one_spectrum.mem_adic_completion_integers IsDedekindDomain.HeightOneSpectrum.mem_adicCompletionIntegers
+ 
++/-- The unit ball `adicCompletionIntegers` is an open subset of `adicCompletion`. -/
++theorem adicCompletionIntegers_isOpen :
++    IsOpen (v.adicCompletionIntegers K : Set (v.adicCompletion K)) := by
++  exact Valuation.valuationSubring_isOpen
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    IsOpen (v.adicCompletionIntegers K : Set (v.adicCompletion K)) :=
+  Valuation.valuationSubring_isOpen
+```
+
+--- candidate 12 (sim=0.720, past_pr=#26713, file=Mathlib/Topology/Algebra/Valued/ValuativeRel.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,107 @@
+... [76 lines above hidden]
++  rw [mem_nhds]
++  simp only [setOf_subset_setOf]
++  exact ⟨Units.mk0 _ hr, fun y hy => (sub_add_cancel y x).symm ▸
++    le_trans ((v).map_add _ _) (max_le (le_of_lt hy) hx)⟩
++
++theorem isClosed_closedBall (r : ValueGroupWithZero R) :
++    IsClosed {x | v x ≤ r} := by
++  rw [← isOpen_compl_iff, isOpen_iff_mem_nhds]
++  intro x hx
++  simp only [mem_compl_iff, mem_setOf_eq, not_le] at hx
++  rw [mem_nhds]
++  have hx' : v x ≠ 0 := ne_of_gt <| lt_of_le_of_lt zero_le' <| hx
++  refine ⟨Units.mk0 _ hx', fun y hy hy' => ne_of_lt hy <| Valuation.map_sub_swap v x y ▸
+```
+PAST COMMENT (from reviewer):
+You can do `exact` here, right?
+
+--- candidate 13 (sim=0.716, past_pr=#32454, file=Mathlib/Analysis/Normed/Field/Basic.lean) ---
+PAST HUNK:
+```
+@@ -119,9 +119,8 @@ lemma norm_eq_one_iff_ne_zero_of_discrete {x : 𝕜} : ‖x‖ = 1 ↔ x ≠ 0 :
+   · have : IsOpen {(0 : 𝕜)} := isOpen_discrete {0}
+     simp_rw [Metric.isOpen_singleton_iff, dist_eq_norm, sub_zero] at this
+     obtain ⟨ε, εpos, h'⟩ := this
+-    wlog h : ‖x‖ < 1 generalizing 𝕜 with H
+-    · push_neg at h
+-      rcases h.eq_or_lt with h|h
++    wlog! h : ‖x‖ < 1 generalizing 𝕜 with H
++    · rcases h.eq_or_lt with h|h
+```
+PAST COMMENT (from reviewer):
+Pre-existing: we might as well follow mathlib's style guide now
+```suggestion
+    · rcases h.eq_or_lt with h | h
+```
+
+--- candidate 14 (sim=0.715, past_pr=#27939, file=Mathlib/RingTheory/Valuation/ValuativeRel.lean) ---
+PAST HUNK:
+```
+@@ -680,8 +680,8 @@ open Topology ValuativeRel in
+ /-- We say that a topology on `R` is valuative if the neighborhoods of `0` in `R`
+ are determined by the relation `· ≤ᵥ ·`. -/
+ class IsValuativeTopology (R : Type*) [CommRing R] [ValuativeRel R] [TopologicalSpace R] where
+-  mem_nhds_iff : ∀ s : Set R, s ∈ 𝓝 (0 : R) ↔
+-    ∃ γ : (ValueGroupWithZero R)ˣ, { x | valuation _ x < γ } ⊆ s
++  mem_nhds {s : Set R} {x : R} : s ∈ 𝓝 (x : R) ↔
++    ∃ γ : (ValueGroupWithZero R)ˣ, { z | valuation _ (z - x) < γ } ⊆ s
+```
+PAST COMMENT (from reviewer):
+Just a matter of personal taste, but I would prefer the following spelling here:
+```lean
+s ∈ 𝓝 (x : R) ↔ ∃ γ : (ValueGroupWithZero R)ˣ, (x + ·) '' { z | valuation _ z < γ } ⊆ s
+```
+
+(At least this would make it possible to replace `CommRing` with `CommSemiring` in the future. Maybe we do want to talk about valuations on $\mathbb{N}$?)
+
+--- candidate 15 (sim=0.714, past_pr=#26549, file=Mathlib/Topology/Algebra/Valued/LocallyCompact.lean) ---
+PAST HUNK:
+```
+@@ -132,18 +144,24 @@ lemma totallyBounded_iff_finite_residueField [IsDiscreteValuationRing 𝒪[K]] :
+... [13 lines above hidden]
+-    obtain ⟨n, hn⟩ : ∃ n : ℕ, ‖p‖ ^ n < ε := exists_pow_lt_of_lt_one εpos hp'
++    have hp' := Valuation.integer.v_irreducible_lt_one hp
++    obtain ⟨n, hn⟩ : ∃ n : ℕ, ‖(p : K)‖ ^ n < ε := exists_pow_lt_of_lt_one εpos
++      (toNormedField.norm_lt_one_iff.mpr hp')
+     have hF := finite_quotient_maximalIdeal_pow_of_finite_residueField H n
+     refine ⟨Quotient.out '' (Set.univ (α := 𝒪[K] ⧸ (𝓂[K] ^ n))), Set.toFinite _, ?_⟩
+-    simp only [Ideal.univ_eq_iUnion_image_add (𝓂[K] ^ n), hp.maximalIdeal_pow_eq_closedBall_pow,
++    have : {y : 𝒪[K] | v (y : K) ≤ v (p : K) ^ n} = Metric.closedBall 0 (‖p‖ ^ n)  := by
++      ext
++      simp [← norm_pow]
++    simp only [Ideal.univ_eq_iUnion_image_add (𝓂[K] ^ n),
++      hp.maximalIdeal_pow_eq_setOf_le_v_coe_pow,
++      this,
+```
+PAST COMMENT (from reviewer):
+Maybe put these on fewer lines?
+
+--- candidate 16 (sim=0.714, past_pr=#24353, file=Mathlib/Topology/Algebra/Valued/ValuationTopology.lean) ---
+PAST HUNK:
+```
+@@ -193,4 +208,13 @@ theorem valuationSubring_isOpen (K : Type u) [Field K] [hv : Valued K Γ₀] :
+     IsOpen (hv.v.valuationSubring : Set K) :=
+   integer_isOpen K
+ 
++/-- The closed unit ball of a valued ring is closed. -/
++theorem integer_isClosed : IsClosed (_i.v.integer : Set R) :=
++  isClosed_closedBall _ _
++
++/-- The valuation subring of a valued field is closed. -/
++theorem valuationSubring_isClosed (K : Type u) [Field K] [hv : Valued K Γ₀] :
++    IsClosed (hv.v.valuationSubring : Set K) :=
++  integer_isClosed K
+```
+PAST COMMENT (from reviewer):
+I think these should be `isClosed_blah` instead and maybe you can rename the `isOpen` ones too. Remember to add deprecation aliases if you do so.
+
+--- candidate 17 (sim=0.712, past_pr=#27939, file=Mathlib/Topology/Algebra/Valued/ValuativeRel.lean) ---
+PAST HUNK:
+```
+@@ -19,6 +19,27 @@ to facilitate a refactor.
+... [5 lines above hidden]
++
++/-! # Alternate constructors -/
++
++variable {R : Type*} [CommRing R] [ValuativeRel R] [TopologicalSpace R]
++
++open ValuativeRel TopologicalSpace Filter Topology Set
++
++local notation "v" => valuation R
++
++/-- Assuming `ContinuousConstVAdd R R`, we only need to check the neighbourhood of `0` in order to
++prove `IsValuativeTopology R`. -/
++theorem of_zero [ContinuousConstVAdd R R]
++    (h₀ : ∀ s : Set R, s ∈ 𝓝 (0 : R) ↔ ∃ γ : (ValueGroupWithZero R)ˣ, { z | v z < ↑γ } ⊆ s) :
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    (h₀ : ∀ s : Set R, s ∈ 𝓝 (0 : R) ↔ ∃ γ : (ValueGroupWithZero R)ˣ, { z | v z < γ } ⊆ s) :
+```
+Is this necessary? (Not tested)
+
+--- candidate 18 (sim=0.710, past_pr=#36532, file=Mathlib/Topology/Algebra/ValuativeRel/ValuativeTopology.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,379 @@
+... [281 lines above hidden]
++    (isOpen_ball _)
++
++/-- An open ball centred at the origin in a valued ring is clopen. -/
++theorem isClopen_ball (r : ValueGroup₀ v) : IsClopen (X := R) {x | v.restrict x < r} :=
++  ⟨isClosed_ball _, isOpen_ball _⟩
++
++/-- A closed ball centred at the origin in a valued ring is open. -/
++theorem isOpen_closedBall {r : ValueGroup₀ v} (hr : r ≠ 0) :
++  IsOpen (X := R) {x | v.restrict x ≤ r} := by
++  rw [isOpen_iff_mem_nhds]
++  intro x hx
++  rw [v.mem_nhds]
++  simp only [setOf_subset_setOf]
+```
+PAST COMMENT (from reviewer):
+
+```suggestion
+  rw [v.mem_nhds]
+  simp only [setOf_subset_setOf]
+```
+simp only [v.mem_nhds, setOf_subset_setOf]
+
+--- candidate 19 (sim=0.709, past_pr=#27465, file=Mathlib/Topology/Algebra/Valued/ValuativeRel.lean) ---
+PAST HUNK:
+```
+@@ -74,17 +74,32 @@ instance (priority := low) {R : Type*} [CommRing R] [ValuativeRel R] [UniformSpa
+   «v» := valuation R
+   is_topological_valuation := mem_nhds_zero_iff
+ 
++lemma v_eq_valuation {R : Type*} [CommRing R] [ValuativeRel R] [UniformSpace R]
++    [IsUniformAddGroup R] [IsValuativeTopology R] :
++    Valued.v = valuation R := rfl
+```
+PAST COMMENT (from reviewer):
+Do we really want to make `Valued` survive? Is this needed or are you adding it for general purposes?
+
+--- candidate 20 (sim=0.709, past_pr=#27465, file=Mathlib/Topology/Algebra/Valued/ValuativeRel.lean) ---
+PAST HUNK:
+```
+@@ -74,17 +74,32 @@ instance (priority := low) {R : Type*} [CommRing R] [ValuativeRel R] [UniformSpa
+   «v» := valuation R
+   is_topological_valuation := mem_nhds_zero_iff
+ 
++lemma v_eq_valuation {R : Type*} [CommRing R] [ValuativeRel R] [UniformSpace R]
++    [IsUniformAddGroup R] [IsValuativeTopology R] :
++    Valued.v = valuation R := rfl
+```
+PAST COMMENT (from reviewer):
+I see, but IMHO it would be better to avoid adding API if on the long run we want to discourage the use of `Valued`, as detailed in the docstring of `Mathlib/RingTheory/Valuation/ValuativeRel/Basic.lean`.
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "new_hunk_plausible_concerns": [
+    "refactor-simplify",
+    "proof-golf",
+    "docstring",
+    "naming",
+    "generalize-signature",
+    "design-smell-architectural"
+  ],
+  "summary": "The new lemma is added under Valued and uses Valued.v/𝒪[K]; past feedback suggests generalizing away from Valued to any Valuation and avoiding expanding the Valued-based API.",
+  "confidence": "medium",
+  "strong_matches": [
+    {
+      "past_pr": 27265,
+      "past_file": "Mathlib/Topology/Algebra/Valued/ValuationTopology.lean",
+      "past_concern_axis": "generalize-signature",
+      "past_comment_excerpt": "Should this be stated for any `Valuation` rather than just `Valued.v`?",
+      "applies_because": "The lemma assumes `[Valued K Γ₀]` and uses `Valued.v` and `𝒪[K]`. It could be formulated for an arbitrary `v : Valuation K Γ₀` using `v.valuationSubring`, then specialize to the Valued instance.",
+      "suggested_adaptation": "State a version `DiscreteTopology (v.valuationSubring) ↔ DiscreteTopology K` for any `v : Valuation K Γ₀`, and (optionally) provide the `Valued`-instance corollary via `Valued.v`.",
+      "why_might_not_apply": "The notation `𝒪[K]` is tied to a `Valued` instance and the file may intentionally target the `Valued`-based API.",
+      "supporting_past_prs": []
+    },
+    {
+      "past_pr": 27465,
+      "past_file": "Mathlib/Topology/Algebra/Valued/ValuativeRel.lean",
+      "past_concern_axis": "design-smell-architectural",
+      "past_comment_excerpt": "avoid adding API if on the long run we want to discourage the use of `Valued`.",
+      "applies_because": "This adds a new `Valued.discreteTopology_…` lemma relying on the `Valued` class; past guidance advises against expanding `Valued`-centric API in favor of `Valuation`-based formulations.",
+      "suggested_adaptation": "Move the statement to the `Valuation`-based API (in the `Valuation` namespace) and only derive the `Valued` version if really needed.",
+      "why_might_not_apply": "This file may be the designated place for `Valued`-centric results, and an immediate `Valuation` refactor might be outside this PR’s scope.",
+      "supporting_past_prs": [
+        27465
+      ]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "Lemma lacks a docstring; consider adding a brief description of the equivalence.",
+      "axis": "docstring",
+      "supporting_past_prs": [
+        36532
+      ]
+    }
+  ]
+}

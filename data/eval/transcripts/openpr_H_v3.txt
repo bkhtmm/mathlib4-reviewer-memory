@@ -1,0 +1,464 @@
+====================================================================================================
+CASE H  PR #36731  (open-pr, v3 prompt)
+file: Mathlib/Geometry/PlaneCurves.lean  line: 6.0
+reviewer: @grunweg  on 2026-03-16T14:47:23Z
+advice_kind: minimise imports
+prompt_tokens: 4945  completion_tokens: 2582
+HUMAN reviewer (ground truth):
+  > You will need to convert this to a module. Replacing the block of imports by the following will do:
+  > ```
+  > module
+  > 
+  > public import Mathlib.Algebra.Order.Ring.Star
+  > public import Mathlib.Analysis.InnerProductSpace.Calculus
+  > public import Mathlib.Analysis.SpecialFunctions.Trigonometric.Deriv
+  > public import Mathlib.Analysis.Calculus.Deriv.Prod
+  > public import Mathlib.Data.Real.CompleteField
+  > public import Mathlib.Data.Real.StarOrdered
+  > public import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
+  > public import Mathlib.Order.BourbakiWitt
+  > ```
+  > That said, I strongly suspect you don't need all those imports. Can you try to minimise them, either by hand or using the `#min_imports` commands? (Write this at the end of the file, on a separate line, and you'll get a list of imports that very likely suffices.)
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Your single most important task is to AVOID "axis-miss" false positives: cases where a past comment and the new code LOOK similar on the surface, but the past reviewer was raising a different KIND of concern than anything the new hunk actually has. A correct silent output is far more valuable than a confident wrong-axis answer.
+
+Read carefully before producing JSON. Follow the four steps below in order.
+
+STEP 1 — STRUCTURAL + SEMANTIC READING OF THE NEW HUNK.
+  1a. Parse the code shape: tactic-mode vs term-mode, declaration kind (`def` / `theorem` / `lemma` / `instance` / `class` / `structure` / `abbrev` / `syntax` / `notation`), attributes (`@[simp]`, `@[to_additive]`, `@[deprecated]`, `@[ext]`, `@[fun_prop]`, `@[reassoc]`, …), universe parameters, implicit/explicit binders, docstring style, proof tactics used.
+  1b. Inventory what *could* be criticized about THIS specific hunk. Pick as many as apply from this list of "concern axes":
+     - correctness-bug        (code doesn't typecheck / is logically wrong)
+     - naming                  (lemma/def name doesn't follow conventions)
+     - docstring               (missing, unclear, typo, wrong phrasing)
+     - attribute               (missing/wrong `@[simp]` / `@[to_additive]` …)
+     - style-syntax            (`fun x ↦` vs `fun x =>`, `by use _; exact _` vs `⟨_, _⟩`, whitespace/`ppSpace`, notation preference)
+     - proof-golf              (the proof tactics could be shorter/nicer)
+     - refactor-simplify       (same statement provable with less machinery)
+     - generalize-signature    (hypotheses too strong; remove/weaken a typeclass)
+     - design-smell-architectural (this API shape is wrong; returning a string, unnecessary instance, redundant definition, etc.)
+     - imports-module          (superfluous imports, module structure)
+     - namespace-organization  (`_root_`, namespace boundary, file placement)
+     - automation-tactic       (should use / should teach `aesop_cat`, `gcongr`, `positivity`, etc.)
+     - instance-diamond        (this instance creates an ambiguity / defeq diamond with another)
+     - unify-with-existing     (a similar definition/lemma already exists)
+     - junk-value              (docstring should note behavior at the "undefined" input; handled via `0`/`⊥`/`⊤`)
+  List the concerns that PLAUSIBLY apply to the new hunk. If none are obviously present, say so — don't invent them.
+
+STEP 2 — PER-CANDIDATE CONCERN CLASSIFICATION.
+  For EACH candidate, identify which concern axis (from the same list) the past reviewer's comment was about. Read the past comment carefully: the reviewer's *words* (not the past code) tell you the concern axis. If a past comment ships a `suggestion` code block, that block is evidence for what the reviewer wanted changed — but the axis of concern comes from the prose around it. Ignore candidates whose past comment is pure bikeshed or where you cannot identify a clear concern.
+
+STEP 3 — AXIS MATCH + APPLICABILITY CHECK.
+  A candidate is eligible for `strong_matches` ONLY if BOTH:
+    (a) Its axis (from step 2) is among the new hunk's plausible concerns (from step 1b).
+    (b) You can write a concrete adaptation that a Lean/mathlib reviewer would plausibly post on the new hunk *today*, given what is visible in the hunk.
+  Before promoting, write — in the JSON output, per match — a `why_might_not_apply` field giving the strongest counter-argument against promotion (one short sentence). If this counter-argument is actually compelling (e.g. "the new code does not have that pattern", "the new code *does* have an ext lemma, so this doesn't apply"), DO NOT promote; demote to `weak_observations` or drop.
+  Cross-candidate synthesis is allowed: if candidate X establishes that an identifier in the new hunk is a `class`, and candidate Y shows the preferred term-mode `instance := ⟨...⟩` template, they jointly support a promotion. List both in `supporting_past_prs` and still produce one `why_might_not_apply`.
+
+STEP 4 — CONFIDENCE AND OUTPUT.
+  Confidence scale:
+    - "high"   — ≥1 strong match survives step 3 AND the adaptation is a near-verbatim application of a past comment; the counter-argument is weak.
+    - "medium" — ≥1 strong match survives step 3 BUT needs adaptation or synthesis; counter-argument is plausible but not decisive.
+    - "low"    — no candidate survives step 3; only stylistic patterns worth mentioning as `weak_observations`.
+    - "none"   — retrieved pool's axes don't match anything plausible about the new hunk; state this and stop.
+  When in doubt between "medium" and "low" on a single uncertain candidate, prefer "low" and put that candidate in `weak_observations`. "Confident but wrong-axis" is the #1 failure we are trying to eliminate.
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "new_hunk_plausible_concerns": [<one or more axis labels from Step 1b, or []>],
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_concern_axis": "<axis label from the list>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure AND explaining why the concern axis matches>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "why_might_not_apply": "<one short sentence — strongest counter-argument against this promotion>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "axis": "<axis label>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Do not invent axis labels outside the list. Do not promote a candidate whose axis is not in `new_hunk_plausible_concerns`.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #36731 (file: Mathlib/Geometry/PlaneCurves.lean):
+```
+@@ -0,0 +1,720 @@
++/-
++Copyright (c) 2026 Michael Novak. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Michael Novak
++-/
++import Mathlib.Algebra.Order.Ring.Star
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.921, past_pr=#27606, file=Mathlib/NumberTheory/ModularForms/EisensteinSeries/QExpansion.lean) ---
+PAST HUNK:
+```
+@@ -3,23 +3,42 @@ Copyright (c) 2025 Chris Birkbeck. All rights reserved.
+ Released under Apache 2.0 license as described in the file LICENSE.
+ Authors: Chris Birkbeck
+ -/
++import Mathlib.Algebra.Order.Ring.Star
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+This import is not necessary (it provides an instance that can also be obtained otherwise).
+
+--- candidate 2 (sim=0.848, past_pr=#28400, file=Mathlib/NumberTheory/ModularForms/DedekindEta.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,140 @@
++/-
++Copyright (c) 2024 Chris Birkbeck. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Chris Birkbeck, David Loeffler
++-/
++
++import Mathlib.Algebra.Order.Ring.Star
++import Mathlib.Analysis.CStarAlgebra.Classes
+```
+PAST COMMENT (from reviewer):
+These two imports aren't used (not sure why `shake` fails to complain)
+
+--- candidate 3 (sim=0.795, past_pr=#31362, file=Mathlib/Combinatorics/Enumerative/PentagonalNumbers.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,255 @@
++/-
++Copyright (c) 2025 Beibei Xiong. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Beibei Xiong
++-/
++import Mathlib.Algebra.Order.Ring.Star
++import Mathlib.Analysis.Normed.Ring.Lemmas
++import Mathlib.Combinatorics.Enumerative.Partition
++import Mathlib.Data.Int.Star
++import Mathlib.RingTheory.PowerSeries.Basic
+```
+PAST COMMENT (from reviewer):
+```suggestion
+module
+
+public import Mathlib.Algebra.Order.Ring.Star
+public import Mathlib.Analysis.Normed.Ring.Lemmas
+public import Mathlib.Combinatorics.Enumerative.Partition
+public import Mathlib.Data.Int.Star
+public import Mathlib.RingTheory.PowerSeries.Basic
+```
+
+--- candidate 4 (sim=0.781, past_pr=#218, file=Mathlib/Control/Random.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,145 @@
++import Mathlib.Init.Algebra.Order
+```
+PAST COMMENT (from reviewer):
+Please include copyright header (copy from other files).
+
+--- candidate 5 (sim=0.773, past_pr=#9511, file=Mathlib/Algebra/Ring/Ext.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,528 @@
++/-
++Copyright (c) 2024 Raghuram Sundararajan. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Raghuram Sundararajan
++-/
++import Mathlib.Algebra.Ring.Defs
++import Mathlib.Algebra.Group.Ext
++-- import Mathlib
+```
+PAST COMMENT (from reviewer):
+A commented-out line that is no longer needed can be safely deleted (we can always check the commits to get it back).
+```suggestion
+```
+
+--- candidate 6 (sim=0.773, past_pr=#10562, file=Mathlib/Tactic/Bound.lean) ---
+PAST HUNK:
+```
++/-
++Copyright (c) 2024 Geoffrey Irving. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Geoffrey Irving
++-/
++
++import Aesop
++import Mathlib.Algebra.Order.AbsoluteValue
++import Mathlib.Algebra.Order.BigOperators.Group.Finset
++import Mathlib.Algebra.Order.Field.Basic
++import Mathlib.Algebra.Order.Floor
++import Mathlib.Algebra.Order.Ring.Basic
++import Mathlib.Algebra.Order.Ring.Defs
+```
+PAST COMMENT (from reviewer):
+I'm always worried about importing significant theory in tactics files. It really ties our hands simplifying the import tree.
+
+Could you either try to minimize these imports, or add some comments explaining why these are the minimum necessary?
+
+--- candidate 7 (sim=0.773, past_pr=#14941, file=Mathlib/Algebra/Ring/Semireal/Defs.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,115 @@
++/-
++Copyright (c) 2024 Florent Schaffhauser. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Florent Schaffhauser.
++-/
++
++import Mathlib.Algebra.Ring.Defs
+```
+PAST COMMENT (from reviewer):
+```suggestion
+Authors: Florent Schaffhauser
+-/
+import Mathlib.Algebra.Ring.Defs
+```
+TBH I am not sure what is the problem here. At worst just copy/paste from another file and change your name (The VS Code extension can also produce it for you IIRC)
+
+--- candidate 8 (sim=0.773, past_pr=#14941, file=Mathlib/Algebra/Ring/Semireal/Defs.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,115 @@
++/-
++Copyright (c) 2024 Florent Schaffhauser. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Florent Schaffhauser.
++-/
++
++import Mathlib.Algebra.Ring.Defs
+```
+PAST COMMENT (from reviewer):
+Ah, it's the dot at the end of the line
+
+--- candidate 9 (sim=0.770, past_pr=#13974, file=Mathlib/LinearAlgebra/Matrix/DotProduct.lean) ---
+PAST HUNK:
+```
+@@ -101,17 +102,27 @@ section StarOrderedRing
+ 
+ variable [PartialOrder R] [NonUnitalRing R] [StarRing R] [StarOrderedRing R] [NoZeroDivisors R]
+ 
++/-- Note that this applies to `ℂ` via `Complex.strictOrderedCommRing`. -/
+```
+PAST COMMENT (from reviewer):
+It looks like you copied all these docstrings from the few declarations below, but they're all wrong? I think they apply to `ℂ` via `RCLike.toStarOrderedRing`, which is available in the `ComplexOrder` scope.
+
+--- candidate 10 (sim=0.766, past_pr=#36329, file=Mathlib/RingTheory/PowerSeries/Log.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,66 @@
++/-
++Copyright (c) 2026 Mathlib contributors. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Mathlib contributors
+```
+PAST COMMENT (from reviewer):
+I’ve just noticed that `Exp.lean` has the same header, so I’m a little confused. `Exp.lean` was added by you in #34256, but its contents were already essentially present in `WellKnown.lean`, right? So I have two comments:
+
+* First, if that is correct, then @yury-harmonic should probably be credited with the copyright and authorship of `Exp.lean`. You may of course add yourself to the list of authors, but please don’t remove anyone.
+* Second, where does the material in this PR come from? Is it original to you?
+
+--- candidate 11 (sim=0.766, past_pr=#36329, file=Mathlib/RingTheory/PowerSeries/Log.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,66 @@
++/-
++Copyright (c) 2026 Mathlib contributors. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Mathlib contributors
+```
+PAST COMMENT (from reviewer):
+Yes, adding names to the list of authors is completely standard, we don't have precise rules about it
+
+--- candidate 12 (sim=0.764, past_pr=#26402, file=Mathlib/CategoryTheory/Limits/FormalCoproducts.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,427 @@
++/-
++Copyright (c) 2025 Kenny Lau. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Joël Riou, Kenny Lau
++-/
++
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+
+--- candidate 13 (sim=0.763, past_pr=#34204, file=Mathlib/LinearAlgebra/QuadraticForm/Signature.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,228 @@
++/-
++Copyright (c) 2026 David Loeffler. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: David Loeffler
+```
+PAST COMMENT (from reviewer):
+Could you add the names of the other contributors here?
+
+--- candidate 14 (sim=0.761, past_pr=#10834, file=NatNumberCategories) ---
+PAST HUNK:
+```
+@@ -0,0 +1,416 @@
++/-
++Copyright (c) 2024 Colin Jones. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Author: Colin Jones
++-/
++import Mathlib
+```
+PAST COMMENT (from reviewer):
+This file is supposed to be part of Mathlib, it can't import mathlib without creating an infinite loop. Just import the files you need:
+```suggestion
+import Mathlib.Algebra.GeomSum
+import Mathlib.NumberTheory.Divisors
+import Mathlib.Tactic.NormNum.Prime
+import Mathlib.Analysis.Normed.Field.Basic
+```
+
+--- candidate 15 (sim=0.760, past_pr=#34003, file=Mathlib/Algebra/Group/ModEq.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,352 @@
++/-
++Copyright (c) 2023 Yaël Dillies. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Yaël Dillies
+```
+PAST COMMENT (from reviewer):
+I think you can claim authorship here now.
+
+--- candidate 16 (sim=0.759, past_pr=#19760, file=Mathlib/Topology/CWComplex/Basic.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,385 @@
++/-
++Copyright (c) 2024 Floris van Doorn and Hannah Scholz. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Floris van Doorn, Hannah Scholz
++-/
++
++import Mathlib.Analysis.InnerProductSpace.Basic
++import Mathlib.Data.Real.StarOrdered
++import Mathlib.Order.CompletePartialOrder
+```
+PAST COMMENT (from reviewer):
+I found this list of imports most strange. Indeed, those are some of the imports that `#min_imports` gets fooled by because they introduce high priority instances that are easily used instead of simpler ones.
+
+So I checked out your branch and iteratively replaced each import by its imports while running `#min_imports`, and I got the following list of imports:
+```suggestion
+import Mathlib.Analysis.NormedSpace.Real
+import Mathlib.Logic.Equiv.PartialEquiv
+```
+
+--- candidate 17 (sim=0.757, past_pr=#15105, file=Mathlib/Probability/Kernel/Disintegration/Basic.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,155 @@
++/-
++Copyright (c) 2024 Yaël Dillies, Kin Yau James Wong. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Yaël Dillies, Kin Yau James Wong
+```
+PAST COMMENT (from reviewer):
+```suggestion
+Authors: Yaël Dillies, Kin Yau James Wong, Rémy Degenne
+```
+Since a non-negligible part of that code is moved from the other file (although slightly changed).
+
+--- candidate 18 (sim=0.755, past_pr=#9773, file=Mathlib/Analysis/Fourier/FourierTransformDeriv.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,192 @@
++/-
++Copyright (c) 2024 David Loeffler. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: David Loeffler
+```
+PAST COMMENT (from reviewer):
+Could you add Alex and Heather here?
+
+--- candidate 19 (sim=0.755, past_pr=#25280, file=Mathlib/RingTheory/EmbeddingDimension.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,422 @@
+... [4 lines above hidden]
++Authors: Brian Nugent, Jarod Alper
++-/
++import Mathlib.Algebra.Azumaya.Basic
++import Mathlib.Algebra.Lie.OfAssociative
++import Mathlib.Algebra.Module.SpanRank
++import Mathlib.Algebra.Order.Ring.Star
++import Mathlib.Analysis.Normed.Ring.Lemmas
++import Mathlib.Data.Int.Star
++import Mathlib.LinearAlgebra.Dual.Lemmas
++import Mathlib.LinearAlgebra.FreeModule.PID
++import Mathlib.RingTheory.Henselian
++import Mathlib.RingTheory.HopkinsLevitzki
++import Mathlib.RingTheory.Ideal.Cotangent
+```
+PAST COMMENT (from reviewer):
+Can you make sure that these are actually needed, in particular, `Mathlib.Algebra.Lie.OfAssociative` and `Mathlib.Algebra.Azumaya.Basic` and more looks like common `#min_imports` false positives.
+
+--- candidate 20 (sim=0.754, past_pr=#9428, file=Mathlib/AlgebraicTopology/SingularSet.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,71 @@
++/-
++Copyright (c) 2024 Johan Commelin. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Johan Commelin, Scott Morrison, Adam Topaz
+```
+PAST COMMENT (from reviewer):
+Ah, I guess [we've argued this before](https://leanprover.zulipchat.com/#narrow/stream/113488-general/topic/Copyright.20header/near/280420005). I always take it to be the year the oldest definition/lemma of the file was created.
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "new_hunk_plausible_concerns": [
+    "imports-module"
+  ],
+  "summary": "The only visible content is a single import; past reviews often flagged this specific import as unnecessary or asked to minimize imports.",
+  "confidence": "medium",
+  "strong_matches": [
+    {
+      "past_pr": 27606,
+      "past_file": "Mathlib/NumberTheory/ModularForms/EisensteinSeries/QExpansion.lean",
+      "past_concern_axis": "imports-module",
+      "past_comment_excerpt": "This import is not necessary",
+      "applies_because": "The new file imports Mathlib.Algebra.Order.Ring.Star and shows no usage in the snippet; reviewers frequently ask to remove this import if not needed.",
+      "suggested_adaptation": "Please drop Mathlib.Algebra.Order.Ring.Star (or justify it) if it's unused; consider running #min_imports to verify.",
+      "why_might_not_apply": "Subsequent (hidden) content in the file might actually rely on star/order instances from this import.",
+      "supporting_past_prs": [
+        28400,
+        25280,
+        19760
+      ]
+    }
+  ],
+  "weak_observations": []
+}

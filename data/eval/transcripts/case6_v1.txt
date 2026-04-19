@@ -1,0 +1,809 @@
+====================================================================================================
+CASE 6  PR #35939  (heldout-closed)
+file: Mathlib/Algebra/Homology/DerivedCategory/HomologySequence.lean  line: 208.0
+prompt_version: v1
+prompt_tokens: 10718  completion_tokens: 1804  latency: 21.5s
+HUMAN reviewer (ground truth):
+  > I think we at least prefer `erw` to track the defeq abuse as technical debt
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Your job: given a NEW code hunk from an open pull request, look at a set of historically retrieved (past_hunk, past_comment) pairs and decide which (if any) of those past reviewer comments would also apply to the new hunk.
+
+You MUST follow these rules strictly:
+
+1. Each candidate is a real (code, comment) pair from a real closed PR. Read both. The reviewer's comment was made in response to that specific code.
+
+2. For each candidate, decide if the same comment, possibly lightly adapted, would be a sensible review on the NEW hunk. To say YES you need substantive overlap — same kind of code pattern AND same kind of advice.
+
+3. NEVER invent advice that isn't grounded in a specific retrieved comment. If none of the candidates is genuinely applicable, say so clearly and produce an empty `strong_matches` list. This is a valid, expected output; do not manufacture relevance.
+
+4. You MAY include a small `weak_observations` list of 0-3 items describing recurring style/conventions you noticed across the retrieved pool that *might* be worth thinking about, even if no single candidate is a strong match. Mark these clearly as observations, not findings.
+
+5. Set `confidence` to:
+   - "high"  — at least one candidate is a clear paraphrase of advice that applies to the new hunk
+   - "medium" — at least one candidate touches the same concern, with light adaptation
+   - "low"   — only loose stylistic patterns; nothing directly applicable
+   - "none"  — retrieved pool is unrelated; do not press an answer
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment>",
+      "applies_because": "<one or two sentences linking past code & comment to new hunk>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>"
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Be terse. Quote short — under 30 words per excerpt.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #35939 (file: Mathlib/Algebra/Homology/DerivedCategory/HomologySequence.lean):
+```
+@@ -176,3 +178,97 @@ lemma mono_homologyMap_mor₂_iff :
+ end HomologySequence
+ 
+ end DerivedCategory
++
++namespace CochainComplex
++
++open HomologicalComplex
++
++variable {C} (T : Triangle (CochainComplex C ℤ))
++
++/-- If `T` is a triangle in `CochainComplex C ℤ`, this is the connecting homomorphism
++`T.obj₃.homology n₀ ⟶ T.obj₁.homology n₁` in homology when `n₀ + 1 = n₁`. -/
++noncomputable def homologyδOfTriangle (n₀ n₁ : ℤ) (h : n₀ + 1 = n₁) :
++    T.obj₃.homology n₀ ⟶ T.obj₁.homology n₁ :=
++  homologyMap T.mor₃ n₀ ≫
++    ((homologyFunctor C (.up ℤ) 0).shiftIso 1 n₀ n₁ (by lia)).hom.app _
++
++set_option backward.isDefEq.respectTransparency false in
++@[reassoc (attr := simp)]
++lemma homologyFunctorFactors_hom_app_homologyδOfTriangle (n₀ n₁ : ℤ) (h : n₀ + 1 = n₁) :
++    (DerivedCategory.homologyFunctorFactors C n₀).hom.app T.obj₃ ≫
++      homologyδOfTriangle T n₀ n₁ h =
++    DerivedCategory.HomologySequence.δ
++      (DerivedCategory.Q.mapTriangle.obj T) n₀ n₁ h ≫
++        (DerivedCategory.homologyFunctorFactors C n₁).hom.app T.obj₁ := by
++  have := DerivedCategory.shiftMap_homologyFunctor_map_Q T.mor₃ n₀ n₁ (by lia)
++  dsimp [ShiftedHom.map] at this
++  dsimp [DerivedCategory.HomologySequence.δ]
++  simp only [this, Category.assoc, Iso.inv_hom_id_app, homologyFunctor_obj,
++    NatIso.cancel_natIso_hom_left]
++  exact (Category.comp_id _).symm
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.810, past_pr=#13664, file=Mathlib/Algebra/Homology/DerivedCategory/HomologySequence.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,101 @@
++/-
++Copyright (c) 2024 Joël Riou. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Joël Riou
++-/
++
++import Mathlib.Algebra.Homology.DerivedCategory.Basic
++
++/-!
++# The homology sequence
++
++In this file, we construct `homologyFunctor C n : DerivedCategory C ⥤ C` for all `n : ℤ`,
++show that they are homological functors which form a shift sequence, and construct
++the long exact homology sequences associated to distinguished triangles in the
++derived category.
++
++-/
++
++universe w v u
++
++open CategoryTheory Pretriangulated
++
++variable (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
++
++namespace DerivedCategory
++
++/-- The homology functor `DerivedCategory C ⥤ C` in degree `n : ℤ`. -/
++noncomputable def homologyFunctor (n : ℤ) : DerivedCategory C ⥤ C :=
++  HomologicalComplexUpToQuasiIso.homologyFunctor C (ComplexShape.up ℤ) n
++
++/-- The homology functor on the derived category is induced by the homology
++functor on the category of cochain complexes. -/
++noncomputable def homologyFunctorFactors (n : ℤ) : Q ⋙ homologyFunctor C n ≅
++    HomologicalComplex.homologyFunctor _ _ n :=
++  HomologicalComplexUpToQuasiIso.homologyFunctorFactors C (ComplexShape.up ℤ) n
++
++/-- The homology functor on the derived category is induced by the homology
++functor on the homotopy category of cochain complexes. -/
++noncomputable def homologyFunctorFactorsh (n : ℤ) : Qh ⋙ homologyFunctor C n ≅
++    HomotopyCategory.homologyFunctor _ _ n :=
++  HomologicalComplexUpToQuasiIso.homologyFunctorFactorsh C 
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+@[reassoc]
+lemma δ_comp : δ T n₀ n₁ h ≫ (homologyFunctor C n₁).map T.mor₁ = 0 :=
+```
+Or
+```suggestion
+@[reassoc (attr := simp)]
+lemma δ_comp : δ T n₀ n₁ h ≫ (homologyFunctor C n₁).map T.mor₁ = 0 :=
+```
+
+--- candidate 2 (sim=0.807, past_pr=#13664, file=Mathlib/Algebra/Homology/DerivedCategory/HomologySequence.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,101 @@
++/-
++Copyright (c) 2024 Joël Riou. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Joël Riou
++-/
++
++import Mathlib.Algebra.Homology.DerivedCategory.Basic
++
++/-!
++# The homology sequence
++
++In this file, we construct `homologyFunctor C n : DerivedCategory C ⥤ C` for all `n : ℤ`,
++show that they are homological functors which form a shift sequence, and construct
++the long exact homology sequences associated to distinguished triangles in the
++derived category.
++
++-/
++
++universe w v u
++
++open CategoryTheory Pretriangulated
++
++variable (C : Type u) [Category.{v} C] [Abelian C] [HasDerivedCategory.{w} C]
++
++namespace DerivedCategory
++
++/-- The homology functor `DerivedCategory C ⥤ C` in degree `n : ℤ`. -/
++noncomputable def homologyFunctor (n : ℤ) : DerivedCategory C ⥤ C :=
++  HomologicalComplexUpToQuasiIso.homologyFunctor C (ComplexShape.up ℤ) n
++
++/-- The homology functor on the derived category is induced by the homology
++functor on the category of cochain complexes. -/
++noncomputable def homologyFunctorFactors (n : ℤ) : Q ⋙ homologyFunctor C n ≅
++    HomologicalComplex.homologyFunctor _ _ n :=
++  HomologicalComplexUpToQuasiIso.homologyFunctorFactors C (ComplexShape.up ℤ) n
++
++/-- The homology functor on the derived category is induced by the homology
++functor on the homotopy category of cochain complexes. -/
++noncomputable def homologyFunctorFactorsh (n : ℤ) : Qh ⋙ homologyFunctor C n ≅
++    HomotopyCategory.homologyFunctor _ _ n :=
++  HomologicalComplexUpToQuasiIso.homologyFunctorFactorsh C 
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+@[reassoc]
+lemma comp_δ : (homologyFunctor C n₀).map T.mor₂ ≫ δ T n₀ n₁ h = 0 :=
+```
+Or
+```suggestion
+@[reassoc (attr := simp)]
+lemma comp_δ : (homologyFunctor C n₀).map T.mor₂ ≫ δ T n₀ n₁ h = 0 :=
+```
+
+--- candidate 3 (sim=0.803, past_pr=#31224, file=Mathlib/Algebra/Homology/Embedding/Connect.lean) ---
+PAST HUNK:
+```
+@@ -175,16 +176,66 @@ noncomputable def homologyIsoPos (n : ℕ) (m : ℤ)
+ 
+ /-- Given `h : ConnectData K L` and `n : ℕ`, the homology
+ of `h.cochainComplex` in degree `-(n + 2)` identifies to the homology of `K` in degree `n + 1`. -/
+-noncomputable def homologyIsoNeg (n : ℕ) (m : ℤ)
+-    [h.cochainComplex.HasHomology m] [K.HasHomology (n + 1)]
+-    (hm : m = -(n + 2 : ℕ)) :
+-    h.cochainComplex.homology m ≅ K.homology (n + 1) :=
+-  have := hasHomology_of_iso h.restrictionLEIso.symm (n + 1)
++noncomputable def homologyIsoNeg (n : ℕ) [NeZero n] (m : ℤ)
++    [h.cochainComplex.HasHomology m] [K.HasHomology n] (hm : m = -(n + 1 : ℕ)) :
++    h.cochainComplex.homology m ≅ K.homology n :=
++  have := hasHomology_of_iso h.restrictionLEIso.symm n
+   (h.cochainComplex.restrictionHomologyIso
+-    (ComplexShape.embeddingUpIntLE (-1)) (n + 2) (n + 1) n (by simp) (by simp)
+-      (i' := m - 1) (j' := m) (k' := m + 1)
+-      (by simp; cutsat) (by simp; cutsat) (by simp; cutsat) (by simp) (by simp)).symm ≪≫
+-    HomologicalComplex.homologyMapIso h.restrictionLEIso (n + 1)
++    (ComplexShape.embeddingUpIntLE (-1)) (n + 1) n (n - 1) (by simp) (by cases n <;> simp)
++      (i' := m - 1) (j' := m) (k' := m + 1) (by simp; cutsat) (by simp; cutsat)
++      (by have := NeZero.ne n; cases n <;> simp <;> cutsat) (by simp) (by simp)).symm ≪≫
++    HomologicalComplex.homologyMapIso h.restrictionLEIso n
++
++variable
++  (fK : K ⟶ K') (fL : L ⟶ L') (f_comm : fK.f 0 ≫ h'.d₀ = h.d₀ ≫ fL.f 0)
++  (fK' : K' ⟶ K'') (fL' : L' ⟶ L'') (f_comm' : fK'.f 0 ≫ h''.d₀ = h'.d₀ ≫ fL'.f 0)
++
++/-- Connecting comple
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+Can you also fix `homologyIsoPos` as well so that this takes `NeZero n`? Thanks.
+
+--- candidate 4 (sim=0.798, past_pr=#31224, file=Mathlib/Algebra/Homology/Embedding/Connect.lean) ---
+PAST HUNK:
+```
+@@ -160,31 +161,80 @@ def restrictionLEIso :
+       cochainComplex_d, d_negSucc]
+     simp)
+ 
+-/-- Given `h : ConnectData K L` and `n : ℕ`, the homology
+-of `h.cochainComplex` in degree `n + 1` identifies to the homology of `L` in degree `n + 1`. -/
+-noncomputable def homologyIsoPos (n : ℕ) (m : ℤ)
+-    [h.cochainComplex.HasHomology m] [L.HasHomology (n + 1)]
+-    (hm : m = (n + 1 : ℕ)) :
+-    h.cochainComplex.homology m ≅ L.homology (n + 1) :=
+-  have := hasHomology_of_iso h.restrictionGEIso.symm (n + 1)
++/-- Given `h : ConnectData K L` and `n : ℕ` non-zero, the homology
++of `h.cochainComplex` in degree `n` identifies to the homology of `L` in degree `n`. -/
++noncomputable def homologyIsoPos (n : ℕ) [NeZero n] (m : ℤ) (hm : m = n)
++    [h.cochainComplex.HasHomology m] [L.HasHomology n] :
++    h.cochainComplex.homology m ≅ L.homology n :=
++  have := hasHomology_of_iso h.restrictionGEIso.symm n
+   (h.cochainComplex.restrictionHomologyIso
+-    (ComplexShape.embeddingUpIntGE 0) n (n + 1) (n + 2) (by simp) (by simp)
+-      (i' := m - 1) (j' := m) (k' := m + 1) (by simp; cutsat) (by simp; cutsat)
+-      (by simp; cutsat) (by simp) (by simp)).symm ≪≫
+-    HomologicalComplex.homologyMapIso h.restrictionGEIso (n + 1)
+-
+-/-- Given `h : ConnectData K L` and `n : ℕ`, the homology
+-of `h.cochainComplex` in degree `-(n + 2)` identifies to the homology of `K` in degree `n + 1`. -/
+-noncomputable def homologyIsoNeg (n : ℕ) (m : ℤ)
+-    [h.cochainComplex.HasHomology m] [K.HasHomology (n + 1)]
+-    (hm : m = -(n + 2 : ℕ)) :
+-    h.cochainComplex.homology m ≅ K.homology (n + 1
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+
+```suggestion
+  simp
+```
+
+--- candidate 5 (sim=0.767, past_pr=#8771, file=Mathlib/Algebra/Homology/HomologySequence.lean) ---
+PAST HUNK:
+```
+@@ -302,6 +302,32 @@ lemma homology_exact₂ : (ShortComplex.mk (HomologicalComplex.homologyMap S.f i
+ lemma homology_exact₃ : (ShortComplex.mk _ _ (comp_δ hS i j hij)).Exact :=
+   (snakeInput hS i j hij).L₁'_exact
+ 
++lemma δ_eq' {A : C} (x₃ : A ⟶ S.X₃.homology i) (x₂ : A ⟶ S.X₂.opcycles i)
++    (x₁ : A ⟶ S.X₁.cycles j)
++    (h₂ : x₂ ≫ HomologicalComplex.opcyclesMap S.g i = x₃ ≫ S.X₃.homologyι i)
++    (h₁ : x₁ ≫ HomologicalComplex.cyclesMap S.f j = x₂ ≫ S.X₂.opcyclesToCycles i j) :
++    x₃ ≫ hS.δ i j hij = x₁ ≫ S.X₁.homologyπ j :=
++  (snakeInput hS i j hij).δ_eq x₃ x₂ x₁ h₂ h₁
++
++lemma δ_eq {A : C} (x₃ : A ⟶ S.X₃.X i) (hx₃ : x₃ ≫ S.X₃.d i j = 0)
++    (x₂ : A ⟶ S.X₂.X i) (hx₂ : x₂ ≫ S.g.f i = x₃)
++    (x₁ : A ⟶ S.X₁.X j) (hx₁ : x₁ ≫ S.f.f j = x₂ ≫ S.X₂.d i j)
++    (k : ι) (hk : c.next j = k):
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    (k : ι) (hk : c.next j = k) :
+```
+
+--- candidate 6 (sim=0.760, past_pr=#7050, file=Mathlib/Algebra/Homology/HomotopyCategory/HomComplex.lean) ---
+PAST HUNK:
+```
+@@ -415,8 +416,135 @@ lemma δ_shape (hnm : ¬ n + 1 = m) (z : Cochain F G n) : δ n m z = 0 := by
+     simp only [ComplexShape.up_Rel]
+     exact fun _ => hnm (by linarith)
+ 
++variable (F G)
++
++/-- The differential on the complex of morphisms between cochain complexes, as an
++additive homomorphism. -/
++@[simps!]
++def δ_hom : Cochain F G n →+ Cochain F G m :=
++  AddMonoidHom.mk' (δ n m) (fun α β => by
++    by_cases n + 1 = m
++    · ext p q hpq
++      dsimp
++      simp only [δ_v n m h _ p q hpq _ _ rfl rfl, Cochain.add_v, add_comp, comp_add, zsmul_add]
++      abel
++    · simp only [δ_shape _ _ h, add_zero])
++
++variable {F G}
++
++@[simp] lemma δ_add (z₁ z₂ : Cochain F G n) : δ n m (z₁ + z₂) = δ n m z₁ + δ n m z₂ :=
++  (δ_hom F G n m).map_add z₁ z₂
++
++@[simp] lemma δ_sub (z₁ z₂ : Cochain F G n) : δ n m (z₁ - z₂) = δ n m z₁ - δ n m z₂ :=
++  (δ_hom F G n m).map_sub z₁ z₂
++
++@[simp] lemma δ_zero : δ n m (0 : Cochain F G n) = 0 := (δ_hom F G n m).map_zero
++
++@[simp] lemma δ_neg (z : Cochain F G n) : δ n m (-z) = - δ n m z :=
++  (δ_hom F G n m).map_neg z
++
++@[simp] lemma δ_zsmul (k : ℤ) (z : Cochain F G n) : δ n m (k • z) = k • δ n m z :=
++  (δ_hom F G n m).map_zsmul z k
++
++lemma δ_δ (n₀ n₁ n₂ : ℤ) (z : Cochain F G n₀) : δ n₁ n₂ (δ n₀ n₁ z) = 0 := by
++  by_cases h₁₂ : n₁ + 1 = n₂; swap; rw [δ_shape _ _ h₁₂]
++  by_cases h₀₁ : n₀ + 1 = n₁; swap; rw [δ_shape _ _ h₀₁, δ_zero]
++  ext p q hpq
++  dsimp
++  simp only [δ_v n₁ n₂ h₁₂ _ p q hpq _ _ rfl rfl,
++    δ_v n₀ n₁ h₀₁ z p (q-1) (by linarith) (q-2) _ (by linarith) rfl,
++    δ_v n₀ n₁ h₀₁ z (p+1) q (by linarith) _ (p+2) rfl (b
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+lemma δ_ofHomotopy {φ₁ φ₂ : F ⟶ G} (h : Homotopy φ₁ φ₂) :
+```
+
+--- candidate 7 (sim=0.752, past_pr=#14084, file=Mathlib/Algebra/Homology/HomotopyCategory/MappingCone.lean) ---
+PAST HUNK:
+```
+@@ -541,6 +541,93 @@ lemma lift_desc_f {K L : CochainComplex C ℤ} (α : Cocycle K F 1) (β : Cochai
+     liftCochain_v_descCochain_v φ α.1 β α' (Cochain.ofHom β') (zero_add 1) (neg_add_self 1) 0
+     (add_zero 0) n n n (add_zero n) (add_zero n) n' hnn', Cochain.ofHom_v]
+ 
++
++section
++
++open Preadditive Category
++
++variable (H : C ⥤ D) [H.Additive]
++  [HasHomotopyCofiber ((H.mapHomologicalComplex (ComplexShape.up ℤ)).map φ)]
++
++/-- If `H : C ⥤ D` is an additive functor and `φ` is a morphism of cochain complexes
++in `C`, this is the comparison isomorphism (in each degree) between the image
++by `H` of `mappingCone φ` and the mapping cone of the image by `H` of `φ`. -/
++@[simps]
++noncomputable def mapHomologicalComplexXIso' (n m : ℤ) (hnm : n + 1 = m) :
++    ((H.mapHomologicalComplex (ComplexShape.up ℤ)).obj (mappingCone φ)).X n ≅
++      (mappingCone ((H.mapHomologicalComplex (ComplexShape.up ℤ)).map φ)).X n where
++  hom := H.map ((fst φ).1.v n m (by omega)) ≫
++      (inl ((H.mapHomologicalComplex (ComplexShape.up ℤ)).map φ)).v m n (by omega) +
++      H.map ((snd φ).v n n (add_zero n)) ≫
++        (inr ((H.mapHomologicalComplex (ComplexShape.up ℤ)).map φ)).f n
++  inv := (fst ((H.mapHomologicalComplex (ComplexShape.up ℤ)).map φ)).1.v n m (by omega) ≫
++      H.map ((inl φ).v m n (by linarith)) +
+```
+PAST COMMENT (from reviewer):
+Not at a computer so I can't check: could this be `omega`? No problem if there is a good reason.
+
+--- candidate 8 (sim=0.752, past_pr=#25872, file=Mathlib/Algebra/Homology/ConcreteCategory.lean) ---
+PAST HUNK:
+```
+@@ -65,6 +65,18 @@ lemma δ_apply' (x₃ : (forget₂ C Ab).obj (S.X₃.homology i))
+     (forget₂ C Ab).map (hS.δ i j hij) x₃ = (forget₂ C Ab).map (S.X₁.homologyπ j) x₁ :=
+   (HomologicalComplex.HomologySequence.snakeInput hS i j hij).δ_apply' x₃ x₂ x₁ h₂ h₁
+ 
++include hS in
+```
+PAST COMMENT (from reviewer):
+````suggestion
+set_option linter.style.commandStart false in
+include hS in
+/-
+In the short exact sequence of complexes
+```
+       0            0            0
+       |            |            |
+       v            v            v
+...-> X_1,i -----> X_1,j --d--> X_1,k ->...
+       |            |            |
+       |          f |            |
+       v            v            v
+...-> X_2,i --d--> X_2,j -----> X_2,k ->...
+       |            |            |
+       v            v            v
+...-> X_3,i -----> X_3,j -----> X_3,k ->...
+       |            |            |
+       v            v            v
+       0            0            0
+```
+if x₁ ∈ X_1,j and x₂ ∈ X_2,i and if f(x₁)=d(x₂) then d(x₁)=0.
+-/
+````
+
+I spent a while trying to figure out what the
+... [truncated]
+
+--- candidate 9 (sim=0.749, past_pr=#9032, file=Mathlib/Algebra/Homology/HomotopyCategory/Pretriangulated.lean) ---
+PAST HUNK:
+```
+@@ -359,3 +359,110 @@ end Shift
+ end mappingCone
+ 
+ end CochainComplex
++
++namespace HomotopyCategory
++
++variable (C)
++
++namespace Pretriangulated
++
++/-- A triangle in `HomotopyCategory C (ComplexShape.up ℤ)` if it is isomorphic to
+```
+PAST COMMENT (from reviewer):
+
+```suggestion
+/-- A triangle in `HomotopyCategory C (ComplexShape.up ℤ)` is distinguished if it is isomorphic to
+```
+
+--- candidate 10 (sim=0.744, past_pr=#31046, file=Mathlib/Algebra/Homology/HomotopyCategory/Pretriangulated.lean) ---
+PAST HUNK:
+```
+@@ -162,6 +162,15 @@ lemma map_id : map φ φ (𝟙 _) (𝟙 _) (by rw [id_comp, comp_id]) = 𝟙 _ :
+   ext n
+   simp [ext_from_iff _ (n + 1) n rfl, map]
+ 
++lemma triangle_mor₃_hom : (CochainComplex.mappingCone.triangle φ₁).mor₃ ≫
+```
+PAST COMMENT (from reviewer):
+This lemma is not necessary as it is `(triangleMap φ₁ φ₂ a b comm).comm₃` (see the definition `triangleMap` below).
+
+--- candidate 11 (sim=0.734, past_pr=#33360, file=Mathlib/CategoryTheory/Abelian/Injective/Extend.lean) ---
+PAST HUNK:
+```
+@@ -91,6 +91,35 @@ instance : R.cochainComplex.IsLE 0 := by
+   simp only [← HomologicalComplex.isSupported_iff_of_quasiIso R.ι']
+   infer_instance
+ 
++namespace Hom
++
++variable {R} {X' : C} {R' : InjectiveResolution X'} {f : X ⟶ X'}
++  (φ : Hom R R' f)
++
++/-- The morphism on cochain complexes indexed by `ℤ` that is induced by
++an (heterogeneous) morphism of injective resolutions. -/
++noncomputable def hom' : R.cochainComplex ⟶ R'.cochainComplex :=
++  HomologicalComplex.extendMap φ.hom _
++
++@[reassoc]
++lemma hom'_f (n : ℤ) (m : ℕ) (h : m = n) :
++    φ.hom'.f n =
++    (R.cochainComplexXIso n m h).hom ≫ φ.hom.f m ≫ (R'.cochainComplexXIso n m h).inv := by
++  simp [hom', HomologicalComplex.extendMap_f _
++    ComplexShape.embeddingUpNat (i := m) (i' := n) (by simpa),
++    cochainComplexXIso]
++
++@[reassoc (attr := simp)]
++lemma ι'_comp :
+```
+PAST COMMENT (from reviewer):
+```suggestion
+lemma ι'_comp_hom' :
+```
+or `ι'_hom'` maybe? but I feel there should be `hom'` in the name.
+
+--- candidate 12 (sim=0.733, past_pr=#7195, file=Mathlib/Algebra/Homology/ShortComplex/Homology.lean) ---
+PAST HUNK:
+```
+@@ -1013,6 +1013,160 @@ lemma π_homologyMap_ι [S₁.HasHomology] [S₂.HasHomology] (φ : S₁ ⟶ S
+ 
+ end
+ 
++variable (S)
++
++/-- The canonical isomorphism `S.op.homology ≅ Opposite.op S.homology` when a short
++complex `S` has homology. -/
++noncomputable def homologyOpIso [S.HasHomology] :
++    S.op.homology ≅ Opposite.op S.homology :=
++  S.op.leftHomologyIso.symm ≪≫ S.leftHomologyOpIso ≪≫ S.rightHomologyIso.symm.op
++
++@[simp]
++lemma homologyMap'_op : (homologyMap' φ h₁ h₂).op =
++    h₂.iso.inv.op ≫ homologyMap' (opMap φ) h₂.op h₁.op ≫ h₁.iso.hom.op :=
++  Quiver.Hom.unop_inj (by
++    dsimp
++    have γ : HomologyMapData φ h₁ h₂ := default
++    simp only [γ.homologyMap'_eq, γ.op.homologyMap'_eq, HomologyData.op_left,
++      HomologyMapData.op_left, RightHomologyMapData.op_φH, Quiver.Hom.unop_op, assoc,
++      ← γ.comm_assoc, Iso.hom_inv_id, comp_id])
++
++@[simp]
++lemma homologyMap_op [HasHomology S₁] [HasHomology S₂] :
++    (homologyMap φ).op =
++      (S₂.homologyOpIso).inv ≫ homologyMap (opMap φ) ≫ (S₁.homologyOpIso).hom := by
++  dsimp only [homologyMap, homologyOpIso]
++  rw [homologyMap'_op]
++  dsimp only [Iso.symm, Iso.trans, Iso.op, Iso.refl, rightHomologyIso, leftHomologyIso,
++    leftHomologyOpIso, leftHomologyMapIso', rightHomologyMapIso',
++    LeftHomologyData.leftHomologyIso, homologyMap']
++  simp only [assoc, rightHomologyMap'_op, op_comp, ← leftHomologyMap'_comp_assoc, id_comp,
++    opMap_id, comp_id, HomologyData.op_left]
++
++variable (C)
++
++/-- The natural isomorphism `(homologyFunctor C).op ≅ opFunctor C ⋙ homologyFunctor Cᵒᵖ`
++which relates the homology in
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+`φ` can be implicit.
+
+--- candidate 13 (sim=0.728, past_pr=#26520, file=Mathlib/Algebra/Homology/Embedding/Connect.lean) ---
+PAST HUNK:
+```
+@@ -110,6 +110,63 @@ def cochainComplex : CochainComplex C ℤ where
+   d := h.d
+   shape := h.shape
+ 
++open HomologicalComplex
++
++/-- If `h : ConnectData K L`, then `h.cochainComplex` identifies to `L` in degrees `≥ 0`. -/
++@[simps!]
++def restrictionGEIso :
++    h.cochainComplex.restriction (ComplexShape.embeddingUpIntGE 0) ≅ L :=
++  Hom.isoOfComponents
++    (fun n ↦ h.cochainComplex.restrictionXIso (ComplexShape.embeddingUpIntGE 0)
++      (i := n) (i' := n) (by simp)) (by
++    rintro n _ rfl
++    dsimp only
++    rw [restriction_d_eq (e := (ComplexShape.embeddingUpIntGE 0)) _ (i' := n)
++      (j' := (n + 1 : ℕ)) (by simp) (by simp), cochainComplex_d, h.d_ofNat]
++    simp)
++
++/-- If `h : ConnectData K L`, then `h.cochainComplex` identifies to `K` in degrees `≤ -1`. -/
++@[simps!]
++def restrictionLEIso :
++    h.cochainComplex.restriction (ComplexShape.embeddingUpIntLE (-1)) ≅ K :=
++  Hom.isoOfComponents
++    (fun n ↦ h.cochainComplex.restrictionXIso (ComplexShape.embeddingUpIntLE (-1))
++        (i := n) (i' := .negSucc n) (by dsimp; omega)) (by
++    rintro _ n rfl
++    dsimp only
++    rw [restriction_d_eq (e := (ComplexShape.embeddingUpIntLE (-1))) _
++      (i' := Int.negSucc (n + 1)) (j' := Int.negSucc n) (by dsimp; omega) (by dsimp; omega),
++      cochainComplex_d, d_negSucc]
++    simp)
++
++/-- Given `h : ConnectData K L` and `n : ℕ`, the homology
++of `h.cochainComplex` in degree `n + 1` identifies to the homology of `L` in degree `n + 1`. -/
++noncomputable def homologyIsoPos (n : ℕ) (m : ℤ)
++    [h.cochainComplex.HasHomology m] [L.HasHomology (n + 1)]
++    (hm 
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+Remove this and put it in the module docstring as a TODO, I think it's better like that than just "buried away" as a comment.
+
+--- candidate 14 (sim=0.724, past_pr=#27351, file=Mathlib/Algebra/Homology/HomologySequence.lean) ---
+PAST HUNK:
+```
+@@ -152,20 +147,13 @@ variable (C)
+ 
+ attribute [local simp] homologyMap_comp cyclesMap_comp opcyclesMap_comp
+ 
+-#adaptation_note /-- nightly-2024-03-11
+-We turn off simprocs here.
+-Ideally someone will investigate whether `simp` lemmas can be rearranged
+-so that this works without the `set_option`,
+-*or* come up with a proposal regarding finer control of disabling simprocs. -/
+-set_option simprocs false in
+-/-- The functor `HomologicalComplex C c ⥤ ComposableArrows C 3` that maps `K` to the
+-diagram `K.homology i ⟶ K.opcycles i ⟶ K.cycles j ⟶ K.homology j`. -/
+ @[simps]
+```
+PAST COMMENT (from reviewer):
+Please restore the doc-string. :-)
+
+--- candidate 15 (sim=0.719, past_pr=#7195, file=Mathlib/Algebra/Homology/ShortComplex/Homology.lean) ---
+PAST HUNK:
+```
+@@ -1013,6 +1013,160 @@ lemma π_homologyMap_ι [S₁.HasHomology] [S₂.HasHomology] (φ : S₁ ⟶ S
+ 
+ end
+ 
++variable (S)
++
++/-- The canonical isomorphism `S.op.homology ≅ Opposite.op S.homology` when a short
++complex `S` has homology. -/
++noncomputable def homologyOpIso [S.HasHomology] :
++    S.op.homology ≅ Opposite.op S.homology :=
++  S.op.leftHomologyIso.symm ≪≫ S.leftHomologyOpIso ≪≫ S.rightHomologyIso.symm.op
++
++@[simp]
++lemma homologyMap'_op : (homologyMap' φ h₁ h₂).op =
++    h₂.iso.inv.op ≫ homologyMap' (opMap φ) h₂.op h₁.op ≫ h₁.iso.hom.op :=
++  Quiver.Hom.unop_inj (by
++    dsimp
++    have γ : HomologyMapData φ h₁ h₂ := default
++    simp only [γ.homologyMap'_eq, γ.op.homologyMap'_eq, HomologyData.op_left,
++      HomologyMapData.op_left, RightHomologyMapData.op_φH, Quiver.Hom.unop_op, assoc,
++      ← γ.comm_assoc, Iso.hom_inv_id, comp_id])
++
++@[simp]
++lemma homologyMap_op [HasHomology S₁] [HasHomology S₂] :
++    (homologyMap φ).op =
++      (S₂.homologyOpIso).inv ≫ homologyMap (opMap φ) ≫ (S₁.homologyOpIso).hom := by
++  dsimp only [homologyMap, homologyOpIso]
++  rw [homologyMap'_op]
++  dsimp only [Iso.symm, Iso.trans, Iso.op, Iso.refl, rightHomologyIso, leftHomologyIso,
++    leftHomologyOpIso, leftHomologyMapIso', rightHomologyMapIso',
++    LeftHomologyData.leftHomologyIso, homologyMap']
++  simp only [assoc, rightHomologyMap'_op, op_comp, ← leftHomologyMap'_comp_assoc, id_comp,
++    opMap_id, comp_id, HomologyData.op_left]
++
++variable (C)
++
++/-- The natural isomorphism `(homologyFunctor C).op ≅ opFunctor C ⋙ homologyFunctor Cᵒᵖ`
++which relates the homology in
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+`x` can be implicit here.
+
+--- candidate 16 (sim=0.717, past_pr=#13287, file=Mathlib/Algebra/Homology/HomotopyCategory/ShiftSequence.lean) ---
+PAST HUNK:
+```
+@@ -119,8 +119,8 @@ instance {K L : CochainComplex C ℤ} (φ : K ⟶ L) (n : ℤ) [QuasiIso φ] :
+     QuasiIso (φ⟦n⟧') where
+   quasiIsoAt a := by
+     rw [quasiIsoAt_iff_isIso_homologyMap]
+-    refine' (NatIso.isIso_map_iff
+-      ((homologyFunctor C (ComplexShape.up ℤ) 0).shiftIso n a (n + a) rfl) φ).2 _
++    refine (NatIso.isIso_map_iff
+```
+PAST COMMENT (from reviewer):
+I feel like this should be `apply` (or perhaps we should discuss deprecating `apply` in favor of `refine`).
+
+--- candidate 17 (sim=0.715, past_pr=#25943, file=Mathlib/RepresentationTheory/Homological/GroupHomology/LongExactSequence.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,158 @@
++/-
++Copyright (c) 2025 Amelia Livingston. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Amelia Livingston
++-/
++import Mathlib.Algebra.Homology.ConcreteCategory
++import Mathlib.Algebra.Homology.HomologicalComplexAbelian
++import Mathlib.RepresentationTheory.Homological.GroupHomology.Functoriality
++
++/-!
++# Long exact sequence in group homology
++
++Given a commutative ring `k` and a group `G`, this file shows that a short exact sequence of
++`k`-linear `G`-representations `0 ⟶ X₁ ⟶ X₂ ⟶ X₃ ⟶ 0` induces a short exact sequence of
++complexes
++`0 ⟶ inhomogeneousChains X₁ ⟶ inhomogeneousChains X₂ ⟶ inhomogeneousChains X₃ ⟶ 0`.
++
++Since the homology of `inhomogeneousChains Xᵢ` is the group homology of `Xᵢ`, this allows us
++to specialize API about long exact sequences to group homology.
++
++## Main definitions
++
++* `groupHomology.δ hX i j hij`: the connecting homomorphism `Hᵢ(G, X₃) ⟶ Hⱼ(G, X₁)` associated
++  to an exact sequence `0 ⟶ X₁ ⟶ X₂ ⟶ X₃ ⟶ 0` of representations.
++
++-/
++
++universe v u
++
++namespace groupHomology
++
++open CategoryTheory ShortComplex Finsupp
++
++variable {k G : Type u} [CommRing k] [Group G] {X : ShortComplex (Rep k G)} (hX : ShortExact X)
++
++include hX
++
++lemma map_chainsFunctor_shortExact :
++    ShortExact (X.map (chainsFunctor k G)) :=
++  letI := hX.mono_f
++  HomologicalComplex.shortExact_of_degreewise_shortExact _ fun i => {
++    exact := by
++      have : LinearMap.range X.f.hom.hom = LinearMap.ker X.g.hom.hom :=
++        (hX.exact.map (forget₂ (Rep k G) (ModuleCat k))).modul
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+Isn't the stronger statement that (`f ∘ x ∈ Zₙ(G, X₂)` implies it's a cycle) also true? Is there a reason you wanted this weaker statement?
+
+--- candidate 18 (sim=0.711, past_pr=#31707, file=Mathlib/Algebra/Homology/DerivedCategory/ExactFunctor.lean) ---
+PAST HUNK:
+```
+@@ -91,7 +92,26 @@ instance : NatTrans.CommShift F.mapDerivedCategoryFactors.hom ℤ :=
+       simp only [id_comp, mapDerivedCategoryFactorsh_hom_app, assoc, comp_id,
+         ← Functor.map_comp_assoc, Iso.inv_hom_id_app, map_id, comp_obj])
+ 
++instance : NatTrans.CommShift F.mapDerivedCategoryFactors.symm.hom ℤ :=
++  NatTrans.CommShift.of_iso_inv F.mapDerivedCategoryFactors ℤ
++
+ instance : F.mapDerivedCategory.IsTriangulated :=
+   Functor.isTriangulated_of_precomp_iso F.mapDerivedCategoryFactorsh
+ 
++/-- The commute of `DerivedCategory.singleFunctor` with `F` and `F.mapDerivedCategory`. -/
++noncomputable def mapDerivedCategorySingleFunctor (n : ℤ) :
++    (DerivedCategory.singleFunctor C₁ n) ⋙ F.mapDerivedCategory ≅
++      F ⋙ (DerivedCategory.singleFunctor C₂ n) :=
++  (isoWhiskerRight (DerivedCategory.singleFunctorIsoCompQ C₁ n) _)
++    ≪≫ associator .. ≪≫ (isoWhiskerLeft _ F.mapDerivedCategoryFactors) ≪≫ (associator ..).symm
++      ≪≫ isoWhiskerRight (HomologicalComplex.singleMapHomologicalComplex F (ComplexShape.up ℤ) n) _
++        ≪≫ (associator ..) ≪≫ (isoWhiskerLeft _ (DerivedCategory.singleFunctorIsoCompQ C₂ n)).symm
+```
+PAST COMMENT (from reviewer):
+```suggestion
+        ≪≫ associator .. ≪≫ (isoWhiskerLeft _ (DerivedCategory.singleFunctorIsoCompQ C₂ n)).symm
+```
+
+--- candidate 19 (sim=0.709, past_pr=#31046, file=Mathlib/Algebra/Homology/HomotopyCategory/ShortExact.lean) ---
+PAST HUNK:
+```
+@@ -148,6 +148,16 @@ lemma quasiIso_descShortComplex : QuasiIso (descShortComplex S) where
+       all_goals dsimp [φ]; infer_instance
+     apply IsIso.of_isIso_comp_left ((homologyFunctorFactors C (up ℤ) n).hom.app (mappingCone S.f))
+ 
++lemma descShortComplex_hom {S₁ S₂ : ShortComplex (CochainComplex C ℤ)}
+```
+PAST COMMENT (from reviewer):
+These `_hom` lemmas are *naturality* lemmas: the names have to be changed.
+
+--- candidate 20 (sim=0.708, past_pr=#15575, file=Mathlib/CategoryTheory/Triangulated/Yoneda.lean) ---
+PAST HUNK:
+```
+@@ -48,7 +48,7 @@ lemma preadditiveYoneda_map_distinguished
+ noncomputable instance (A : Cᵒᵖ) : (preadditiveCoyoneda.obj A).ShiftSequence ℤ :=
+   Functor.ShiftSequence.tautological _ _
+ 
+-lemma preadditiveCoyoneda_homologySequenceδ_apply
++lemma preadditiveCoyoneda_homologySequenceδ_apply {C} [Category C] [Preadditive C] [HasShift C ℤ]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+lemma preadditiveCoyoneda_homologySequenceδ_apply {C : Type*} [Category C] [Preadditive C] [HasShift C ℤ]
+```
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "summary": "No past comments directly apply to this new hunk; the added lemma already carries @[reassoc (attr := simp)] and other patterns differ.",
+  "confidence": "low",
+  "strong_matches": [],
+  "weak_observations": [
+    {
+      "observation": "Consider whether omega could solve simple ℤ index equalities instead of lia/linarith.",
+      "supporting_past_prs": [
+        14084
+      ]
+    },
+    {
+      "observation": "Compositional lemmas often benefit from @[reassoc] and sometimes (attr := simp); your lemma already follows this convention.",
+      "supporting_past_prs": [
+        13664
+      ]
+    },
+    {
+      "observation": "Be mindful of lemma naming conventions for naturality lemmas (avoid generic _hom names).",
+      "supporting_past_prs": [
+        31046,
+        33360
+      ]
+    }
+  ]
+}

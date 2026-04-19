@@ -1,0 +1,491 @@
+====================================================================================================
+CASE J  PR #36698  (open-pr, v3 prompt)
+file: Mathlib/Combinatorics/Enumerative/LatinSquare.lean  line: 257.0
+reviewer: @vlad902  on 2026-03-17T07:34:52Z
+advice_kind: refactor (suggestion block)
+prompt_tokens: 5602  completion_tokens: 2131
+HUMAN reviewer (ground truth):
+  > ```suggestion
+  >   once_per_row i' :=
+  >     h.bijective.comp (A.once_per_row (f.symm i') |>.comp g.symm.bijective)
+  > ```
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Your single most important task is to AVOID "axis-miss" false positives: cases where a past comment and the new code LOOK similar on the surface, but the past reviewer was raising a different KIND of concern than anything the new hunk actually has. A correct silent output is far more valuable than a confident wrong-axis answer.
+
+Read carefully before producing JSON. Follow the four steps below in order.
+
+STEP 1 — STRUCTURAL + SEMANTIC READING OF THE NEW HUNK.
+  1a. Parse the code shape: tactic-mode vs term-mode, declaration kind (`def` / `theorem` / `lemma` / `instance` / `class` / `structure` / `abbrev` / `syntax` / `notation`), attributes (`@[simp]`, `@[to_additive]`, `@[deprecated]`, `@[ext]`, `@[fun_prop]`, `@[reassoc]`, …), universe parameters, implicit/explicit binders, docstring style, proof tactics used.
+  1b. Inventory what *could* be criticized about THIS specific hunk. Pick as many as apply from this list of "concern axes":
+     - correctness-bug        (code doesn't typecheck / is logically wrong)
+     - naming                  (lemma/def name doesn't follow conventions)
+     - docstring               (missing, unclear, typo, wrong phrasing)
+     - attribute               (missing/wrong `@[simp]` / `@[to_additive]` …)
+     - style-syntax            (`fun x ↦` vs `fun x =>`, `by use _; exact _` vs `⟨_, _⟩`, whitespace/`ppSpace`, notation preference)
+     - proof-golf              (the proof tactics could be shorter/nicer)
+     - refactor-simplify       (same statement provable with less machinery)
+     - generalize-signature    (hypotheses too strong; remove/weaken a typeclass)
+     - design-smell-architectural (this API shape is wrong; returning a string, unnecessary instance, redundant definition, etc.)
+     - imports-module          (superfluous imports, module structure)
+     - namespace-organization  (`_root_`, namespace boundary, file placement)
+     - automation-tactic       (should use / should teach `aesop_cat`, `gcongr`, `positivity`, etc.)
+     - instance-diamond        (this instance creates an ambiguity / defeq diamond with another)
+     - unify-with-existing     (a similar definition/lemma already exists)
+     - junk-value              (docstring should note behavior at the "undefined" input; handled via `0`/`⊥`/`⊤`)
+  List the concerns that PLAUSIBLY apply to the new hunk. If none are obviously present, say so — don't invent them.
+
+STEP 2 — PER-CANDIDATE CONCERN CLASSIFICATION.
+  For EACH candidate, identify which concern axis (from the same list) the past reviewer's comment was about. Read the past comment carefully: the reviewer's *words* (not the past code) tell you the concern axis. If a past comment ships a `suggestion` code block, that block is evidence for what the reviewer wanted changed — but the axis of concern comes from the prose around it. Ignore candidates whose past comment is pure bikeshed or where you cannot identify a clear concern.
+
+STEP 3 — AXIS MATCH + APPLICABILITY CHECK.
+  A candidate is eligible for `strong_matches` ONLY if BOTH:
+    (a) Its axis (from step 2) is among the new hunk's plausible concerns (from step 1b).
+    (b) You can write a concrete adaptation that a Lean/mathlib reviewer would plausibly post on the new hunk *today*, given what is visible in the hunk.
+  Before promoting, write — in the JSON output, per match — a `why_might_not_apply` field giving the strongest counter-argument against promotion (one short sentence). If this counter-argument is actually compelling (e.g. "the new code does not have that pattern", "the new code *does* have an ext lemma, so this doesn't apply"), DO NOT promote; demote to `weak_observations` or drop.
+  Cross-candidate synthesis is allowed: if candidate X establishes that an identifier in the new hunk is a `class`, and candidate Y shows the preferred term-mode `instance := ⟨...⟩` template, they jointly support a promotion. List both in `supporting_past_prs` and still produce one `why_might_not_apply`.
+
+STEP 4 — CONFIDENCE AND OUTPUT.
+  Confidence scale:
+    - "high"   — ≥1 strong match survives step 3 AND the adaptation is a near-verbatim application of a past comment; the counter-argument is weak.
+    - "medium" — ≥1 strong match survives step 3 BUT needs adaptation or synthesis; counter-argument is plausible but not decisive.
+    - "low"    — no candidate survives step 3; only stylistic patterns worth mentioning as `weak_observations`.
+    - "none"   — retrieved pool's axes don't match anything plausible about the new hunk; state this and stop.
+  When in doubt between "medium" and "low" on a single uncertain candidate, prefer "low" and put that candidate in `weak_observations`. "Confident but wrong-axis" is the #1 failure we are trying to eliminate.
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "new_hunk_plausible_concerns": [<one or more axis labels from Step 1b, or []>],
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_concern_axis": "<axis label from the list>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure AND explaining why the concern axis matches>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "why_might_not_apply": "<one short sentence — strongest counter-argument against this promotion>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "axis": "<axis label>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Do not invent axis labels outside the list. Do not promote a candidate whose axis is not in `new_hunk_plausible_concerns`.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #36698 (file: Mathlib/Combinatorics/Enumerative/LatinSquare.lean):
+```
+@@ -0,0 +1,933 @@
+... [217 lines above hidden]
++      exact Group.mulLeft_bijective (G := G),
++    once_per_column := by
++      simp only [OncePerColumn, Matrix.col]
++      exact Group.mulRight_bijective (G := G)
++   }
++
++
++@[expose] public section Equivalence
++
++/-- Given relabeling maps for the rows, columns, and symbols,
++    produce the relabeled Latin rectangle. -/
++@[reducible]
++def renameLatinRectangle
++    (f : m ≃ m')
++    (g : n ≃ n')
++    (h : α ≃ β)
++    (A : LatinRectangle m n α) :
++    LatinRectangle m' n' β := {
++  M := fun i' j' ↦ h (A.M (f.symm i') (g.symm j')),
++  exactly_n_symbols := by
++    have g' : Fintype.card n = Fintype.card n' := Fintype.card_congr g
++    have h' : Fintype.card α = Fintype.card β := Fintype.card_congr h
++    have k' := A.exactly_n_symbols
++    omega,
++  once_per_row := by
++    simp only [OncePerRow, Matrix.row]
++    have h' := A.once_per_row
++    simp only [OncePerRow, Matrix.row] at h'
++    intro i'
++    specialize h' (f.symm i') --(h.symm b')
++    have h_comp :
++      (fun j' ↦ h (LatinRectangle.M (f.symm i') (g.symm j'))) =
++      h ∘ (LatinRectangle.M (f.symm i')) ∘ g.symm := by
++      ext
++      simp
++    rw [h_comp]
++    apply Function.Bijective.comp
++    · exact Equiv.bijective h
++    · apply Function.Bijective.comp
++      · exact h'
++      · exact Equiv.bijective g.symm,
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.662, past_pr=#10834, file=NatNumberCategories) ---
+PAST HUNK:
+```
+@@ -0,0 +1,416 @@
++/-
++Copyright (c) 2024 Colin Jones. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Author: Colin Jones
++-/
++import Mathlib
+```
+PAST COMMENT (from reviewer):
+This file is supposed to be part of Mathlib, it can't import mathlib without creating an infinite loop. Just import the files you need:
+```suggestion
+import Mathlib.Algebra.GeomSum
+import Mathlib.NumberTheory.Divisors
+import Mathlib.Tactic.NormNum.Prime
+import Mathlib.Analysis.Normed.Field.Basic
+```
+
+--- candidate 2 (sim=0.648, past_pr=#2960, file=Mathlib/Data/Matrix/Basic.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,2829 @@
+... [2476 lines above hidden]
++  invFun M := M.submatrix eₘ eₙ
++  left_inv M := by simp
++  right_inv M := by simp
++#align matrix.reindex Matrix.reindex
++
++@[simp]
++theorem reindex_apply (eₘ : m ≃ l) (eₙ : n ≃ o) (M : Matrix m n α) :
++    reindex eₘ eₙ M = M.submatrix eₘ.symm eₙ.symm :=
++  rfl
++#align matrix.reindex_apply Matrix.reindex_apply
++
++-- @[simp] -- Porting note: simp can prove this
++theorem reindex_refl_refl (A : Matrix m n α) : reindex (Equiv.refl _) (Equiv.refl _) A = A :=
+```
+PAST COMMENT (from reviewer):
+Whoops, this one was probably meant to say something else. That's out of scope here though.
+
+--- candidate 3 (sim=0.647, past_pr=#28708, file=Mathlib/Data/Matrix/Stochastic.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,250 @@
++/-
++Copyright (c) 2025 Steven Herbert. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Steven Herbert
++-/
++
++import Mathlib.Data.Matrix.Basic
+```
+PAST COMMENT (from reviewer):
+```suggestion
+import Mathlib.Data.Matrix.Basic
+import Mathlib.Data.Matrix.Mul
+```
+
+--- candidate 4 (sim=0.641, past_pr=#1874, file=Mathlib/GroupTheory/Coset.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,891 @@
+... [859 lines above hidden]
++
++end Subgroup
++
++namespace QuotientGroup
++
++variable [Group α]
++
++/-- If `s` is a subgroup of the group `α`, and `t` is a subset of `α ⧸ s`, then there is a
++(typically non-canonical) bijection between the preimage of `t` in `α` and the product `s × t`. -/
++@[to_additive "If `s` is a subgroup of the additive group `α`, and `t` is a subset of `α ⧸ s`, then
++ there is a (typically non-canonical) bijection between the preimage of `t` in `α` and the product
++ `s × t`."]
++noncomputable def preimageMkEquivSubgroupTimesSet (s : Subgroup α) (t : Set (α ⧸ s)) :
+```
+PAST COMMENT (from reviewer):
+```suggestion
+noncomputable def preimageMkEquivSubgroupProdSet (s : Subgroup α) (t : Set (α ⧸ s)) :
+```
+
+--- candidate 5 (sim=0.640, past_pr=#1874, file=Mathlib/GroupTheory/Coset.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,891 @@
+... [876 lines above hidden]
++        leftRel_apply.mp (@Quotient.exact' _ (leftRel s) _ _ <| Quotient.out_eq' _)⟩,
++      ⟨QuotientGroup.mk a, a.2⟩⟩
++  invFun a :=
++    ⟨Quotient.out' a.2.1 * a.1.1,
++      show QuotientGroup.mk _ ∈ t by
++        rw [mk_mul_of_mem _ a.1.2, out_eq']
++        exact a.2.2⟩
++  left_inv := fun ⟨a, ha⟩ => Subtype.eq <| show _ * _ = a by simp
++  right_inv := fun ⟨⟨a, ha⟩, ⟨x, hx⟩⟩ => by ext <;> simp [ha]
++#align quotient_group.preimage_mk_equiv_subgroup_times_set
++  QuotientGroup.preimageMkEquivSubgroupTimesSet
++#align quotient_add_group.preimage_mk_equiv_add_subgroup_times_set
++  QuotientAddGroup.preimageMkEquivAddSubgroupTimesSet
+```
+PAST COMMENT (from reviewer):
+```suggestion
+#align quotient_group.preimage_mk_equiv_subgroup_times_set QuotientGroup.preimageMkEquivSubgroupProdSet
+#align quotient_add_group.preimage_mk_equiv_add_subgroup_times_set QuotientAddGroup.preimageMkEquivAddSubgroupProdSet
+```
+
+--- candidate 6 (sim=0.640, past_pr=#21148, file=Mathlib/RingTheory/MatrixAlgebra.lean) ---
+PAST HUNK:
+```
+@@ -4,23 +4,90 @@ Released under Apache 2.0 license as described in the file LICENSE.
+ Authors: Kim Morrison, Eric Wieser
+ -/
+ import Mathlib.Data.Matrix.Basis
++import Mathlib.Data.Matrix.Composition
+```
+PAST COMMENT (from reviewer):
+maybe open a new file just to make the large import happy?
+
+--- candidate 7 (sim=0.640, past_pr=#21148, file=Mathlib/RingTheory/MatrixAlgebra.lean) ---
+PAST HUNK:
+```
+@@ -4,23 +4,90 @@ Released under Apache 2.0 license as described in the file LICENSE.
+ Authors: Kim Morrison, Eric Wieser
+ -/
+ import Mathlib.Data.Matrix.Basis
++import Mathlib.Data.Matrix.Composition
+```
+PAST COMMENT (from reviewer):
+I wouldn't mind it so much if it was just this file and `PolynomialAlgebra`, but it does bump the imports of `Localization.Algebra` and its downstream files by quite a bit too. I wouldn't expect those to even know about matrices.
+
+Maybe we should be flipping the import direction `MatrixAlgebra -> PolynomialAlgebra`?
+
+--- candidate 8 (sim=0.637, past_pr=#6526, file=Mathlib/Algebra/Ring/UnitEquivs.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,69 @@
++/-
++Copyright (c) 2021 Johan Commelin. All rights reserved.
+```
+PAST COMMENT (from reviewer):
+Is this a copy-paste error?
+```suggestion
+Copyright (c) 2023 Eric Rodriguez. All rights reserved.
+```
+Same remark for `Authors` field on line 4, though maybe this is co-authored?
+
+--- candidate 9 (sim=0.635, past_pr=#28100, file=Mathlib/LinearAlgebra/Matrix/GeneralLinearGroup/Basic.lean) ---
+PAST HUNK:
+```
+@@ -14,6 +15,79 @@ see `LinearAlgebra/Matrix/GeneralLinearGroup/Defs.lean`.
+ 
+ namespace Matrix
+ 
++open Matrix LinearMap
++
++variable {R n : Type*} [Fintype n]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+variable {R V : Type*} [AddCommGroup V]
+```
+
+--- candidate 10 (sim=0.635, past_pr=#35467, file=Mathlib/Combinatorics/Quiver/Schreier.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,771 @@
+... [5 lines above hidden]
++-/
++module
++
++public import Mathlib.Combinatorics.Quiver.Basic
++public import Mathlib.Combinatorics.Quiver.SingleObj
++public import Mathlib.Combinatorics.Quiver.Covering
++public import Mathlib.Combinatorics.Quiver.Symmetric
++public import Mathlib.Combinatorics.Quiver.ConnectedComponent
++public import Mathlib.GroupTheory.GroupAction.Quotient
++public import Mathlib.GroupTheory.QuotientGroup.Basic
++public import Mathlib.Algebra.Group.Subgroup.Basic
++public import Mathlib.GroupTheory.FreeGroup.Basic
++public import Mathlib.Tactic.Group
+```
+PAST COMMENT (from reviewer):
+Can you use `#min_imports` at the bottom of the file and replace these with what it suggests?
+(these aren't minimized, e.g. `Quiver.SingleObj` imports `Quiver.Symmetric`)
+
+--- candidate 11 (sim=0.634, past_pr=#9428, file=Mathlib/AlgebraicTopology/SingularSet.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,71 @@
++/-
++Copyright (c) 2024 Johan Commelin. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Johan Commelin, Scott Morrison, Adam Topaz
+```
+PAST COMMENT (from reviewer):
+Ah, I guess [we've argued this before](https://leanprover.zulipchat.com/#narrow/stream/113488-general/topic/Copyright.20header/near/280420005). I always take it to be the year the oldest definition/lemma of the file was created.
+
+--- candidate 12 (sim=0.634, past_pr=#9428, file=Mathlib/AlgebraicTopology/SingularSet.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,71 @@
++/-
++Copyright (c) 2024 Johan Commelin. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Johan Commelin, Scott Morrison, Adam Topaz
+```
+PAST COMMENT (from reviewer):
+Can you make sure the year is correct?
+
+--- candidate 13 (sim=0.630, past_pr=#6205, file=Mathlib/Algebra/Order/LatticeGroup.lean) ---
+PAST HUNK:
+```
+@@ -59,12 +61,10 @@ lattices.
+ lattice, ordered, group
+ -/
+ 
+-
+--- Needed for squares
+ -- Needed for squares
+```
+PAST COMMENT (from reviewer):
+What does this comment mean?
+
+--- candidate 14 (sim=0.629, past_pr=#7385, file=Mathlib/MeasureTheory/Measure/Trim.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,136 @@
++/-
++Copyright (c) 2023 Rémy Degenne. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Rémy Degenne
++-/
+```
+PAST COMMENT (from reviewer):
+Is this correct? I thought we've had `trim` for much longer than 9 months
+
+--- candidate 15 (sim=0.628, past_pr=#11667, file=Mathlib/Combinatorics/SimpleGraph/Matching.lean) ---
+PAST HUNK:
+```
+@@ -36,45 +36,42 @@ one edge, and the edges of the subgraph represent the paired vertices.
+ 
+ * Tutte's Theorem
+ 
+-* Hall's Marriage Theorem (see combinatorics.hall)
++* Hall's Marriage Theorem (see `Combinatorics.Hall.Basic`)
+```
+PAST COMMENT (from reviewer):
+```suggestion
+* Hall's Marriage Theorem (see Combinatorics.Hall.Basic)
+```
+I *think* this is the correct syntax for the linkifier to work
+
+--- candidate 16 (sim=0.627, past_pr=#9511, file=Mathlib/Algebra/Ring/Ext.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,528 @@
++/-
++Copyright (c) 2024 Raghuram Sundararajan. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Raghuram Sundararajan
++-/
++import Mathlib.Algebra.Ring.Defs
++import Mathlib.Algebra.Group.Ext
++-- import Mathlib
+```
+PAST COMMENT (from reviewer):
+A commented-out line that is no longer needed can be safely deleted (we can always check the commits to get it back).
+```suggestion
+```
+
+--- candidate 17 (sim=0.626, past_pr=#13401, file=Mathlib/GroupTheory/Congruence/BigOperators.lean) ---
+PAST HUNK:
+```
+@@ -6,24 +6,42 @@ Authors: Amelia Livingston
+ 
+ import Mathlib.GroupTheory.Congruence.Basic
+ import Mathlib.Algebra.BigOperators.Group.Finset
++import Mathlib.Algebra.BigOperators.Group.Multiset
++import Mathlib.Algebra.BigOperators.Group.List
+```
+PAST COMMENT (from reviewer):
+The first imports the other two
+```suggestion
+import Mathlib.Algebra.BigOperators.Group.Finset
+```
+
+--- candidate 18 (sim=0.626, past_pr=#14623, file=Mathlib/Combinatorics/SimpleGraph/Connectivity.lean) ---
+PAST HUNK:
+```
+@@ -3,7 +3,10 @@ Copyright (c) 2021 Kyle Miller. All rights reserved.
+ Released under Apache 2.0 license as described in the file LICENSE.
+ Authors: Kyle Miller
+ -/
++import Mathlib.Algebra.Order.Ring.Nat
+ import Mathlib.Combinatorics.SimpleGraph.Subgraph
++import Mathlib.Data.Fintype.Card
++import Mathlib.Order.ConditionallyCompleteLattice.Basic
+```
+PAST COMMENT (from reviewer):
+That is quite some new imports in an already long file. Maybe put the new lemmas (and any already existing related lemmas) in a new file?
+
+I also don't see how the new imports are actually used in the new lemmas?
+
+--- candidate 19 (sim=0.626, past_pr=#30047, file=Mathlib/Combinatorics/SimpleGraph/EdgeLabelling.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,227 @@
++/-
++Copyright (c) 2023 Bhavik Mehta. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Bhavik Mehta, Olivia Röhrig
++-/
++import Mathlib.Combinatorics.SimpleGraph.Maps
++import Mathlib.Combinatorics.SimpleGraph.Finite
++import Mathlib.Data.Fintype.BigOperators
++import Mathlib.Data.ZMod.Defs
+```
+PAST COMMENT (from reviewer):
+I think we shouldn't need this import
+
+--- candidate 20 (sim=0.626, past_pr=#30047, file=Mathlib/Combinatorics/SimpleGraph/EdgeLabelling.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,227 @@
++/-
++Copyright (c) 2023 Bhavik Mehta. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Bhavik Mehta, Olivia Röhrig
++-/
++import Mathlib.Combinatorics.SimpleGraph.Maps
++import Mathlib.Combinatorics.SimpleGraph.Finite
++import Mathlib.Data.Fintype.BigOperators
++import Mathlib.Data.ZMod.Defs
+```
+PAST COMMENT (from reviewer):
+(to be clear, I mean just the very last line - github doesn't let me select just one line to comment on!)
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "new_hunk_plausible_concerns": [],
+  "summary": "None of the retrieved past review comments (mostly about imports, naming with Prod vs Times, copyright headers, or commented-out imports) clearly apply to this new snippet.",
+  "confidence": "none",
+  "strong_matches": [],
+  "weak_observations": []
+}

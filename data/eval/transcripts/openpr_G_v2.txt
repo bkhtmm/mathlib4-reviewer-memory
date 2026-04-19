@@ -1,0 +1,792 @@
+====================================================================================================
+CASE G  PR #26345  (open-pr, v2 prompt)
+file: Mathlib/Analysis/LocallyConvex/Bipolar.lean  line: 99.0
+reviewer: @eric-wieser  on 2025-07-27T21:00:37Z
+advice_kind: signature change (suggestion block)
+prompt_tokens: 9935  completion_tokens: 3101
+HUMAN reviewer (ground truth):
+  > ```suggestion
+  > noncomputable def rightDualEquiv (hr : B.SeparatingRight) : F ≃ₗ[𝕜] NormedSpace.Dual 𝕜 (WeakBilin B) :=
+  > ```
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Compared to a naive matcher you must do TWO extra things, because the answer is often only derivable by combining evidence:
+
+A. STRUCTURAL PATTERN EXTRACTION. Past comments often contain `suggestion` code blocks (```suggestion ... ```) or inline code-shape rewrites. These suggested code snippets ARE concrete advice, not just commentary. Treat them as first-class evidence about preferred Lean/mathlib idioms (e.g.: term-mode constructor `:= ⟨_, _, _⟩` vs `by use _; exact _`, `instance` vs `theorem` for class-membership statements, `refine ⟨..., ?_⟩` vs `use ...; constructor`, `@[simp]` / `@[to_additive]` attributes, naming conventions, docstring phrasing, etc.).
+
+B. CROSS-CANDIDATE SYNTHESIS. The applicable advice for the new hunk may require combining evidence from multiple candidates. Example: candidate X's context tells you that an identifier in the new hunk is a `class`; candidate Y shows the term-mode `instance ... := ⟨...⟩` template for proving class membership. Together they support the conclusion: "the new theorem proving class membership should be rewritten as an `instance` with a term-mode constructor". List supporting PRs for any synthesised finding.
+
+Reasoning protocol (do this internally before producing JSON):
+
+  1. STRUCTURAL FEATURES OF THE NEW HUNK. Identify each: tactic-mode vs term-mode? Uses `by use ...; exact ...`? Uses `use ...; constructor`? Declares an `instance` / a `theorem` / a `lemma` / a `def` / a `class`? Has `@[simp]`, `@[to_additive]`, `@[deprecated]`? Uses anonymous functions `fun x =>` vs `↦`? Has a docstring `/-- ... -/` of any specific shape?
+
+  2. PATTERN INVENTORY FROM CANDIDATES. For each candidate, note any concrete pattern shown in its suggested-code or comment (term-mode template, attribute recommendation, naming convention, idiomatic rewrite, terminology preference, etc.). Also note which candidates' past hunks define or use identifiers that appear in the new hunk (these are clues about whether something is a class, an instance, an alias, etc.).
+
+  3. APPLICABILITY CHECK. For each pattern from step 2, ask: does the new hunk's structure (step 1) instantiate the same shape that this pattern was applied to? If yes, that's a STRONG match. If two patterns combine to support a finding, list both supporting PRs.
+
+  4. STRICT REFUSAL. If after this analysis no candidate (alone or in combination) gives concrete, well-grounded advice for the specific code in the new hunk, output an empty `strong_matches` list. Do not paper over with generic advice. Generic style observations belong in `weak_observations`, clearly marked. Do not invent advice that isn't traceable to specific past PRs in the retrieval pool.
+
+Confidence:
+  - "high"  — at least one strong match is grounded in concrete suggested-code or explicit prose from a candidate, and the new hunk clearly fits the same shape
+  - "medium" — at least one strong match exists but requires synthesis or adaptation; OR a single candidate gives related but not identical advice
+  - "low"   — only loose stylistic patterns; nothing actionable
+  - "none"  — retrieved pool is unrelated; do not press an answer
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Be precise about which PR(s) support each finding via supporting_past_prs.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #26345 (file: Mathlib/Analysis/LocallyConvex/Bipolar.lean):
+```
+@@ -0,0 +1,166 @@
++/-
++Copyright (c) 2025 Christopher Hoskin. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Christopher Hoskin
++-/
++
++import Mathlib.Analysis.LocallyConvex.Polar
++import Mathlib.Analysis.LocallyConvex.AbsConvex
++import Mathlib.Analysis.LocallyConvex.WeakDual
++import Mathlib.Analysis.Normed.Module.Convex
++import Mathlib.Analysis.NormedSpace.HahnBanach.Separation
++import Mathlib.LinearAlgebra.Dual.Lemmas
++import Mathlib.Analysis.RCLike.Basic
++import Mathlib.Topology.Algebra.Module.StrongTopology
++
++/-!
++
++# Bipolar Theorem
++
++## Main definitions
++
++- `LinearMap.rightDualEquiv`: When `B` is right-separating, `F` is linearly equivalent to the
++  topological dual of `E` with the weak topology.
++- `LinearMap.leftDualEquiv`: When `B` is left-separating, `E` is linearly equivalent to the
++  topological dual of `F` with the weak topology.
++
++## Main statements
++
++- `LinearMap.flip_polar_polar_eq`: The Bipolar Theorem: The bipolar of a set coincides with its
++  closed absolutely convex hull.
++
++## References
++
++* [Conway, *A course in functional analysis*][conway1990]
++
++## Tags
++
++bipolar
++-/
++
++variable {𝕜 E F : Type*}
++
++namespace LinearMap
++
++section NormedField
++
++variable {𝕜 E F : Type*}
++variable [NormedField 𝕜] [NormedSpace ℝ 𝕜] [AddCommMonoid E] [AddCommMonoid F]
++variable [Module 𝕜 E] [Module 𝕜 F]
++
++variable {B : E →ₗ[𝕜] F →ₗ[𝕜] 𝕜} (s : Set E)
++
++variable [Module ℝ F] [IsScalarTower ℝ 𝕜 F] [IsScalarTower ℝ 𝕜 𝕜]
++
++theorem polar_AbsConvex : AbsConvex 𝕜 (B.polar s) := by
++  rw [polar_eq_biInter_preimage]
++  exact AbsConvex.iInter₂ fun i hi =>
++    ⟨balanced_closedBall_zero.mulActionHom_preimage (f := (B i : (F →ₑ[(RingHom.id 𝕜)] 𝕜))),
++      (convex_closedBall _ _).linear_preimage (B i)⟩
++
++end NormedField
++
++variable [RCLike 𝕜] [AddCommGroup E] [AddCommGroup F]
++variable [Module 𝕜 E] [Module 𝕜 F]
++
++variable (B : E →ₗ[𝕜] F →ₗ[𝕜] 𝕜)
++
++lemma isBounded_of_Continuous (f : WeakBilin B →L[𝕜] 𝕜) :
++    Seminorm.IsBounded B.toSeminormFamily (fun _ : Fin 1 => normSeminorm 𝕜 𝕜) f.toLinearMap := by
++  obtain ⟨s,C, hC1, hC2⟩ :=
++    Seminorm.bound_of_continuous B.weakBilin_withSeminorms
++      f.toSeminorm (continuous_norm.comp f.continuous)
++  rw [Seminorm.IsBounded, forall_const]
++  exact ⟨s, ⟨C, hC2⟩⟩
++
++lemma dualEmbedding_isSurjective : Function.Surjective (WeakBilin.eval B) := by
++  intro f₁
++  have test5 : ∃ (s₁ : Finset F),
++    ↑f₁ ∈ Submodule.span 𝕜 (Set.range (ContinuousLi
+... [truncated]
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.795, past_pr=#21002, file=Mathlib/Analysis/Normed/Module/Dual.lean) ---
+PAST HUNK:
+```
+@@ -306,3 +308,32 @@ theorem sInter_polar_eq_closedBall {𝕜 E : Type*} [RCLike 𝕜] [NormedAddComm
+ end PolarSets
+ 
+ end NormedSpace
++
++namespace LinearMap
++
++section NormedField
++
++variable {𝕜 E F : Type*}
++variable [NormedField 𝕜] [NormedSpace ℝ 𝕜] [AddCommMonoid E] [AddCommMonoid F]
++variable [Module 𝕜 E] [Module 𝕜 F]
++
++variable {B : E →ₗ[𝕜] F →ₗ[𝕜] 𝕜} (s : Set E)
++
++variable [Module ℝ F] [IsScalarTower ℝ 𝕜 F] [IsScalarTower ℝ 𝕜 𝕜]
++
++theorem polar_AbsConvex : AbsConvex 𝕜 (B.polar s) := by
++  rw [polar_eq_biInter_preimage]
++  exact AbsConvex.iInter₂ fun i hi =>
++    ⟨Balanced.mulActionHom_preimage (E := F) (balanced_closedBall_zero (E := 𝕜) (r := (1 : ℝ)))
++      (𝕜 := 𝕜) (B i), Convex.linear_preimage (convex_closedBall _ _) (B i)⟩
++
++/-
++TODO: prove the converse and upgrade this to the bipolar theorem
+```
+PAST COMMENT (from reviewer):
+I think this TODO needs updating
+
+--- candidate 2 (sim=0.795, past_pr=#21002, file=Mathlib/Analysis/Normed/Module/Dual.lean) ---
+PAST HUNK:
+```
+@@ -306,3 +308,32 @@ theorem sInter_polar_eq_closedBall {𝕜 E : Type*} [RCLike 𝕜] [NormedAddComm
+ end PolarSets
+ 
+ end NormedSpace
++
++namespace LinearMap
++
++section NormedField
++
++variable {𝕜 E F : Type*}
++variable [NormedField 𝕜] [NormedSpace ℝ 𝕜] [AddCommMonoid E] [AddCommMonoid F]
++variable [Module 𝕜 E] [Module 𝕜 F]
++
++variable {B : E →ₗ[𝕜] F →ₗ[𝕜] 𝕜} (s : Set E)
++
++variable [Module ℝ F] [IsScalarTower ℝ 𝕜 F] [IsScalarTower ℝ 𝕜 𝕜]
++
++theorem polar_AbsConvex : AbsConvex 𝕜 (B.polar s) := by
++  rw [polar_eq_biInter_preimage]
++  exact AbsConvex.iInter₂ fun i hi =>
++    ⟨Balanced.mulActionHom_preimage (E := F) (balanced_closedBall_zero (E := 𝕜) (r := (1 : ℝ)))
++      (𝕜 := 𝕜) (B i), Convex.linear_preimage (convex_closedBall _ _) (B i)⟩
++
++/-
++TODO: prove the converse and upgrade this to the bipolar theorem
++-/
++set_option linter.unusedSectionVars false in
+```
+PAST COMMENT (from reviewer):
+I don't think that's what you want to do. Are you sure you want these unused section variables as hypotheses?
+
+--- candidate 3 (sim=0.767, past_pr=#27699, file=Mathlib/Topology/Algebra/Module/StrongDual.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,174 @@
++/-
++Copyright (c) 2020 Heather Macbeth. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Heather Macbeth
++-/
++import Mathlib.Topology.Algebra.Module.LinearMap
++import Mathlib.Analysis.LocallyConvex.Polar
++
++/-!
++# The topological StrongDual of a Module
++
++## Main definitions
++
++- `strongDualPairing`: The StrongDual pairing as a bilinear form.
++- `StrongDual.polar`: Given a subset `s` in a monoid `M` (over a commutative ring `R`), the polar
++  `polar R s` is the subset of `StrongDual R M` consisting of those functionals which evaluate to
++  something of norm at most one at all points `z ∈ s`.
++- `StrongDual.polarSubmodule`: Given a subset `s` in a monoid `M` (over a field `𝕜`) closed under
++  scalar multiplication, the polar `polarSubmodule 𝕜 s` is the submodule of `StrongDual 𝕜 M`
++  consisting of those functionals which evaluate to zero at all points `z ∈ s`.
++
++## References
++
++* [Conway, John B., A course in functional analysis][conway1990]
++
++## Tags
++
++StrongDual, polar
++-/
++
++namespace StrongDual
++
++section
++
++variable (R : Type*) [CommSemiring R] [TopologicalSpace R]
++  (M : Type*) [TopologicalSpace M] [AddCommMonoid M] [Module R M] [ContinuousAdd R]
++  [ContinuousConstSMul R R]
++
++/-- The StrongDual pairing as a bilinear form. -/
++def _root_.strongDualPairing : StrongDual R M →ₗ[R] M →ₗ[R] R :=
++  ContinuousLinearMap.coeLM R
++
++@[deprecated (since := "2025-08-3")] alias NormedSpace.dualPairing := strongDualPairing
++
++@[simp]
++theorem dualPairing_apply {v : StrongDual R M} {x : M} : 
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+
+--- candidate 4 (sim=0.763, past_pr=#27699, file=Mathlib/Topology/Algebra/Module/StrongDual.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,173 @@
++/-
++Copyright (c) 2020 Heather Macbeth. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Heather Macbeth
++-/
++import Mathlib.Topology.Algebra.Module.LinearMap
++import Mathlib.Analysis.LocallyConvex.Polar
++
++/-!
++# The topological StrongDual of a Module
++
++## Main definitions
++
++- `strongDualPairing`: The StrongDual pairing as a bilinear form.
++- `StrongDual.polar`: Given a subset `s` in a monoid `M` (over a commutative ring `R`), the polar
++  `polar R s` is the subset of `StrongDual R M` consisting of those functionals which evaluate to
++  something of norm at most one at all points `z ∈ s`.
++- `StrongDual.polarSubmodule`: Given a subset `s` in a monoid `M` (over a field `𝕜`) closed under
++  scalar multiplication, the polar `polarSubmodule 𝕜 s` is the submodule of `StrongDual 𝕜 M`
++  consisting of those functionals which evaluate to zero at all points `z ∈ s`.
++
++## References
++
++* [Conway, John B., A course in functional analysis][conway1990]
++
++## Tags
++
++StrongDual, polar
++-/
++
++namespace StrongDual
++
++section
++
++variable (R : Type*) [CommSemiring R] [TopologicalSpace R]
++  (M : Type*) [TopologicalSpace M] [AddCommMonoid M] [Module R M] [ContinuousAdd R]
++  [ContinuousConstSMul R R]
++
++/-- The StrongDual pairing as a bilinear form. -/
++def _root_.strongDualPairing : StrongDual R M →ₗ[R] M →ₗ[R] R :=
++  ContinuousLinearMap.coeLM R
++
++@[deprecated (since := "2025-08-3")] alias NormedSpace.dualPairing := strongDualPairing
++
++@[simp]
++theorem dualPairing_apply {v : StrongDual R M} {x : M} : 
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+I don't think we need to `unfold` here
+```suggestion
+  rw [LinearMap.separatingLeft_iff_ker_eq_bot, LinearMap.ker_eq_bot]
+```
+
+--- candidate 5 (sim=0.746, past_pr=#36332, file=Mathlib/Analysis/Normed/Module/WeakDual.lean) ---
+PAST HUNK:
+```
+@@ -48,6 +41,49 @@ the weak-* topology on (its type synonym) `WeakDual 𝕜 E`:
+   Closed balls in the dual of a normed space `E` over `ℝ` or `ℂ` are compact in the weak-star
+   topology.
+ 
++## Main definitions
++
++* `StrongDual.toWeakDual` and `WeakDual.toStrongDual`: Linear equivalences between the dual types.
++* `WeakDual.instBornology`: The norm bornology on `WeakDual 𝕜 E`.
++* `WeakDual.polar`: The polar set of `s : Set E` viewed as a subset of `WeakDual 𝕜 E`.
++
++## Main results
++
++### Topology comparison
++* `dual_norm_topology_le_weak_dual_topology`: The weak-* topology is coarser than the norm topology.
+```
+PAST COMMENT (from reviewer):
+```suggestion
+* `NormedSpace.Dual.toWeakDual_continuous`: The weak-* topology is coarser than the norm topology.
+```
+
+--- candidate 6 (sim=0.742, past_pr=#37314, file=Mathlib/Analysis/Normed/Module/WeakDual.lean) ---
+PAST HUNK:
+```
+@@ -321,18 +339,6 @@ theorem isCompact_closedBall [ProperSpace 𝕜] (x' : StrongDual 𝕜 E) (r : 
+ section PolarSets
+ variable (𝕜)
+ 
+-/-- The polar set `polar 𝕜 s` of `s : Set E` seen as a subset of the dual of `E` with the
+-weak-star topology is `WeakDual.polar 𝕜 s`. -/
+-def polar (s : Set E) : Set (WeakDual 𝕜 E) := toStrongDual ⁻¹' (StrongDual.polar 𝕜) s
+-
+-theorem polar_def (s : Set E) : polar 𝕜 s = { f : WeakDual 𝕜 E | ∀ x ∈ s, ‖f x‖ ≤ 1 } := rfl
+-
+-/-- The polar `polar 𝕜 s` of a set `s : E` is a closed subset when the weak star topology
+-is used. -/
+-theorem isClosed_polar (s : Set E) : IsClosed (polar 𝕜 s) := by
+-  simp only [polar_def, setOf_forall]
+-  exact isClosed_biInter fun x hx => isClosed_Iic.preimage (WeakBilin.eval_continuous _ _).norm
+-
+```
+PAST COMMENT (from reviewer):
+I think you should just keep it here since right above it is a module documentation "`### Polar sets in the weak dual space`", so it might make more sense documentation wise. Just move the section here, and add the right variables within the section (so you'd need to add `{E : Type*} [AddCommMonoid E] [TopologicalSpace E] [Module \bbk E]`).
+
+--- candidate 7 (sim=0.728, past_pr=#37314, file=Mathlib/Analysis/Normed/Module/WeakDual.lean) ---
+PAST HUNK:
+```
+@@ -114,14 +114,15 @@ open Filter Function Bornology Metric Set Topology Filter
+ ### Equivalences between `StrongDual` and `WeakDual`
+ -/
+ 
++variable {R : Type*} [CommSemiring R] [TopologicalSpace R] [ContinuousAdd R]
++variable {𝕜 : Type*} [NontriviallyNormedField 𝕜] [ContinuousConstSMul R R]
++variable {M : Type*} [AddCommMonoid M] [TopologicalSpace M] [Module 𝕜 M] [Module R M]
++variable {E : Type*} [SeminormedAddCommGroup E] [NormedSpace 𝕜 E]
++
+ namespace StrongDual
+ 
+ section
+ 
+-variable {R : Type*} [CommSemiring R] [TopologicalSpace R] [ContinuousAdd R]
+-  [ContinuousConstSMul R R]
+```
+PAST COMMENT (from reviewer):
+I'd say so. Unless maybe you have reason to think you'll be using it more later on?
+
+--- candidate 8 (sim=0.725, past_pr=#16859, file=Mathlib/Analysis/LocallyConvex/WeakSpace.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,101 @@
++/-
++Copyright (c) 2024 Jireh Loreaux. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Jireh Loreaux
++-/
++import Mathlib.LinearAlgebra.Dual
++import Mathlib.Analysis.NormedSpace.HahnBanach.Separation
++import Mathlib.Topology.Algebra.Module.WeakDual
++
++/-! # Closures of convex sets in locally convex spaces
++
++This file contains the standard result that if `E` is a vector space with two locally convex
++topologies, then the closure of a convex set is the same in either topology, provided they have the
++same collection of continuous linear functionals. In particular, the weak closure of a convex set
++in locally convex space coincides with the closure in the original topology.
++
++Of course, we phrase this in terms of linear maps between locally convex spaces, rather than
++creating two separate topologies on the same space.
++-/
++
++variable {𝕜 E F : Type*}
++variable [RCLike 𝕜] [AddCommGroup E] [Module 𝕜 E] [AddCommGroup F] [Module 𝕜 F]
++variable [Module ℝ E] [IsScalarTower ℝ 𝕜 E] [Module ℝ F] [IsScalarTower ℝ 𝕜 F]
++variable [TopologicalSpace E] [TopologicalAddGroup E] [ContinuousSMul 𝕜 E] [LocallyConvexSpace ℝ E]
++variable [TopologicalSpace F] [TopologicalAddGroup F] [ContinuousSMul 𝕜 F] [LocallyConvexSpace ℝ F]
++
++variable (𝕜) in
++/-- If `E` is a locally convex space over `𝕜` (with `RCLike 𝕜`), and `s : Set E` is `ℝ`-convex, then
++the closure of `s` and the weak closure of `s` coincide. More precisely, the topological closure
++commutes with `toWeakSpace 𝕜 E`.
++
++This holds more generally for any l
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+Perhaps instead:
+
+See`LinearEquiv.image_closure_of_convex` below.
+
+Although this assumes that the file will not be reorganized, it isn't obvious to the reader that the result in question will lie in this file and so it isn't obvious to look for it in what follows.
+
+--- candidate 9 (sim=0.724, past_pr=#29241, file=Mathlib/Analysis/Convex/Cone/Dual.lean) ---
+PAST HUNK:
+```
+@@ -139,7 +139,7 @@ theorem hyperplane_separation_point (C : ProperCone ℝ E) (hx₀ : x₀ ∉ C)
+ @[simp] theorem dual_flip_dual (p : E →ₗ[ℝ] F →ₗ[ℝ] ℝ) [p.IsContPerfPair] (C : ProperCone ℝ E) :
+     dual p.flip (dual p (C : Set E)) = C := by
+   refine le_antisymm (fun x ↦ ?_) subset_dual_dual
+-  simp only [mem_toPointedCone, mem_dual, SetLike.mem_coe]
++  simp only [ClosedSubmodule.mem_toSubmodule_iff, mem_dual, SetLike.mem_coe, flip_apply]
+```
+PAST COMMENT (from reviewer):
+I'd prefer to keep the original `simp only` because the lemma it uses is more meaningful in this context.
+
+--- candidate 10 (sim=0.721, past_pr=#36332, file=Mathlib/Analysis/Normed/Module/WeakDual.lean) ---
+PAST HUNK:
+```
+@@ -203,35 +239,117 @@ namespace WeakDual
+ 
+ open NormedSpace
+ 
+-theorem isClosed_closedBall (x' : StrongDual 𝕜 E) (r : ℝ) :
+-    IsClosed (toStrongDual ⁻¹' closedBall x' r) :=
+-  isClosed_induced_iff'.2 (ContinuousLinearMap.is_weak_closed_closedBall x' r)
++/-!
++### Bornology and pointwise bounds
++
++This section relates the inherited norm bornology (`IsBounded`) to the intrinsic
++von Neumann bornology of the weak-* topology (`IsVonNBounded`).
++
++The following results justify using the norm bornology as the default instance: by the
++Uniform Boundedness Principle, it coincides with the von Neumann bornology whenever
++$E$ is a Banach space.
++-/
++
++set_option backward.isDefEq.respectTransparency false in
++variable (𝕜 E) in
++/-- The family of seminorms on `WeakDual 𝕜 E` given by `fun x f ↦ ‖f x‖`, indexed by `E`.
++This is the seminorm family associated to the weak-* topology via `topDualPairing`. -/
++def seminormFamily : SeminormFamily 𝕜 (WeakDual 𝕜 E) E := (topDualPairing 𝕜 E).toSeminormFamily
++
++set_option backward.isDefEq.respectTransparency false in
++@[simp]
++lemma seminormFamily_apply (x : E) (f : WeakDual 𝕜 E) : seminormFamily 𝕜 E x f = ‖f x‖ := rfl
++
++set_option backward.isDefEq.respectTransparency false in
++variable (𝕜 E) in
++lemma withSeminorms : WithSeminorms (seminormFamily 𝕜 E) :=
++  (topDualPairing 𝕜 E).weakBilin_withSeminorms
+```
+PAST COMMENT (from reviewer):
+I *think* this should all be able to move to `Mathlib.Analysis.LocallyConvex.WeakDual` without increasing the imports there. Please let me know if I'm wrong.
+
+--- candidate 11 (sim=0.720, past_pr=#27316, file=Mathlib/Analysis/LocallyConvex/WeakDual.lean) ---
+PAST HUNK:
+```
+@@ -6,6 +6,8 @@ Authors: Moritz Doll
+ import Mathlib.Analysis.Normed.Field.Lemmas
+ import Mathlib.Analysis.LocallyConvex.WithSeminorms
+ import Mathlib.Topology.Algebra.Module.WeakBilin
++import Mathlib.LinearAlgebra.Dual.Lemmas
++import Mathlib.LinearAlgebra.Finsupp.Span
+```
+PAST COMMENT (from reviewer):
+```suggestion
+import Mathlib.LinearAlgebra.Dual.Lemmas
+import Mathlib.LinearAlgebra.Finsupp.Span
+import Mathlib.Topology.Algebra.Module.WeakBilin
+```
+
+--- candidate 12 (sim=0.720, past_pr=#4351, file=Mathlib/Analysis/NormedSpace/WeakDual.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,258 @@
++/-
++Copyright (c) 2021 Kalle Kytölä. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Kalle Kytölä, Yury Kudryashov
++
++! This file was ported from Lean 3 source module analysis.normed_space.weak_dual
++! leanprover-community/mathlib commit f2ce6086713c78a7f880485f7917ea547a215982
++! Please do not edit these lines, except to modify the commit id
++! if you have ported upstream changes.
++-/
++import Mathlib.Topology.Algebra.Module.WeakDual
++import Mathlib.Analysis.NormedSpace.Dual
++import Mathlib.Analysis.NormedSpace.OperatorNorm
++
++/-!
++# Weak dual of normed space
++
++Let `E` be a normed space over a field `𝕜`. This file is concerned with properties of the weak-*
++topology on the dual of `E`. By the dual, we mean either of the type synonyms
++`normed_space.dual 𝕜 E` or `weak_dual 𝕜 E`, depending on whether it is viewed as equipped with its
++usual operator norm topology or the weak-* topology.
++
++It is shown that the canonical mapping `normed_space.dual 𝕜 E → weak_dual 𝕜 E` is continuous, and
++as a consequence the weak-* topology is coarser than the topology obtained from the operator norm
++(dual norm).
++
++In this file, we also establish the Banach-Alaoglu theorem about the compactness of closed balls
++in the dual of `E` (as well as sets of somewhat more general form) with respect to the weak-*
++topology.
++
++## Main definitions
++
++The main definitions concern the canonical mapping `dual 𝕜 E → weak_dual 𝕜 E`.
++
++* `normed_space.dual.to_weak_dual` and `weak_dual.to_normed_dual`: Linear equivalences 
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+Shouldn't the RHS just be `WeakDual.instTopologicalSpace 𝕜 E`? For the RHS maybe just check what `infer_instance` outputs
+
+--- candidate 13 (sim=0.718, past_pr=#8820, file=Mathlib/Analysis/NormedSpace/HahnBanach/SeparatingDual.lean) ---
+PAST HUNK:
+```
+@@ -73,6 +75,26 @@ section Field
+ variable {R V : Type*} [Field R] [AddCommGroup V] [TopologicalSpace R] [TopologicalSpace V]
+   [TopologicalRing R] [TopologicalAddGroup V] [Module R V] [SeparatingDual R V]
+ 
++-- this could generalize to CommRing R if we were to add a section
++theorem _root_.separatingDual_iff_injective : SeparatingDual R V ↔
++    Function.Injective (ContinuousLinearMap.coeLM (R := R) R (M := V) (N₃ := R)).flip := by
++  simp_rw [separatingDual_def, Ne, injective_iff_map_eq_zero]
++  refine forall_congr' fun v ↦ ?_
+```
+PAST COMMENT (from reviewer):
+I haven't checked in lean, but I'm guessing the syntax would be `congrm ∀ v, ?_`, which I think is more readable.
+
+--- candidate 14 (sim=0.717, past_pr=#28390, file=Mathlib/Analysis/LocallyConvex/Polar.lean) ---
+PAST HUNK:
+```
+@@ -122,10 +122,7 @@ theorem tripolar_eq_polar (s : Set E) : B.polar (B.flip.polar (B.polar s)) = B.p
+ 
+ /-- The polar set is closed in the weak topology induced by `B.flip`. -/
+ theorem polar_weak_closed (s : Set E) : IsClosed[WeakBilin.instTopologicalSpace B.flip]
+```
+PAST COMMENT (from reviewer):
+This is just a duplicate of `polar_isClosed`, so one of them should be deprecated in favor is the other. However, both of them are bad because they are abusing defeq between `F` and `WeakBilin B.flip`.
+
+--- candidate 15 (sim=0.715, past_pr=#35559, file=Mathlib/Analysis/Normed/Module/Dual.lean) ---
+PAST HUNK:
+```
+@@ -234,6 +153,25 @@ theorem sInter_polar_eq_closedBall {𝕜 E : Type*} [RCLike 𝕜] [NormedAddComm
+ 
+ end PolarSets
+ 
++section DualSeparation
++
++variable (𝕜 : Type*) [RCLike 𝕜] {E : Type*} [NormedAddCommGroup E] [NormedSpace 𝕜 E]
++
++theorem eq_zero_of_forall_dual_eq_zero {x : E} (h : ∀ f : StrongDual 𝕜 E, f x = (0 : 𝕜)) :
++    x = 0 := by
++  obtain ⟨g, -, hgx⟩ := exists_dual_vector'' 𝕜 x
++  exact norm_eq_zero.mp (RCLike.ofReal_eq_zero.mp (hgx ▸ h g))
++
++theorem eq_zero_iff_forall_dual_eq_zero (x : E) : x = 0 ↔ ∀ g : StrongDual 𝕜 E, g x = 0 :=
++  ⟨fun hx => by simp [hx], fun h => eq_zero_of_forall_dual_eq_zero 𝕜 h⟩
++
++/-- See also `geometric_hahn_banach_point_point`. -/
++theorem eq_iff_forall_dual_eq {x y : E} : x = y ↔ ∀ g : StrongDual 𝕜 E, g x = g y := by
++  rw [← sub_eq_zero, eq_zero_iff_forall_dual_eq_zero 𝕜 (x - y)]
++  simp [sub_eq_zero]
++
++end DualSeparation
++
+```
+PAST COMMENT (from reviewer):
+These should be stated instead for the `SeparatingDual` class. Then they should apply automatically to the dual of a normed space via the relevant instance.
+
+--- candidate 16 (sim=0.714, past_pr=#22352, file=Mathlib/Analysis/LocallyConvex/Polar.lean) ---
+PAST HUNK:
+```
+@@ -60,6 +59,14 @@ theorem polar_mem_iff (s : Set E) (y : F) : y ∈ B.polar s ↔ ∀ x ∈ s, ‖
+ theorem polar_mem (s : Set E) (y : F) (hy : y ∈ B.polar s) : ∀ x ∈ s, ‖B x y‖ ≤ 1 :=
+   hy
+ 
++theorem polar_eq_biInter_preimage (s : Set E) :
++    B.polar s = ⋂ x ∈ s, ((B x) ⁻¹' Metric.closedBall (0 : 𝕜) 1) := by aesop
++
++theorem polar_isClosed (s : Set E) : IsClosed (X := WeakBilin B.flip) (B.polar s) := by
++  rw [polar_eq_biInter_preimage]
++  exact isClosed_biInter
++    (fun _ _ => IsClosed.preimage (WeakBilin.eval_continuous B.flip _) Metric.isClosed_closedBall)
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    fun _ _ ↦ Metric.isClosed_closedBall.preimage (WeakBilin.eval_continuous B.flip _)
+```
+
+--- candidate 17 (sim=0.710, past_pr=#16859, file=Mathlib/Analysis/LocallyConvex/WeakSpace.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,101 @@
++/-
++Copyright (c) 2024 Jireh Loreaux. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Jireh Loreaux
++-/
++import Mathlib.LinearAlgebra.Dual
++import Mathlib.Analysis.NormedSpace.HahnBanach.Separation
++import Mathlib.Topology.Algebra.Module.WeakDual
++
++/-! # Closures of convex sets in locally convex spaces
++
++This file contains the standard result that if `E` is a vector space with two locally convex
++topologies, then the closure of a convex set is the same in either topology, provided they have the
++same collection of continuous linear functionals. In particular, the weak closure of a convex set
++in locally convex space coincides with the closure in the original topology.
++
+```
+PAST COMMENT (from reviewer):
+```suggestion
+in a locally convex space coincides with the closure in the original topology.
+
+```
+
+--- candidate 18 (sim=0.709, past_pr=#15776, file=Mathlib/Analysis/LocallyConvex/Polar.lean) ---
+PAST HUNK:
+```
+@@ -111,6 +111,26 @@ theorem polar_weak_closed (s : Set E) : IsClosed[WeakBilin.instTopologicalSpace
+   refine isClosed_iInter fun x => isClosed_iInter fun _ => ?_
+   exact isClosed_le (WeakBilin.eval_continuous B.flip x).norm continuous_const
+ 
++theorem polar_singleton {a : E} : B.polar {a} = { x | ‖B a x‖ ≤ 1 } := le_antisymm
++  (fun _ hx => hx _ rfl)
++  (fun x hx => (polar_mem_iff _ _ _).mp (fun _ hb => by rw [Set.mem_singleton_iff.mp hb]; exact hx))
++
++theorem mem_polar_singleton {a : E} (y : F) : y ∈ B.polar {a} ↔ ‖B a y‖ ≤ 1 := by
++  rw [polar_singleton]
++  exact Set.mem_setOf
++
++theorem sInter_polar_finite_subset_eq_polar (U : Set E) :
++    ⋂₀ (B.polar '' { F | F.Finite ∧ F ⊆ U }) = B.polar U := by
++  apply le_antisymm _ _
++  · intro x hx
++    simp only [Set.sInter_image, Set.mem_setOf_eq, Set.mem_iInter, and_imp] at hx
++    intro a ha
++    rw [← mem_polar_singleton]
++    apply hx _ (Set.finite_singleton a) (Set.singleton_subset_iff.mpr ha)
++  · simp only [Set.sInter_image, Set.mem_setOf_eq, Set.le_eq_subset, Set.subset_iInter_iff,
++    and_imp]
++    exact fun F _ hF₂ => polar_antitone _ hF₂
+```
+PAST COMMENT (from reviewer):
+If you use `ext` to begin with, then you only need to do the `simp` once.
+```suggestion
+  ext x
+  simp only [Set.sInter_image, Set.mem_setOf_eq, Set.mem_iInter, and_imp]
+  refine ⟨fun hx a ha ↦ ?_, fun hx F _ hF₂ => polar_antitone _ hF₂ hx⟩
+  simpa [mem_polar_singleton] using hx _ (Set.finite_singleton a) (Set.singleton_subset_iff.mpr ha)
+```
+
+--- candidate 19 (sim=0.709, past_pr=#29033, file=Mathlib/Analysis/LocallyConvex/Basic.lean) ---
+PAST HUNK:
+```
+@@ -278,6 +282,20 @@ protected theorem Balanced.convexHull (hs : Balanced 𝕜 s) : Balanced 𝕜 (co
+   simp only [smul_add, ← smul_comm]
+   exact convex_convexHull ℝ s (hx a ha) (hy a ha) hu hv huv
+ 
++variable (F ℱ : Type*) [SeminormedAddCommGroup F] [Module 𝕜 F]
++variable [FunLike ℱ F E] [LinearMapClass ℱ 𝕜 F E]
++
++omit [Module ℝ E] in
++theorem absorbent_subset_image_iff_surjective {f : ℱ} {s : Set E} (hs_abs : Absorbent 𝕜 s) :
+```
+PAST COMMENT (from reviewer):
+```suggestion
+theorem Absorbent.subset_range_iff_surjective {f : ℱ} {s : Set E} (hs_abs : Absorbent 𝕜 s) :
+```
+(and in the module docstring)
+
+--- candidate 20 (sim=0.700, past_pr=#35559, file=Mathlib/Analysis/Normed/Module/DoubleDual.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,163 @@
++/-
++Copyright (c) 2020 Heather Macbeth. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Heather Macbeth, Michał Świętek
++-/
++module
++
++public import Mathlib.Analysis.LocallyConvex.WeakSpace
++public import Mathlib.Analysis.Normed.Module.WeakDual
++
++/-!
++# The double dual of a normed space
++
++In this file we define the inclusion of a normed space into its double strong dual and prove
++basic properties.
++
++## Main definitions
++
++* `NormedSpace.inclusionInDoubleDual` is the inclusion of a normed space in its double
++  `StrongDual`, considered as a bounded linear map.
++* `NormedSpace.inclusionInDoubleDualLi` is the same map as a linear isometry (for `𝕜 = ℝ` or
++  `𝕜 = ℂ`).
++* `NormedSpace.inclusionInDoubleDualWeak` is the canonical map from the weak space into the
++  weak-star bidual.
++* `NormedSpace.inclusionInDoubleDualWeak_isEmbedding` shows that `inclusionInDoubleDualWeak` is
++  a topological embedding.
++* `NormedSpace.inclusionInDoubleDualWeak_homeomorph` is the same map as a homeomorphism onto
++  its range.
++* `NormedSpace.isCompact_closure_of_isBounded` transfers compactness from the weak-star topology
++  on the bidual back to the weak topology on `X` via Banach–Alaoglu.
++
++## References
++
++* [Conway, John B., A course in functional analysis][conway1990]
++
++## Tags
++
++double dual, inclusion, isometry, embedding
+```
+PAST COMMENT (from reviewer):
+
+```suggestion
+double dual, inclusion, isometry, embedding, weak-star topology
+```
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "summary": "No concrete past reviewer advice clearly applies to this new hunk.",
+  "confidence": "none",
+  "strong_matches": [],
+  "weak_observations": [
+    {
+      "observation": "Docstring bullet lists and naming are often reviewed; double-check that the listed ‘Main definitions/statements’ actually appear in this file and use preferred names.",
+      "supporting_past_prs": [
+        36332,
+        16859,
+        35559
+      ]
+    },
+    {
+      "observation": "Import ordering and placement sometimes get style comments; ensure imports are grouped consistently with the project’s conventions.",
+      "supporting_past_prs": [
+        27316
+      ]
+    }
+  ]
+}

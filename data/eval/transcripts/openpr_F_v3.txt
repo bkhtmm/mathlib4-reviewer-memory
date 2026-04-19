@@ -1,0 +1,613 @@
+====================================================================================================
+CASE F  PR #33355  (open-pr, v3 prompt)
+file: Mathlib/Combinatorics/SimpleGraph/Connectivity/VertexConnectivity.lean  line: 130.0
+reviewer: @vihdzp  on 2025-12-30T23:54:09Z
+advice_kind: naming + edge case
+prompt_tokens: 8551  completion_tokens: 3449
+HUMAN reviewer (ground truth):
+  > The lemma should be named like this:
+  > ```suggestion
+  > lemma isVertexConnected_completeGraph [Fintype V] (h : 1 < Fintype.card V) :
+  > ```
+  > Also, isn't this true for `#V = 1` as well?
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Your single most important task is to AVOID "axis-miss" false positives: cases where a past comment and the new code LOOK similar on the surface, but the past reviewer was raising a different KIND of concern than anything the new hunk actually has. A correct silent output is far more valuable than a confident wrong-axis answer.
+
+Read carefully before producing JSON. Follow the four steps below in order.
+
+STEP 1 — STRUCTURAL + SEMANTIC READING OF THE NEW HUNK.
+  1a. Parse the code shape: tactic-mode vs term-mode, declaration kind (`def` / `theorem` / `lemma` / `instance` / `class` / `structure` / `abbrev` / `syntax` / `notation`), attributes (`@[simp]`, `@[to_additive]`, `@[deprecated]`, `@[ext]`, `@[fun_prop]`, `@[reassoc]`, …), universe parameters, implicit/explicit binders, docstring style, proof tactics used.
+  1b. Inventory what *could* be criticized about THIS specific hunk. Pick as many as apply from this list of "concern axes":
+     - correctness-bug        (code doesn't typecheck / is logically wrong)
+     - naming                  (lemma/def name doesn't follow conventions)
+     - docstring               (missing, unclear, typo, wrong phrasing)
+     - attribute               (missing/wrong `@[simp]` / `@[to_additive]` …)
+     - style-syntax            (`fun x ↦` vs `fun x =>`, `by use _; exact _` vs `⟨_, _⟩`, whitespace/`ppSpace`, notation preference)
+     - proof-golf              (the proof tactics could be shorter/nicer)
+     - refactor-simplify       (same statement provable with less machinery)
+     - generalize-signature    (hypotheses too strong; remove/weaken a typeclass)
+     - design-smell-architectural (this API shape is wrong; returning a string, unnecessary instance, redundant definition, etc.)
+     - imports-module          (superfluous imports, module structure)
+     - namespace-organization  (`_root_`, namespace boundary, file placement)
+     - automation-tactic       (should use / should teach `aesop_cat`, `gcongr`, `positivity`, etc.)
+     - instance-diamond        (this instance creates an ambiguity / defeq diamond with another)
+     - unify-with-existing     (a similar definition/lemma already exists)
+     - junk-value              (docstring should note behavior at the "undefined" input; handled via `0`/`⊥`/`⊤`)
+  List the concerns that PLAUSIBLY apply to the new hunk. If none are obviously present, say so — don't invent them.
+
+STEP 2 — PER-CANDIDATE CONCERN CLASSIFICATION.
+  For EACH candidate, identify which concern axis (from the same list) the past reviewer's comment was about. Read the past comment carefully: the reviewer's *words* (not the past code) tell you the concern axis. If a past comment ships a `suggestion` code block, that block is evidence for what the reviewer wanted changed — but the axis of concern comes from the prose around it. Ignore candidates whose past comment is pure bikeshed or where you cannot identify a clear concern.
+
+STEP 3 — AXIS MATCH + APPLICABILITY CHECK.
+  A candidate is eligible for `strong_matches` ONLY if BOTH:
+    (a) Its axis (from step 2) is among the new hunk's plausible concerns (from step 1b).
+    (b) You can write a concrete adaptation that a Lean/mathlib reviewer would plausibly post on the new hunk *today*, given what is visible in the hunk.
+  Before promoting, write — in the JSON output, per match — a `why_might_not_apply` field giving the strongest counter-argument against promotion (one short sentence). If this counter-argument is actually compelling (e.g. "the new code does not have that pattern", "the new code *does* have an ext lemma, so this doesn't apply"), DO NOT promote; demote to `weak_observations` or drop.
+  Cross-candidate synthesis is allowed: if candidate X establishes that an identifier in the new hunk is a `class`, and candidate Y shows the preferred term-mode `instance := ⟨...⟩` template, they jointly support a promotion. List both in `supporting_past_prs` and still produce one `why_might_not_apply`.
+
+STEP 4 — CONFIDENCE AND OUTPUT.
+  Confidence scale:
+    - "high"   — ≥1 strong match survives step 3 AND the adaptation is a near-verbatim application of a past comment; the counter-argument is weak.
+    - "medium" — ≥1 strong match survives step 3 BUT needs adaptation or synthesis; counter-argument is plausible but not decisive.
+    - "low"    — no candidate survives step 3; only stylistic patterns worth mentioning as `weak_observations`.
+    - "none"   — retrieved pool's axes don't match anything plausible about the new hunk; state this and stop.
+  When in doubt between "medium" and "low" on a single uncertain candidate, prefer "low" and put that candidate in `weak_observations`. "Confident but wrong-axis" is the #1 failure we are trying to eliminate.
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "new_hunk_plausible_concerns": [<one or more axis labels from Step 1b, or []>],
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_concern_axis": "<axis label from the list>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure AND explaining why the concern axis matches>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "why_might_not_apply": "<one short sentence — strongest counter-argument against this promotion>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "axis": "<axis label>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Do not invent axis labels outside the list. Do not promote a candidate whose axis is not in `new_hunk_plausible_concerns`.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #33355 (file: Mathlib/Combinatorics/SimpleGraph/Connectivity/VertexConnectivity.lean):
+```
+@@ -0,0 +1,135 @@
+... [90 lines above hidden]
++/-- 1-vertex-connectivity is equivalent to being a connected graph with at least 2 vertices. -/
++@[simp]
++protected lemma IsVertexConnected.one [Fintype V] :
++    G.IsVertexConnected 1 ↔ 1 < Fintype.card V ∧ G.Connected := by
++  classical
++  constructor
++  · rintro ⟨h_card, h_reach⟩
++    refine ⟨h_card, ?_⟩
++    rw [connected_iff_exists_forall_reachable]
++    have := Fintype.card_pos_iff.1 (zero_lt_one.trans h_card)
++    rcases this with ⟨x⟩
++    refine ⟨x, fun y ↦ ?_⟩
++    by_cases hxy : x = y
++    · subst hxy; exact .refl _
++    · specialize h_reach x y hxy
++      simpa using h_reach (s := ∅) (by simp)
++  · rintro ⟨h_card, h_conn⟩
++    refine ⟨h_card, fun u v huv ↦ ?_⟩
++    intro s hs hu hv
++    have : s = ∅ := by
++      rw [← Set.encard_eq_zero, ← ENat.lt_one_iff_eq_zero]
++      exact_mod_cast hs
++    subst this
++    rw [deleteVerts_empty]
++    exact h_conn.preconnected u v
++
++/-- Vertex connectivity is monotonic in `k`. -/
++@[gcongr]
++lemma IsVertexConnected.anti [Fintype V] {k l : ℕ} (hkl : l ≤ k) (hc : G.IsVertexConnected k) :
++    G.IsVertexConnected l :=
++  ⟨lt_of_le_of_lt hkl hc.1,
++   fun u v huv ↦ IsVertexReachable.anti (Nat.cast_le.mpr hkl) (hc.2 u v huv)⟩
++
++/-- Vertex connectivity is monotonic in the graph. -/
++@[gcongr]
++lemma IsVertexConnected.mono [Fintype V] {k : ℕ} (hGH : G ≤ H) (hc : G.IsVertexConnected k) :
++    H.IsVertexConnected k :=
++  ⟨hc.1, fun u v huv ↦ IsVertexReachable.mono hGH (hc.2 u v huv)⟩
++
++/-- The complete graph on `n` vertices is `(n-1)`-vertex-connected. -/
++lemma completeGraph_isVertexConnected [Fintype V] (h : 1 < Fintype.card V) :
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.866, past_pr=#32870, file=Mathlib/Combinatorics/SimpleGraph/Connectivity/EdgeConnectivity.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,152 @@
+... [107 lines above hidden]
++        constructor
++        · rintro (rfl | ⟨hx, -⟩) <;> assumption
++        · intro hx
++          by_cases h : x = e <;> simp [h, hx]
++      nth_rw 1 [← h_ins]
++      rw [Set.insert_eq, ← deleteEdges_deleteEdges]
++      apply h_succ e he_edge
++      have : s'.encard ≤ s.encard := Set.encard_mono Set.inter_subset_left
++      have hk' : s'.encard < k + 1 := this.trans_lt hk
++      have hsub : s'.encard = (s' \ {e}).encard + 1 :=
++        (Set.encard_diff_singleton_add_one (s := s') he).symm
++      rw [hsub] at hk'
++      exact (ENat.add_lt_add_iff_right ENat.one_ne_top).mp hk'
+```
+PAST COMMENT (from reviewer):
+One final golf:
+```suggestion
+lemma isEdgeReachable_succ {k : ℕ} {u v : V} :
+    G.IsEdgeReachable (k + 1) u v ↔
+      G.Reachable u v ∧ ∀ e ∈ G.edgeSet, (G.deleteEdges {e}).IsEdgeReachable k u v := by
+  refine ⟨fun h ↦ ⟨G.deleteEdges_empty ▸ h (by simp), fun e he s hk ↦ ?_⟩, ?_⟩
+  · rw [deleteEdges_deleteEdges, Set.union_comm]
+    apply h
+    grw [Set.encard_union_le, Set.encard_singleton]
+    exact ENat.add_lt_add_iff_right ENat.one_ne_top |>.mpr hk
+  · intro ⟨h_one, h_succ⟩ s hk
+    rw [G.deleteEdges_eq_inter_edgeSet s]
+    rcases (s ∩ G.edgeSet).eq_empty_or_nonempty with h_empty | ⟨e, he⟩
+    · simpa [h_empty]
+    · rw [← Set.insert_diff_self_of_mem he, Set.insert_eq, ← deleteEdges_deleteEdges]
+      refine h_succ e he.right <| ENat.add_lt_add_iff_right EN
+... [truncated]
+
+--- candidate 2 (sim=0.863, past_pr=#32870, file=Mathlib/Combinatorics/SimpleGraph/Connectivity/EdgeConnectivity.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,130 @@
+... [65 lines above hidden]
++@[simp]
++protected lemma IsEdgeReachable.zero {u v : V} : G.IsEdgeReachable 0 u v :=
++  fun _ hk ↦ absurd (zero_le _) (not_le_of_gt hk)
++
++@[simp]
++protected lemma IsEdgeConnected.zero : G.IsEdgeConnected 0 :=
++  fun _ _ ↦ .zero
++
++@[simp]
++lemma isEdgeReachable_one {u v : V} : G.IsEdgeReachable 1 u v ↔ G.Reachable u v := by
++  refine ⟨fun h ↦ G.deleteEdges_empty ▸ h (by simp), fun h s hs ↦ ?_⟩
++  rwa [Set.encard_eq_zero.mp <| ENat.lt_one_iff_eq_zero.mp hs, deleteEdges_empty]
++
+```
+PAST COMMENT (from reviewer):
+Could you provide
+```suggestion
+
+lemma IsEdgeReachable.reachable (hk : k \ne 0) (huv : G.IsEdgeReachable k u v) : G.Reachable u v
+
+```
+and similarly for `IsEdgeConnected`?
+
+--- candidate 3 (sim=0.757, past_pr=#33335, file=Mathlib/Combinatorics/SimpleGraph/Connectivity/EdgeConnectivity.lean) ---
+PAST HUNK:
+```
+@@ -25,7 +25,7 @@ This file defines k-edge-connectivity for simple graphs.
+ 
+ namespace SimpleGraph
+ 
+-variable {V : Type*} {G H : SimpleGraph V} {k l : ℕ} {u v w : V}
++variable {V : Type*} {G H : SimpleGraph V} {k l : ℕ} {u v w x y : V}
+```
+PAST COMMENT (from reviewer):
+Nit: I think you don't actually use `x` anywhere and only `y` gets used once, perhaps the `y` can be renamed `x`.
+
+--- candidate 4 (sim=0.732, past_pr=#33673, file=Mathlib/Combinatorics/SimpleGraph/Connectivity/EdgeConnectivity.lean) ---
+PAST HUNK:
+```
+ /-- A graph is `k`-edge-connected if any two vertices are `k`-edge-reachable. -/
+ def IsEdgeConnected : Prop := ∀ u v, G.IsEdgeReachable k u v
+ 
+-@[simp] lemma IsEdgeReachable.rfl (u : V) : G.IsEdgeReachable k u u := fun _ _ ↦ .rfl
++@[refl, simp] lemma IsEdgeReachable.refl (u : V) : G.IsEdgeReachable k u u := fun _ _ ↦ .rfl
++
++@[deprecated (since := "2026-01-06")] alias IsEdgeReachable.rfl := IsEdgeReachable.refl
+ 
+ @[symm]
+ lemma IsEdgeReachable.symm (h : G.IsEdgeReachable k u v) : G.IsEdgeReachable k v u :=
+   fun _ hk ↦ (h hk).symm
+ 
++lemma IsEdgeReachable_symm : G.IsEdgeReachable k u v ↔ G.IsEdgeReachable k v u :=
+```
+PAST COMMENT (from reviewer):
+```suggestion
+lemma isEdgeReachable_comm : G.IsEdgeReachable k u v ↔ G.IsEdgeReachable k v u :=
+```
+
+--- candidate 5 (sim=0.721, past_pr=#33335, file=Mathlib/Combinatorics/SimpleGraph/Connectivity/EdgeConnectivity.lean) ---
+PAST HUNK:
+```
+@@ -68,43 +68,32 @@ lemma isEdgeReachable_one : G.IsEdgeReachable 1 u v ↔ G.Reachable u v := by
+ lemma isEdgeConnected_one : G.IsEdgeConnected 1 ↔ G.Preconnected := by
+   simp [IsEdgeConnected, Preconnected]
+ 
+-lemma isEdgeReachable_add_one :
+-    G.IsEdgeReachable (k + 1) u v ↔
+-      G.Reachable u v ∧ ∀ e ∈ G.edgeSet, (G.deleteEdges {e}).IsEdgeReachable k u v := by
+-  refine ⟨fun h ↦ ⟨G.deleteEdges_empty ▸ h (by simp), fun e he s hk ↦ ?_⟩, ?_⟩
++lemma IsEdgeReachable.reachable (hk : k ≠ 0) (huv : G.IsEdgeReachable k u v) : G.Reachable u v :=
++  isEdgeReachable_one.mp (huv.anti (Nat.one_le_iff_ne_zero.mpr hk))
++
++lemma IsEdgeConnected.preconnected (hk : k ≠ 0) (h : G.IsEdgeConnected k) : G.Preconnected :=
++  fun u v ↦ (h u v).reachable hk
++
++lemma IsEdgeConnected.connected [Nonempty V] (hk : k ≠ 0) (h : G.IsEdgeConnected k) :
++    G.Connected where
++  preconnected := h.preconnected hk
++
++lemma isEdgeReachable_add_one (hk : k ≠ 0) :
++    G.IsEdgeReachable (k + 1) u v ↔ ∀ e, (G.deleteEdges {e}).IsEdgeReachable k u v := by
++  refine ⟨fun h e s hk ↦ ?_, fun h s hs ↦ ?_⟩
+   · rw [deleteEdges_deleteEdges, Set.union_comm]
+     apply h
+     grw [Set.encard_union_le, Set.encard_singleton]
+... [27 more lines hidden]
+```
+PAST COMMENT (from reviewer):
+Have we lost lemmas with this right-hand-side? It looks pretty useful to me!
+
+--- candidate 6 (sim=0.708, past_pr=#15171, file=Mathlib/Combinatorics/SimpleGraph/Connectivity.lean) ---
+PAST HUNK:
+```
+@@ -3,44 +3,13 @@ Copyright (c) 2021 Kyle Miller. All rights reserved.
+ Released under Apache 2.0 license as described in the file LICENSE.
+ Authors: Kyle Miller
+ -/
++import Mathlib.Combinatorics.SimpleGraph.Path
+ import Mathlib.Combinatorics.SimpleGraph.Subgraph
+ 
+ /-!
+ 
+-# Graph connectivity
+```
+PAST COMMENT (from reviewer):
+I think we can keep this title, but the rest of the deletions here are sensible
+
+--- candidate 7 (sim=0.704, past_pr=#31103, file=Mathlib/Combinatorics/SimpleGraph/Connectivity/Connected.lean) ---
+PAST HUNK:
+```
+@@ -767,4 +767,80 @@ lemma Connected.connected_delete_edge_of_not_isBridge (hG : G.Connected) {x y :
+... [4 lines above hidden]
++/-!
++### 2-reachability
++
++In this section, we prove results about 2-connected components of a graph, but without naming them.
++
++#### TODO
++
++Should we explicitly have
++```
++def IsTwoReachable (u v : V) : Prop := ∀ e, (G.deleteEdges {e}).Reachable u v
++```
++? This is equivalent to the less idiomatic condition
++`∃ x, ¬ (G.deleteEdges {s(x, y)}).Reachable u y` we use below.
+```
+PAST COMMENT (from reviewer):
+Bridges have a [well known definition](https://en.wikipedia.org/wiki/Bridge_(graph_theory)), so I prefer adding a definition rather than making `IsBridge` disagree with the common notion.
+
+If you introduce a new definition I think it's worth generalizing to [k-edge-connected](https://en.wikipedia.org/wiki/Edge_connectivity) / [k-vertex-connected](https://en.wikipedia.org/wiki/Vertex_connectivity) or anything that'll get us closer to [Menger's theorem](https://en.wikipedia.org/wiki/Menger%27s_theorem).
+
+You can also go for `(G.deleteEdges {e}).Reachable ≤ G.Reachable`.
+
+btw I do want the definition to change, but in regards to removing the awkward `Sym2.lift` (using `reachabilitySet` from #30570).
+
+--- candidate 8 (sim=0.703, past_pr=#31103, file=Mathlib/Combinatorics/SimpleGraph/Connectivity/Connected.lean) ---
+PAST HUNK:
+```
+@@ -767,4 +767,80 @@ lemma Connected.connected_delete_edge_of_not_isBridge (hG : G.Connected) {x y :
+... [4 lines above hidden]
++/-!
++### 2-reachability
++
++In this section, we prove results about 2-connected components of a graph, but without naming them.
++
++#### TODO
++
++Should we explicitly have
++```
++def IsTwoReachable (u v : V) : Prop := ∀ e, (G.deleteEdges {e}).Reachable u v
++```
++? This is equivalent to the less idiomatic condition
++`∃ x, ¬ (G.deleteEdges {s(x, y)}).Reachable u y` we use below.
+```
+PAST COMMENT (from reviewer):
+The definition you write here looks a lot more like 2-edge connectivity, since you're deleting edges and not vertices! I think this is an important distinction to make in the docs here, since the bowtie graph is not 2-connected but it does have that every pair of vertices is `IsTwoReachable`.
+
+Note that we do already have a definition of IsBridge, I expect that might help you in the lemmas below? I also expect you'll want to change the API for it!
+
+I think we should eventually have predicates `G.IsEdgeConnected k` and `G.IsVertexConnected k`, perhaps with special cases for `k=1,2`, but there's no real harm in writing the special cases before the general definition, particularly since the special case API needs to be written at some point anyway. So I'm content with putti
+... [truncated]
+
+--- candidate 9 (sim=0.694, past_pr=#35400, file=Mathlib/Combinatorics/SimpleGraph/Connectivity/EdgeConnectivity.lean) ---
+PAST HUNK:
+```
+@@ -76,13 +76,34 @@ lemma isEdgeConnected_one : G.IsEdgeConnected 1 ↔ G.Preconnected := by
+... [13 lines above hidden]
+ lemma IsEdgeConnected.connected [Nonempty V] (hk : k ≠ 0) (h : G.IsEdgeConnected k) :
+     G.Connected where
+   preconnected := h.preconnected hk
+ 
++lemma IsEdgeReachable.le_degree [G.LocallyFinite] (h : G.IsEdgeReachable k u v) (huv : u ≠ v) :
++    k ≤ G.degree u := by
++  classical
++  by_contra! hh
++  obtain ⟨w, _⟩ := @h (G.incidenceSet u) (by simpa [← Set.coe_fintypeCard]) |>.exists_isPath
++  have : 1 < w.support.length := by
++    by_contra! hh
++    exact huv <| Walk.eq_of_length_eq_zero (by simpa using hh)
++  simpa using w.isChain_adj_support.getElem 0 this
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  simpa using w.isChain_adj_support.getElem 0 <| by grind [Walk.eq_of_length_eq_zero]
+```
+or
+```suggestion
+  simpa using w.adj_snd <| by grind [Walk.nil_iff_length_eq, Walk.eq_of_length_eq_zero]
+```
+or
+```suggestion
+  suffices ¬w.Nil by simpa using w.adj_snd this
+  grind [Walk.nil_iff_length_eq, Walk.eq_of_length_eq_zero]
+```
+
+--- candidate 10 (sim=0.694, past_pr=#35400, file=Mathlib/Combinatorics/SimpleGraph/Connectivity/EdgeConnectivity.lean) ---
+PAST HUNK:
+```
+@@ -76,13 +76,34 @@ lemma isEdgeConnected_one : G.IsEdgeConnected 1 ↔ G.Preconnected := by
+ lemma IsEdgeReachable.reachable (hk : k ≠ 0) (huv : G.IsEdgeReachable k u v) : G.Reachable u v :=
+   isEdgeReachable_one.mp (huv.anti (Nat.one_le_iff_ne_zero.mpr hk))
+ 
++lemma IsEdgeReachable.subsingleton [Subsingleton V] : G.IsEdgeReachable k u v :=
++  fun _ _ ↦ Reachable.of_subsingleton
++
++lemma IsEdgeConnected.subsingleton [Subsingleton V] : G.IsEdgeConnected k :=
++  fun _ _ ↦ IsEdgeReachable.subsingleton
+```
+PAST COMMENT (from reviewer):
+```suggestion
+lemma IsEdgeReachable.subsingleton [Subsingleton V] : G.IsEdgeReachable k u v :=
+  fun _ _ ↦ .of_subsingleton
+
+lemma IsEdgeConnected.subsingleton [Subsingleton V] : G.IsEdgeConnected k :=
+  fun _ _ ↦ .subsingleton
+```
+
+--- candidate 11 (sim=0.689, past_pr=#30129, file=Mathlib/Combinatorics/SimpleGraph/VertexCover.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,211 @@
+... [194 lines above hidden]
++  obtain ⟨s, hs₁, hs₂⟩ := vertexCoverNum_exists H
++  have := H.isIndepSet_iff_isAntichain_adj.mp <| isIndepSet_compl_iff_isVertexCover.mpr hs₂
++  have : IsAntichain G.Adj (f ⁻¹' sᶜ) := this.preimage hf (fun _ _ hadj ↦ f.map_rel' hadj)
++  have : G.IsVertexCover (f ⁻¹' s) :=
++    isIndepSet_compl_iff_isVertexCover.mp <| G.isIndepSet_iff_isAntichain_adj.mpr this
++  grw [this.vertexCoverNum_le, ← hs₁]
++  exact Function.Embedding.encard_le <| Function.Embedding.mk f hf |>.subtypeMap (by simp)
++
++@[gcongr]
++theorem vertexCoverNum_mono (h : G ≤ G') : vertexCoverNum G ≤ vertexCoverNum G' :=
++  vertexCoverNum_le_vertexCoverNum_of_injective (Hom.ofLE h) Function.injective_id
++
++theorem vertexCoverNum_congr (f : G ≃g H) : vertexCoverNum G = vertexCoverNum H :=
+```
+PAST COMMENT (from reviewer):
+Does `congr` eat that? Probably not, but asking anyway
+```suggestion
+@[congr]
+theorem vertexCoverNum_congr (f : G ≃g H) : vertexCoverNum G = vertexCoverNum H :=
+```
+
+--- candidate 12 (sim=0.689, past_pr=#30129, file=Mathlib/Combinatorics/SimpleGraph/VertexCover.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,211 @@
+... [194 lines above hidden]
++  obtain ⟨s, hs₁, hs₂⟩ := vertexCoverNum_exists H
++  have := H.isIndepSet_iff_isAntichain_adj.mp <| isIndepSet_compl_iff_isVertexCover.mpr hs₂
++  have : IsAntichain G.Adj (f ⁻¹' sᶜ) := this.preimage hf (fun _ _ hadj ↦ f.map_rel' hadj)
++  have : G.IsVertexCover (f ⁻¹' s) :=
++    isIndepSet_compl_iff_isVertexCover.mp <| G.isIndepSet_iff_isAntichain_adj.mpr this
++  grw [this.vertexCoverNum_le, ← hs₁]
++  exact Function.Embedding.encard_le <| Function.Embedding.mk f hf |>.subtypeMap (by simp)
++
++@[gcongr]
++theorem vertexCoverNum_mono (h : G ≤ G') : vertexCoverNum G ≤ vertexCoverNum G' :=
++  vertexCoverNum_le_vertexCoverNum_of_injective (Hom.ofLE h) Function.injective_id
++
++theorem vertexCoverNum_congr (f : G ≃g H) : vertexCoverNum G = vertexCoverNum H :=
+```
+PAST COMMENT (from reviewer):
+Hmm, okay, too bad!
+
+--- candidate 13 (sim=0.687, past_pr=#29309, file=Mathlib/Combinatorics/SimpleGraph/Connectivity/Subgraph.lean) ---
+PAST HUNK:
+```
+@@ -561,10 +579,128 @@ lemma extend_finset_to_connected (Gpc : G.Preconnected) {t : Finset V} (tn : t.N
+... [94 lines above hidden]
++        · have := (p.toPath : G.Walk u z).toSubgraph.edge_vert p'_adj_a_b
++          aesop
++        · exact H.edge_vert (H_adj_if_p_adj <| p.adj_toSubgraph_toPath p'_adj_a_b.symm)
++        · have := (p.toPath : G.Walk u z).toSubgraph.edge_vert p'_adj_a_b.symm
++          aesop
++        · exact H_adj_if_p_adj <| p.adj_toSubgraph_toPath p'_adj_a_b
++    use .append puw.toPath.reverse (pux.toPath : G.Walk u x)
++    simpa using ⟨p_le_H' w_mem_H' puw_le_H, p_le_H' x_mem_H' pux_le_H⟩
++
++/-- A nontrivial connected graph contains a vertex that leaves the graph connected if removed. -/
++lemma Connected.exists_vertex_connected_deleteVerts_singleton_of_nontrivial [DecidableEq V]
++    [Fintype V] {H : G.Subgraph} [Nontrivial H.verts] (h : H.Connected) :
++    ∃ v ∈ H.verts, (H.deleteVerts {v}).Connected := by
+```
+PAST COMMENT (from reviewer):
+I wouldn't worry too much for now and put the new result in `.Acyclic`
+
+--- candidate 14 (sim=0.687, past_pr=#29309, file=Mathlib/Combinatorics/SimpleGraph/Connectivity/Subgraph.lean) ---
+PAST HUNK:
+```
+@@ -561,10 +579,128 @@ lemma extend_finset_to_connected (Gpc : G.Preconnected) {t : Finset V} (tn : t.N
+... [94 lines above hidden]
++        · have := (p.toPath : G.Walk u z).toSubgraph.edge_vert p'_adj_a_b
++          aesop
++        · exact H.edge_vert (H_adj_if_p_adj <| p.adj_toSubgraph_toPath p'_adj_a_b.symm)
++        · have := (p.toPath : G.Walk u z).toSubgraph.edge_vert p'_adj_a_b.symm
++          aesop
++        · exact H_adj_if_p_adj <| p.adj_toSubgraph_toPath p'_adj_a_b
++    use .append puw.toPath.reverse (pux.toPath : G.Walk u x)
++    simpa using ⟨p_le_H' w_mem_H' puw_le_H, p_le_H' x_mem_H' pux_le_H⟩
++
++/-- A nontrivial connected graph contains a vertex that leaves the graph connected if removed. -/
++lemma Connected.exists_vertex_connected_deleteVerts_singleton_of_nontrivial [DecidableEq V]
++    [Fintype V] {H : G.Subgraph} [Nontrivial H.verts] (h : H.Connected) :
++    ∃ v ∈ H.verts, (H.deleteVerts {v}).Connected := by
+```
+PAST COMMENT (from reviewer):
+That's probably best, yes
+
+--- candidate 15 (sim=0.675, past_pr=#34808, file=Mathlib/Combinatorics/SimpleGraph/Basic.lean) ---
+PAST HUNK:
+```
+@@ -890,4 +890,16 @@ protected theorem nontrivial_iff : Nontrivial (SimpleGraph V) ↔ Nontrivial V :
+ 
+ end Subsingleton
+ 
++/-- A vertex in a graph is isolated if it's adjacent to no other vertex. -/
++def IsIsolatedVert (G : SimpleGraph V) (v : V) : Prop := ∀ w, ¬ G.Adj v w
+```
+PAST COMMENT (from reviewer):
+Hmm we don't really have precedent for `Vert` as a token. What do you think of `IsIsolated`?
+
+--- candidate 16 (sim=0.675, past_pr=#34808, file=Mathlib/Combinatorics/SimpleGraph/Basic.lean) ---
+PAST HUNK:
+```
+ 
+ end Subsingleton
+ 
++/-- A vertex in a graph is isolated if it's adjacent to no other vertex. -/
++def IsIsolatedVert (G : SimpleGraph V) (v : V) : Prop := ∀ w, ¬ G.Adj v w
++
++@[simp] lemma neighborSet_eq_empty : G.neighborSet v = ∅ ↔ G.IsIsolatedVert v := by
++  simp [neighborSet, IsIsolatedVert, Set.ext_iff]
++
++@[simp] lemma neighborSet_nonempty : (G.neighborSet v).Nonempty ↔ ¬ G.IsIsolatedVert v := by
++  simp [Set.nonempty_iff_ne_empty]
++
++protected alias ⟨IsIsolatedVert.of_neighborSet_eq_empty, IsIsolatedVert.neighborSet_eq_empty⟩ :=
+```
+PAST COMMENT (from reviewer):
+Perhaps we should make `IsIsolatedVert.neighborSet_eq_empty` a simp lemma too, so `G.neighborSet v` simplifies given the hypothesis
+
+--- candidate 17 (sim=0.669, past_pr=#34492, file=Mathlib/Combinatorics/SimpleGraph/Connectivity/Connected.lean) ---
+PAST HUNK:
+```
+@@ -183,6 +183,21 @@ lemma Reachable.of_subsingleton {G : SimpleGraph V} [Subsingleton V] {u v : V} :
+     G.Reachable u v := by
+   rw [Subsingleton.allEq u v]
+ 
++lemma not_reachable_of_degree_zero {V : Type*} {G : SimpleGraph V} {u v : V}
+```
+PAST COMMENT (from reviewer):
+perhaps `not_reachable_left_of_degree_zero` and `_right_` for the other?
+
+--- candidate 18 (sim=0.669, past_pr=#34492, file=Mathlib/Combinatorics/SimpleGraph/Connectivity/Connected.lean) ---
+PAST HUNK:
+```
+@@ -183,6 +183,21 @@ lemma Reachable.of_subsingleton {G : SimpleGraph V} [Subsingleton V] {u v : V} :
+     G.Reachable u v := by
+   rw [Subsingleton.allEq u v]
+ 
++lemma not_reachable_of_degree_zero {V : Type*} {G : SimpleGraph V} {u v : V}
+```
+PAST COMMENT (from reviewer):
+that works too
+
+--- candidate 19 (sim=0.668, past_pr=#35879, file=Mathlib/Combinatorics/Graph/Delete.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,198 @@
+... [164 lines above hidden]
++    E(G.induce X) = {e | ∃ x y, G.IsLink e x y ∧ x ∈ X ∧ y ∈ X} := rfl
++
++@[simp, grind =]
++lemma induce_vertexSet (G : Graph α β) : G.induce V(G) = G := by
++  refine (Compatible.of_le_le (G := G) (by simp) (by simp)).ext rfl <| Set.ext fun e ↦
++    ⟨fun ⟨_, _, h⟩ ↦ h.1.edge_mem, fun h ↦ ?_⟩
++  obtain ⟨x, y, h⟩ := exists_isLink_of_mem_edgeSet h
++  exact ⟨x, y, h, h.left_mem, h.right_mem⟩
++
++/-- The graph obtained from `G` by deleting a set of vertices. -/
++def deleteVerts (G : Graph α β) (X : Set α) : Graph α β := G.induce (V(G) \ X)
++
++lemma deleteVerts_def (G : Graph α β) (X : Set α) : G.deleteVerts X = G.induce (V(G) \ X) := rfl
+```
+PAST COMMENT (from reviewer):
+Why not just leave it to your users to unfold `deleteVerts` if they need to?
+
+--- candidate 20 (sim=0.667, past_pr=#36802, file=Mathlib/Combinatorics/SimpleGraph/Connectivity/Connected.lean) ---
+PAST HUNK:
+```
+@@ -738,6 +739,9 @@ def IsBridge (G : SimpleGraph V) (e : Sym2 V) : Prop :=
+ theorem isBridge_iff {u v : V} :
+     G.IsBridge s(u, v) ↔ G.Adj u v ∧ ¬(G \ fromEdgeSet {s(u, v)}).Reachable u v := Iff.rfl
+ 
++lemma IsBridge.nontrivial {e : Sym2 V} (he : G.IsBridge e) : Nontrivial V := by
++  induction e with | h u v; exact ⟨u, v, by rintro rfl; simp [IsBridge] at he⟩
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  cases e with | h u v; exact ⟨u, v, by rintro rfl; simp [IsBridge] at he⟩
+```
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "new_hunk_plausible_concerns": [
+    "design-smell-architectural"
+  ],
+  "summary": "A past request to add convenient API lemmas deriving base connectivity from k > 0 in edge-connectivity likely applies here to vertex-connectivity.",
+  "confidence": "medium",
+  "strong_matches": [
+    {
+      "past_pr": 32870,
+      "past_file": "Mathlib/Combinatorics/SimpleGraph/Connectivity/EdgeConnectivity.lean",
+      "past_concern_axis": "design-smell-architectural",
+      "past_comment_excerpt": "Could you provide\n\nlemma IsEdgeReachable.reachable (hk : k \\ne 0) ...\n\nand similarly for `IsEdgeConnected`?",
+      "applies_because": "The new code proves monotonicity (`IsVertexConnected.anti`) and characterizes `k=1` as `Connected`. As in edges, it is natural to expose a lemma `IsVertexConnected.connected (hk ≠ 0)` using these, completing the API.",
+      "suggested_adaptation": "Please add a convenience lemma `lemma IsVertexConnected.connected (hk : k ≠ 0) (h : G.IsVertexConnected k) : G.Connected`, via `h.anti (Nat.one_le_iff_ne_zero.mpr hk)` and your `[simp]` lemma for `k = 1`.",
+      "why_might_not_apply": "Such a lemma may already exist elsewhere in the file, or the authors may prefer users to combine `anti` and `.one` themselves.",
+      "supporting_past_prs": [
+        33335
+      ]
+    }
+  ],
+  "weak_observations": []
+}

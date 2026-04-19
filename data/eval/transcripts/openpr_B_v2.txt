@@ -1,0 +1,638 @@
+====================================================================================================
+CASE B  PR #35287  (open-pr, v2 prompt)
+file: Mathlib/AlgebraicTopology/SimplicialSet/CoherentIso.lean  line: 51.0
+reviewer: @robin-carlier  on 2026-02-14T09:20:12Z
+url: None
+prompt_tokens: 8782  completion_tokens: 1594
+HUMAN reviewer (ground truth):
+  > Here and below, you should use a universe level `w`, and use `WalkingIso.{w}` instead of `WalkingIso`:
+  > using `WalkingIso` with an unspecified universe works but will create a universe-level metavariable, and we have observed in the library that these can be a cause of bad performances, so the good practice for now is to add an extra universe like this. 
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Compared to a naive matcher you must do TWO extra things, because the answer is often only derivable by combining evidence:
+
+A. STRUCTURAL PATTERN EXTRACTION. Past comments often contain `suggestion` code blocks (```suggestion ... ```) or inline code-shape rewrites. These suggested code snippets ARE concrete advice, not just commentary. Treat them as first-class evidence about preferred Lean/mathlib idioms (e.g.: term-mode constructor `:= ⟨_, _, _⟩` vs `by use _; exact _`, `instance` vs `theorem` for class-membership statements, `refine ⟨..., ?_⟩` vs `use ...; constructor`, `@[simp]` / `@[to_additive]` attributes, naming conventions, docstring phrasing, etc.).
+
+B. CROSS-CANDIDATE SYNTHESIS. The applicable advice for the new hunk may require combining evidence from multiple candidates. Example: candidate X's context tells you that an identifier in the new hunk is a `class`; candidate Y shows the term-mode `instance ... := ⟨...⟩` template for proving class membership. Together they support the conclusion: "the new theorem proving class membership should be rewritten as an `instance` with a term-mode constructor". List supporting PRs for any synthesised finding.
+
+Reasoning protocol (do this internally before producing JSON):
+
+  1. STRUCTURAL FEATURES OF THE NEW HUNK. Identify each: tactic-mode vs term-mode? Uses `by use ...; exact ...`? Uses `use ...; constructor`? Declares an `instance` / a `theorem` / a `lemma` / a `def` / a `class`? Has `@[simp]`, `@[to_additive]`, `@[deprecated]`? Uses anonymous functions `fun x =>` vs `↦`? Has a docstring `/-- ... -/` of any specific shape?
+
+  2. PATTERN INVENTORY FROM CANDIDATES. For each candidate, note any concrete pattern shown in its suggested-code or comment (term-mode template, attribute recommendation, naming convention, idiomatic rewrite, terminology preference, etc.). Also note which candidates' past hunks define or use identifiers that appear in the new hunk (these are clues about whether something is a class, an instance, an alias, etc.).
+
+  3. APPLICABILITY CHECK. For each pattern from step 2, ask: does the new hunk's structure (step 1) instantiate the same shape that this pattern was applied to? If yes, that's a STRONG match. If two patterns combine to support a finding, list both supporting PRs.
+
+  4. STRICT REFUSAL. If after this analysis no candidate (alone or in combination) gives concrete, well-grounded advice for the specific code in the new hunk, output an empty `strong_matches` list. Do not paper over with generic advice. Generic style observations belong in `weak_observations`, clearly marked. Do not invent advice that isn't traceable to specific past PRs in the retrieval pool.
+
+Confidence:
+  - "high"  — at least one strong match is grounded in concrete suggested-code or explicit prose from a candidate, and the new hunk clearly fits the same shape
+  - "medium" — at least one strong match exists but requires synthesis or adaptation; OR a single candidate gives related but not identical advice
+  - "low"   — only loose stylistic patterns; nothing actionable
+  - "none"  — retrieved pool is unrelated; do not press an answer
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Be precise about which PR(s) support each finding via supporting_past_prs.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #35287 (file: Mathlib/AlgebraicTopology/SimplicialSet/CoherentIso.lean):
+```
+@@ -0,0 +1,184 @@
++/-
++Copyright (c) 2024 Johns Hopkins Category Theory Seminar, Arnoud van der Leer. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Johns Hopkins Category Theory Seminar, Arnoud van der Leer
++-/
++module
++
++import Mathlib.AlgebraicTopology.SimplicialSet.Nerve
++import Mathlib.AlgebraicTopology.SimplicialSet.CompStruct
++
++/-!
++# The Coherent Isomorphism
++
++In this file, we define two related types.
++
++We first define the free walking or free-living isomorphism `WalkingIso`: the category with
++two objects `zero` and `one`, and morphisms `zero ⟶ one` and `one ⟶ zero`.
++We show that the type of functor from `WalkingIso` into any category is equivalent to the type of
++isomorphisms in that category.
++
++Then we define the simplicial set `coherentIso` as the nerve of `WalkingIso`.
++Since the morphism types in `WalkingIso` are given by `unit`, the `n`-simplices of `coherentIso` are
++equivalent to `Fin 2`-vectors of length `n + 1`. This shows that the `n`-simplices of `coherentIso`
++have decidable equality.
++Lastly, we show that `hom : coherentIso _⦋1⦌` (the edge from `zero` to `one`) is an isomorphism,
++and `isIsoOfEqMapHom` concludes from this that for any simplicial set `X`,
++any morphism `g : coherentIso ⟶ X` and any `f : X _⦋1⦌`,
++if `g` sends `hom` to `f`, then `f` is an isomorphism.
++
++-/
++
++@[expose] public section
++
++universe u v
++
++open CategoryTheory
++
++namespace CategoryTheory
++
++/-- This is the free-living isomorphism as a category with objects called `zero` and `one`. -/
++def WalkingIso : Type u := ULift (Fin 2)
++
++@[match_pattern]
++def WalkingIso.zero : WalkingIso := ULift.up (0 : Fin 2)
++
++@[match_pattern]
++def WalkingIso.one : WalkingIso := ULift.up (1 : Fin 2)
++
++open WalkingIso
++
++namespace WalkingIso
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.696, past_pr=#5409, file=Mathlib/AlgebraicTopology/SplitSimplicialObject.lean) ---
+PAST HUNK:
+```
+@@ -258,11 +258,18 @@ attribute [instance] Splitting.map_isIso
+ #align simplicial_object.splitting.map_is_iso SimplicialObject.Splitting.map_isIso
+ 
+ /-- The isomorphism on simplices given by the axiom `Splitting.map_isIso` -/
+-@[simps!]
+ def iso (Δ : SimplexCategoryᵒᵖ) : coprod s.N Δ ≅ X.obj Δ :=
+   asIso (Splitting.map X s.ι Δ)
+ #align simplicial_object.splitting.iso SimplicialObject.Splitting.iso
+ 
++@[simp]
++theorem iso_hom (Δ : SimplexCategoryᵒᵖ) : (iso s Δ).hom = Splitting.map X s.ι Δ :=
++  rfl
++
++@[simp]
++theorem iso_inv (Δ : SimplexCategoryᵒᵖ) : (iso s Δ).inv = inv (Splitting.map X s.ι Δ) :=
++  rfl
++
+```
+PAST COMMENT (from reviewer):
+Because `Splitting.map` is unfolded in `simps` lemmas.
+I wonder why `Splitting.map` isn't unfolded in the old Lean.
+
+--- candidate 2 (sim=0.688, past_pr=#30467, file=Mathlib/CategoryTheory/Iso.lean) ---
+PAST HUNK:
+```
+@@ -222,7 +222,10 @@ def homFromEquiv (α : X ≅ Y) {Z : C} : (X ⟶ Z) ≃ (Y ⟶ Z) where
+ 
+ end Iso
+ 
+-/-- `IsIso` typeclass expressing that a morphism is invertible. -/
++/-- The `IsIso` typeclass expresses that a morphism is invertible.
++
++Given a morphism `f` with `IsIso f`, one can view `f` as an isomorphism via `asIso f` and get
++the inverse using `inf v`. -/
+```
+PAST COMMENT (from reviewer):
+You inferted two letters I'm avraid :)
+```suggestion
+the inverse using `inv f`. -/
+```
+
+--- candidate 3 (sim=0.686, past_pr=#26446, file=Mathlib/CategoryTheory/Localization/Construction.lean) ---
+PAST HUNK:
+```
+@@ -343,7 +343,10 @@ def counitIso : inverse W D ⋙ functor W D ≅ 𝟭 (W.FunctorsInverting D) :=
+         exact fac G hG
+       · rintro ⟨G₁, hG₁⟩ ⟨G₂, hG₂⟩ f
+         ext
+-        apply NatTransExtension.app_eq)
++        dsimp
++        rw [NatTransExtension.app_eq, InducedCategory.eqToHom_hom,
++          InducedCategory.eqToHom_hom]
++        simp)
+```
+PAST COMMENT (from reviewer):
+I don't understand why `simp` isn't picking up `InducedCategory.eqToHom_hom`. It's not that serious but could you make a comment to highlight this technical debt?
+
+--- candidate 4 (sim=0.686, past_pr=#28395, file=Mathlib/AlgebraicTopology/SimplicialSet/StdSimplex.lean) ---
+PAST HUNK:
+```
+@@ -266,6 +259,59 @@ lemma range_δ {n : ℕ} (i : Fin (n + 2)) :
+   rw [Subcomplex.range_eq_ofSimplex]
+   exact ofSimplex_yonedaEquiv_δ i
+ 
++/-- The standard simplex identifies to the nerve to the preordered type
++`ULift (Fin (n + 1))`. -/
++def isoNerve (n : ℕ) :
++    (Δ[n] : SSet.{u}) ≅ nerve (ULift.{u} (Fin (n + 1))) :=
++  NatIso.ofComponents (fun d ↦ Equiv.toIso (objEquiv.trans
++    { toFun f := (ULift.orderIso.symm.monotone.comp f.toOrderHom.monotone).functor
++      invFun f :=
++        SimplexCategory.Hom.mk
++          (ULift.orderIso.toOrderEmbedding.toOrderHom.comp f.toOrderHom)
++      left_inv _ := by aesop
++      right_inv _ := by rfl }))
+```
+PAST COMMENT (from reviewer):
+```suggestion
+      left_inv _ := by aesop }))
+```
+auto-param finds `right_inv`. 
+
+--- candidate 5 (sim=0.685, past_pr=#36613, file=Mathlib/CategoryTheory/Yoneda.lean) ---
+PAST HUNK:
+```
+@@ -1080,43 +1125,42 @@ lemma isIso_iff_coyoneda_map_bijective {X Y : C} (f : X ⟶ Y) :
+     IsIso f ↔ (∀ (T : C), Function.Bijective (fun (x : Y ⟶ T) => f ≫ x)) := by
+   refine ⟨fun _ ↦ ?_, fun hf ↦ isIso_of_coyoneda_map_bijective f hf⟩
+   intro T
+-  rw [← isIso_iff_bijective]
++  rw [bijective_iff_isIso_ofHom]
+   exact inferInstanceAs (IsIso ((coyoneda.map f.op).app _))
+ 
+ lemma isIso_iff_isIso_coyoneda_map {X Y : C} (f : X ⟶ Y) :
+     IsIso f ↔ ∀ c : C, IsIso ((coyoneda.map f.op).app c) := by
+   rw [isIso_iff_coyoneda_map_bijective]
+-  exact forall_congr' fun _ ↦ (isIso_iff_bijective _).symm
++  exact forall_congr' fun _ ↦ bijective_iff_isIso_ofHom _
+ 
+ /-- Coyoneda's lemma as a bijection `(uliftCoyoneda.{w}.obj X ⟶ F) ≃ F.obj (op X)`
+ for any presheaf of type `F : Cᵒᵖ ⥤ Type (max w v₁)` for some
+ auxiliary universe `w`. -/
+-@[simps! -isSimp]
++@[simps! -isSimp apply symm_apply_app]
+ def uliftCoyonedaEquiv {X : Cᵒᵖ} {F : C ⥤ Type (max w v₁)} :
+     (uliftCoyoneda.{w}.obj X ⟶ F) ≃ F.obj X.unop where
+   toFun τ := τ.app X.unop (ULift.up (𝟙 _))
+-  invFun x := { app Y y := F.map y.down x }
++  invFun x := { app Y := TypeCat.ofHom fun y ↦ F.map y.down x }
+   left_inv τ := by
+-    ext Y ⟨y⟩
+-    simp [uliftYoneda, ← FunctorToTypes.naturality]
++    ext Y ⟨x⟩
++    simp [← comp_apply, ← τ.naturality]
+   right_inv x := by simp
+ 
+ attribute [simp] uliftCoyonedaEquiv_symm_apply_app
+ 
+ set_option backward.isDefEq.respectTransparency false in
+-lemma uliftCoyonedaEquiv_naturality {X Y : C} {F : C ⥤ Type max w v₁}
++lemma uliftCoyonedaEquiv_naturality {X Y : C} {F : C ⥤ Type (max w v₁)}
+```
+PAST COMMENT (from reviewer):
+```suggestion
+lemma uliftCoyonedaEquiv_naturality {X Y : C} {F : C ⥤ Type (max w v₁)}
+```
+Just a general comment: I think it would have been fine to leave unparenthesized the `max u v`, but I am too lazy to go and find them all and make suggestions for all of them. Ultimately it’s a matter of taste I guess.
+
+--- candidate 6 (sim=0.682, past_pr=#16783, file=Mathlib/CategoryTheory/Category/Quiv.lean) ---
+PAST HUNK:
+```
+@@ -82,6 +82,38 @@ end Cat
+ 
+ namespace Quiv
+ 
++def isoOfEquiv {V W : Type u } [Quiver.{v + 1, u} V] [Quiver.{v + 1, u} W]
+```
+PAST COMMENT (from reviewer):
+I believe it would much more convenient to develop a suitable API (kind of similar to `eqToHom`) for quivers:
+```lean
+section
+
+variable {V : Type*} [Quiver V]
+
+def _root_.Quiver.homOfEq {X Y : V} (f : X ⟶ Y) {X' Y' : V}
+    (hX : X = X') (hY : Y = Y') : X' ⟶ Y' := by
+  subst hX hY
+  exact f
+
+@[simp]
+lemma _root_.Quiver.homOfEq_trans
+    {X Y : V} (f : X ⟶ Y) {X' Y' : V} (hX : X = X') (hY : Y = Y')
+    {X'' Y'' : V} (hX' : X' = X'') (hY' : Y' = Y'') :
+    Quiver.homOfEq (Quiver.homOfEq f hX hY) hX' hY' =
+      Quiver.homOfEq f (hX.trans hX') (hY.trans hY') := by
+  subst hX hY hX' hY'
+  rfl
+
+lemma _root_.Quiver.homOfEq_injective {X X' Y Y' : V} (hX : X = X') (hY : Y = Y')
+    {f g : X ⟶ Y} (h : Quiver.homOfEq f hX hY = Quiver.homOfEq g hX hY) : f = g := by
+... [truncated]
+
+--- candidate 7 (sim=0.681, past_pr=#749, file=Mathlib/CategoryTheory/Iso.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,603 @@
++/-
++Copyright (c) 2017 Scott Morrison. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Tim Baumann, Stephen Morgan, Scott Morrison, Floris van Doorn
++Ported by: Scott Morrison
++-/
++import Mathlib.CategoryTheory.Functor.Basic
++
++/-!
++# Isomorphisms
++
++This file defines isomorphisms between objects of a category.
++
++## Main definitions
++
++- `structure Iso` : a bundled isomorphism between two objects of a category;
++- `class IsIso` : an unbundled version of `iso`;
++  note that `IsIso f` is a `Prop`, and only asserts the existence of an inverse.
++  Of course, this inverse is unique, so it doesn't cost us much to use choice to retrieve it.
++- `inv f`, for the inverse of a morphism with `[IsIso f]`
++- `as_iso` : convert from `IsIso` to `Iso` (noncomputable);
+```
+PAST COMMENT (from reviewer):
+```suggestion
+- `asIso` : convert from `IsIso` to `Iso` (noncomputable);
+```
+
+--- candidate 8 (sim=0.681, past_pr=#35731, file=Mathlib/AlgebraicTopology/SimplexCategory/Basic.lean) ---
+PAST HUNK:
+```
+@@ -809,19 +809,11 @@ theorem eq_comp_δ_of_not_surjective {n : ℕ} {Δ : SimplexCategory} (θ : Δ 
+ theorem eq_id_of_mono {x : SimplexCategory} (i : x ⟶ x) [Mono i] : i = 𝟙 _ := by
+   suffices IsIso i by
+     apply eq_id_of_isIso
+-  apply isIso_of_bijective
+-  dsimp
+-  rw [Fintype.bijective_iff_injective_and_card i.toOrderHom, ← mono_iff_injective,
+-    eq_self_iff_true, and_true]
+-  infer_instance
++  exact (isIso_iff_of_mono i).mpr rfl
+```
+PAST COMMENT (from reviewer):
+I think that works.
+
+--- candidate 9 (sim=0.681, past_pr=#7845, file=Mathlib/CategoryTheory/Yoneda.lean) ---
+PAST HUNK:
+```
+@@ -504,4 +504,5 @@ lemma isIso_of_yoneda_map_bijective {X Y : C} (f : X ⟶ Y)
+   obtain ⟨g, hg : g ≫ f = 𝟙 Y⟩ := (hf Y).2 (𝟙 Y)
+   exact ⟨g, (hf _).1 (by aesop_cat), hg⟩
+ 
++attribute [nolint simpNF] CategoryTheory.yonedaEquiv_yoneda_map
+```
+PAST COMMENT (from reviewer):
+This can be deleted safely
+
+--- candidate 10 (sim=0.681, past_pr=#28395, file=Mathlib/AlgebraicTopology/SimplicialSet/StdSimplex.lean) ---
+PAST HUNK:
+```
+@@ -266,6 +259,59 @@ lemma range_δ {n : ℕ} (i : Fin (n + 2)) :
+   rw [Subcomplex.range_eq_ofSimplex]
+   exact ofSimplex_yonedaEquiv_δ i
+ 
++/-- The standard simplex identifies to the nerve to the preordered type
++`ULift (Fin (n + 1))`. -/
++def isoNerve (n : ℕ) :
++    (Δ[n] : SSet.{u}) ≅ nerve (ULift.{u} (Fin (n + 1))) :=
++  NatIso.ofComponents (fun d ↦ Equiv.toIso (objEquiv.trans
++    { toFun f := (ULift.orderIso.symm.monotone.comp f.toOrderHom.monotone).functor
++      invFun f :=
++        SimplexCategory.Hom.mk
++          (ULift.orderIso.toOrderEmbedding.toOrderHom.comp f.toOrderHom)
++      left_inv _ := by aesop
++      right_inv _ := by rfl }))
++
++@[simp]
++lemma isoNerve_hom_app_apply {n d : ℕ}
++    (s : (Δ[n] _⦋d⦌)) (i : Fin (d + 1)) :
++    ((isoNerve.{u} n).hom.app _ s).obj i = ULift.up (s i) := rfl
++
++@[simp]
++lemma isoNerve_inv_app_apply {n d : ℕ}
++    (F : (nerve (ULift.{u} (Fin (n + 1)))) _⦋d⦌) (i : Fin (d + 1)) :
++    (isoNerve.{u} n).inv.app _ F i = (F.obj i).down := rfl
++
++lemma mem_nonDegenerate_iff_strictMono {n d : ℕ} (s : (Δ[n] : SSet.{u}) _⦋d⦌) :
++    s ∈ Δ[n].nonDegenerate d ↔ StrictMono s := by
++  rw [← nonDegenerate_iff_of_mono (isoNerve n).hom,
++    PartialOrder.mem_nerve_nonDegenerate_iff_strictMono]
++  rfl
++
++lemma mem_nonDegenerate_iff_mono {n d : ℕ} (s : (Δ[n] : SSet.{u}) _⦋d⦌) :
++    s ∈ Δ[n].nonDegenerate d ↔ Mono (objEquiv s) := by
++  rw [mem_nonDegenerate_iff_strictMono,
++    SimplexCategory.mono_iff_injective]
++  refine ⟨fun h ↦ h.injective, fun h ↦ ?_⟩
++  rw [Fin.strictMono_iff_lt_succ]
++  intro i
++  obtain h' | h' := (stdSimplex.
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+Removing `(m := (op ⦋d⦌))` here makes lean infers `m` as `op d`, breaking through the defeq `d = ⦋d⦌`, despite irreducibility of SimplexCategory. Do you understand why this happens?
+
+--- candidate 11 (sim=0.680, past_pr=#35731, file=Mathlib/AlgebraicTopology/SimplexCategory/Basic.lean) ---
+PAST HUNK:
+```
+@@ -809,19 +809,11 @@ theorem eq_comp_δ_of_not_surjective {n : ℕ} {Δ : SimplexCategory} (θ : Δ 
+ theorem eq_id_of_mono {x : SimplexCategory} (i : x ⟶ x) [Mono i] : i = 𝟙 _ := by
+   suffices IsIso i by
+     apply eq_id_of_isIso
+-  apply isIso_of_bijective
+-  dsimp
+-  rw [Fintype.bijective_iff_injective_and_card i.toOrderHom, ← mono_iff_injective,
+-    eq_self_iff_true, and_true]
+-  infer_instance
++  exact (isIso_iff_of_mono i).mpr rfl
+```
+PAST COMMENT (from reviewer):
+Can this be merged with the `suffices` block? Same below.
+
+--- candidate 12 (sim=0.680, past_pr=#35901, file=Mathlib/CategoryTheory/Sites/Hypercover/One.lean) ---
+PAST HUNK:
+```
+@@ -608,6 +658,148 @@ def isoMk {S : C} {E F : PreOneHypercover S}
+     intro i j k
+     simpa using E.isoMk_aux s₀ s₁ h₁ k
+ 
++section
++
++variable {S : C} {E F : PreOneHypercover.{w} S} (e : E ≅ F)
++
++@[simp]
++lemma hom_inv_s₀_apply (i : E.I₀) : e.inv.s₀ (e.hom.s₀ i) = i :=
++  congr($(e.hom_inv_id).s₀ i)
++
++@[simp]
++lemma inv_hom_s₀_apply (i : F.I₀) : e.hom.s₀ (e.inv.s₀ i) = i :=
++  congr($(e.inv_hom_id).s₀ i)
++
++@[simp]
++lemma hom_inv_s₁_apply {i j : E.I₀} (k : E.I₁ i j) :
++    e.inv.s₁ (e.hom.s₁ k) = E.congrIndexOneOfEq (by simp) (by simp) k := by
++  obtain ⟨hs₀, hh₀, hs₁, hh₁⟩ := PreOneHypercover.Hom.ext'_iff.mp e.hom_inv_id
++  simpa using hs₁ i j k
++
++@[simp]
++lemma inv_hom_s₁_apply {i j : F.I₀} (k : F.I₁ i j) :
++    e.hom.s₁ (e.inv.s₁ k) = F.congrIndexOneOfEq (by simp) (by simp) k := by
++  obtain ⟨hs₀, hh₀, hs₁, hh₁⟩ := PreOneHypercover.Hom.ext'_iff.mp e.inv_hom_id
++  simpa using hs₁ i j k
++
++@[reassoc (attr := simp)]
++lemma hom_inv_h₀ (i : E.I₀) : e.hom.h₀ i ≫ e.inv.h₀ (e.hom.s₀ i) = eqToHom (by simp) := by
++  obtain ⟨hs, hh, _⟩ := Hom.ext'_iff.mp e.hom_inv_id
++  simpa using hh i
++
++@[reassoc (attr := simp)]
++lemma inv_hom_h₀ (i : F.I₀) : e.inv.h₀ i ≫ e.hom.h₀ (e.inv.s₀ i) = eqToHom (by simp) := by
++  obtain ⟨hs, hh, _⟩ := Hom.ext'_iff.mp e.inv_hom_id
++  simpa using hh i
++
++@[reassoc (attr := simp)]
++lemma hom_inv_h₁ {i j : E.I₀} (k : E.I₁ i j) :
++    e.hom.h₁ k ≫ e.inv.h₁ (e.hom.s₁ k) =
++      (E.congrIndexOneOfEqIso (hom_inv_s₀_apply e i).symm (hom_inv_s₀_apply e j).symm k).inv ≫
++      eqToHom (by congr 1; simp) := by
++  obtain ⟨hs, _, _, hh⟩ := Hom.
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+Could you try to show the triangle identity?
+
+--- candidate 13 (sim=0.679, past_pr=#25780, file=Mathlib/AlgebraicTopology/SimplicialSet/StdSimplex.lean) ---
+PAST HUNK:
+```
+@@ -314,6 +315,15 @@ def nonDegenerateEquiv {n d : ℕ} :
+ 
+ end stdSimplex
+ 
++/-- The n-simplex is isomorphic to the nerve of the ordinal category `Fin (n + 1)`. -/
++def simplexIsNerve (n : ℕ) : Δ[n] ≅ nerve (Fin (n + 1)) := NatIso.ofComponents <| fun n ↦
++    Equiv.toIso <| stdSimplex.objEquiv.trans SimplexCategory.homEquivFunctor
+```
+PAST COMMENT (from reviewer):
+As I encountered similar definitions in my formalization of the homotopy theory of simplicial sets, I would suggest using the following two definitions which also uses your definition `homEquivFunctor`:
+```lean
+def CategoryTheory.nerve.representableBy
+    {n : ℕ} (α : Type u) [Preorder α] (e : α ≃o Fin (n + 1)) :
+    (nerve α).RepresentableBy ⦋n⦌ where
+  homEquiv := SimplexCategory.homEquivFunctor.trans
+    { toFun F := F ⋙ e.symm.monotone.functor
+      invFun F := F ⋙ e.monotone.functor
+      left_inv F := Functor.ext (fun x ↦ by simp)
+      right_inv F := Functor.ext (fun x ↦ by simp) }
+  homEquiv_comp _ _ := rfl
+
+/-- If a simplicial set `X` is representable by `⦋m⦌` for some `m : ℕ`, then this is the
+corresponding isomorphism `Δ[m] ≅ X`. -/
+def SSet.stdSimplex.isoOfRepres
+... [truncated]
+
+--- candidate 14 (sim=0.678, past_pr=#33822, file=Mathlib/CategoryTheory/NatIso.lean) ---
+PAST HUNK:
+```
+@@ -7,6 +7,7 @@ module
+ 
+ public import Mathlib.CategoryTheory.Functor.Category
+ public import Mathlib.CategoryTheory.Iso
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+This import should now be redundant
+
+--- candidate 15 (sim=0.678, past_pr=#28234, file=Mathlib/CategoryTheory/Groupoid.lean) ---
+PAST HUNK:
+```
+@@ -95,7 +95,7 @@ variable (X Y)
+ @[simps!]
+ def Groupoid.isoEquivHom : (X ≅ Y) ≃ (X ⟶ Y) where
+   toFun := Iso.hom
+-  invFun f := ⟨f, Groupoid.inv f, (by simp), (by simp)⟩
++  invFun f := ⟨f, Groupoid.inv f, by simp, by simp⟩
+```
+PAST COMMENT (from reviewer):
+Untested:
+```suggestion
+  invFun f := { hom := f, inv := Groupoid.inv f }
+```
+
+--- candidate 16 (sim=0.676, past_pr=#27139, file=Mathlib/CategoryTheory/Comma/Over/Basic.lean) ---
+PAST HUNK:
+```
+@@ -595,6 +598,11 @@ def mapIso {Y : T} (f : X ≅ Y) : Under Y ≌ Under X :=
+ @[simp] lemma mapIso_functor {Y : T} (f : X ≅ Y) : (mapIso f).functor = map f.hom := rfl
+ @[simp] lemma mapIso_inverse {Y : T} (f : X ≅ Y) : (mapIso f).inverse = map f.inv := rfl
+```
+PAST COMMENT (from reviewer):
+```suggestion
+@[simp] lemma mapIso_functor (f : X ≅ Y) : (mapIso f).functor = map f.hom := rfl
+@[simp] lemma mapIso_inverse (f : X ≅ Y) : (mapIso f).inverse = map f.inv := rfl
+```
+
+--- candidate 17 (sim=0.676, past_pr=#27139, file=Mathlib/CategoryTheory/Comma/Over/Basic.lean) ---
+PAST HUNK:
+```
+@@ -595,6 +598,11 @@ def mapIso {Y : T} (f : X ≅ Y) : Under Y ≌ Under X :=
+ @[simp] lemma mapIso_functor {Y : T} (f : X ≅ Y) : (mapIso f).functor = map f.hom := rfl
+ @[simp] lemma mapIso_inverse {Y : T} (f : X ≅ Y) : (mapIso f).inverse = map f.inv := rfl
+```
+PAST COMMENT (from reviewer):
+to match my suggestion above
+
+--- candidate 18 (sim=0.675, past_pr=#25780, file=Mathlib/AlgebraicTopology/SimplicialSet/StdSimplex.lean) ---
+PAST HUNK:
+```
+@@ -314,6 +315,15 @@ def nonDegenerateEquiv {n d : ℕ} :
+ 
+ end stdSimplex
+ 
++/-- The n-simplex is isomorphic to the nerve of the ordinal category `Fin (n + 1)`. -/
++def simplexIsNerve (n : ℕ) : Δ[n] ≅ nerve (Fin (n + 1)) := NatIso.ofComponents <| fun n ↦
++    Equiv.toIso <| stdSimplex.objEquiv.trans SimplexCategory.homEquivFunctor
++
++/-- The n-simplex is isomorphic to the nerve of the ordinal category `ULiftFin (n + 1)`. -/
++def simplexIsNerveULiftFin.{v} (n : ℕ) : Δ[n] ≅ nerve (ULiftFin.{v, u} (n + 1)) :=
++  NatIso.ofComponents
++    (fun i ↦ Equiv.toIso <| stdSimplex.objEquiv.trans SimplexCategory.homEquivFunctorULiftRight)
+```
+PAST COMMENT (from reviewer):
+In mathlib, we only have the notion of equivalence of categories, but no *isomorphism* of categories. This work suggests that even if we have kind of avoided introducing this notion until now, it would be a good idea to have a Prop typeclass `Equivalence.IsIso`, and a `Equivalence.toEquiv` which would allow to obtain bijections between types. By adding a few typeclasses about pre/post-composition with isomorphisms of categories, this should ease certain definitions in this PR.
+
+--- candidate 19 (sim=0.674, past_pr=#37332, file=Mathlib/AlgebraicTopology/SimplicialSet/StdSimplex.lean) ---
+PAST HUNK:
+```
+@@ -447,6 +473,100 @@ noncomputable def facePairIso {n : ℕ} (i j : Fin (n + 1)) (hij : i < j) :
+   stdSimplex.isoOfRepresentableBy
+     (stdSimplex.faceRepresentableBy.{u} _ _ (Fin.orderIsoPair i j hij))
+ 
++set_option backward.isDefEq.respectTransparency false in
++variable (n) in
++lemma bijective_image_objEquiv_toOrderHom_univ (m : ℕ) :
+```
+PAST COMMENT (from reviewer):
+Given that this lemma is rather specific, with some "ugly" function (it involves a match arm),
+I think this lemma should be made private, the definition of `nonDegenerateEquiv'` would then
+be `no_expose`'d, and then only characterizing lemmas would be accessible publicly.
+
+--- candidate 20 (sim=0.672, past_pr=#27968, file=Mathlib/AlgebraicTopology/SimplexCategory/Basic.lean) ---
+PAST HUNK:
+```
+@@ -679,6 +664,33 @@ theorem isIso_of_bijective {x y : SimplexCategory} {f : x ⟶ y}
+   haveI : IsIso ((forget SimplexCategory).map f) := (isIso_iff_bijective _).mpr hf
+   isIso_of_reflects_iso f (forget SimplexCategory)
+ 
++lemma isIso_iff_of_mono {n m : SimplexCategory} (f : n ⟶ m) [hf : Mono f] :
++    IsIso f ↔ n.len = m.len := by
++  refine ⟨fun _ ↦ len_eq_of_isIso f, fun h ↦ ?_⟩
++  obtain rfl : n = m := by aesop
++  rw [mono_iff_injective] at hf
++  exact isIso_of_bijective ⟨hf, by rwa [← Finite.injective_iff_surjective]⟩
++
++instance {n : ℕ} {i : Fin (n + 2)} : Mono (δ i) := by
++  rw [mono_iff_injective]
++  exact Fin.succAbove_right_injective
++
++lemma isIso_iff_of_epi {n m : SimplexCategory} (f : n ⟶ m) [hf : Epi f] :
++    IsIso f ↔ n.len = m.len := by
++  refine ⟨fun _ ↦ len_eq_of_isIso f, fun h ↦ ?_⟩
++  obtain rfl : n = m := by aesop
++  rw [epi_iff_surjective] at hf
++  exact isIso_of_bijective ⟨by rwa [Finite.injective_iff_surjective], hf⟩
++
++instance : Balanced SimplexCategory where
++  isIso_of_mono_of_epi f _ _ := by
++    rw [isIso_iff_of_epi]
++    exact le_antisymm (len_le_of_mono f) (len_le_of_epi f)
++
++instance {n : ℕ} {i : Fin (n + 2)} : Mono (δ i) := by
++  rw [mono_iff_injective]
++  exact Fin.succAbove_right_injective
++
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+The instance was already registered above
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "summary": "No past reviewer feedback directly matches this new hunk; only a weak note about exposure/privacy conventions might be relevant.",
+  "confidence": "none",
+  "strong_matches": [],
+  "weak_observations": [
+    {
+      "observation": "Consider whether to hide low-level helpers with `no_expose` and only expose characterizing lemmas; using an `@[expose] public section` is unusual in mathlib.",
+      "supporting_past_prs": [
+        37332
+      ]
+    }
+  ]
+}

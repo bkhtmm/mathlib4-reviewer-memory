@@ -1,0 +1,583 @@
+====================================================================================================
+CASE M  PR #36621  (open-pr, v3 prompt)
+file: Mathlib/Topology/Category/TopPair.lean  line: 136.0
+reviewer: @vlad902  on 2026-03-15T11:42:36Z
+advice_kind: naturality definition (suggestion)
+prompt_tokens: 7246  completion_tokens: 2706
+HUMAN reviewer (ground truth):
+  > ```suggestion
+  >     naturality X Y f := Hom.ext (by simp) f.comm.w
+  > ```
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Your single most important task is to AVOID "axis-miss" false positives: cases where a past comment and the new code LOOK similar on the surface, but the past reviewer was raising a different KIND of concern than anything the new hunk actually has. A correct silent output is far more valuable than a confident wrong-axis answer.
+
+Read carefully before producing JSON. Follow the four steps below in order.
+
+STEP 1 — STRUCTURAL + SEMANTIC READING OF THE NEW HUNK.
+  1a. Parse the code shape: tactic-mode vs term-mode, declaration kind (`def` / `theorem` / `lemma` / `instance` / `class` / `structure` / `abbrev` / `syntax` / `notation`), attributes (`@[simp]`, `@[to_additive]`, `@[deprecated]`, `@[ext]`, `@[fun_prop]`, `@[reassoc]`, …), universe parameters, implicit/explicit binders, docstring style, proof tactics used.
+  1b. Inventory what *could* be criticized about THIS specific hunk. Pick as many as apply from this list of "concern axes":
+     - correctness-bug        (code doesn't typecheck / is logically wrong)
+     - naming                  (lemma/def name doesn't follow conventions)
+     - docstring               (missing, unclear, typo, wrong phrasing)
+     - attribute               (missing/wrong `@[simp]` / `@[to_additive]` …)
+     - style-syntax            (`fun x ↦` vs `fun x =>`, `by use _; exact _` vs `⟨_, _⟩`, whitespace/`ppSpace`, notation preference)
+     - proof-golf              (the proof tactics could be shorter/nicer)
+     - refactor-simplify       (same statement provable with less machinery)
+     - generalize-signature    (hypotheses too strong; remove/weaken a typeclass)
+     - design-smell-architectural (this API shape is wrong; returning a string, unnecessary instance, redundant definition, etc.)
+     - imports-module          (superfluous imports, module structure)
+     - namespace-organization  (`_root_`, namespace boundary, file placement)
+     - automation-tactic       (should use / should teach `aesop_cat`, `gcongr`, `positivity`, etc.)
+     - instance-diamond        (this instance creates an ambiguity / defeq diamond with another)
+     - unify-with-existing     (a similar definition/lemma already exists)
+     - junk-value              (docstring should note behavior at the "undefined" input; handled via `0`/`⊥`/`⊤`)
+  List the concerns that PLAUSIBLY apply to the new hunk. If none are obviously present, say so — don't invent them.
+
+STEP 2 — PER-CANDIDATE CONCERN CLASSIFICATION.
+  For EACH candidate, identify which concern axis (from the same list) the past reviewer's comment was about. Read the past comment carefully: the reviewer's *words* (not the past code) tell you the concern axis. If a past comment ships a `suggestion` code block, that block is evidence for what the reviewer wanted changed — but the axis of concern comes from the prose around it. Ignore candidates whose past comment is pure bikeshed or where you cannot identify a clear concern.
+
+STEP 3 — AXIS MATCH + APPLICABILITY CHECK.
+  A candidate is eligible for `strong_matches` ONLY if BOTH:
+    (a) Its axis (from step 2) is among the new hunk's plausible concerns (from step 1b).
+    (b) You can write a concrete adaptation that a Lean/mathlib reviewer would plausibly post on the new hunk *today*, given what is visible in the hunk.
+  Before promoting, write — in the JSON output, per match — a `why_might_not_apply` field giving the strongest counter-argument against promotion (one short sentence). If this counter-argument is actually compelling (e.g. "the new code does not have that pattern", "the new code *does* have an ext lemma, so this doesn't apply"), DO NOT promote; demote to `weak_observations` or drop.
+  Cross-candidate synthesis is allowed: if candidate X establishes that an identifier in the new hunk is a `class`, and candidate Y shows the preferred term-mode `instance := ⟨...⟩` template, they jointly support a promotion. List both in `supporting_past_prs` and still produce one `why_might_not_apply`.
+
+STEP 4 — CONFIDENCE AND OUTPUT.
+  Confidence scale:
+    - "high"   — ≥1 strong match survives step 3 AND the adaptation is a near-verbatim application of a past comment; the counter-argument is weak.
+    - "medium" — ≥1 strong match survives step 3 BUT needs adaptation or synthesis; counter-argument is plausible but not decisive.
+    - "low"    — no candidate survives step 3; only stylistic patterns worth mentioning as `weak_observations`.
+    - "none"   — retrieved pool's axes don't match anything plausible about the new hunk; state this and stop.
+  When in doubt between "medium" and "low" on a single uncertain candidate, prefer "low" and put that candidate in `weak_observations`. "Confident but wrong-axis" is the #1 failure we are trying to eliminate.
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "new_hunk_plausible_concerns": [<one or more axis labels from Step 1b, or []>],
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_concern_axis": "<axis label from the list>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure AND explaining why the concern axis matches>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "why_might_not_apply": "<one short sentence — strongest counter-argument against this promotion>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "axis": "<axis label>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Do not invent axis labels outside the list. Do not promote a candidate whose axis is not in `new_hunk_plausible_concerns`.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #36621 (file: Mathlib/Topology/Category/TopPair.lean):
+```
+@@ -0,0 +1,163 @@
+... [96 lines above hidden]
++
++/-- The functor from topological spaces to topological pairs that sends a space X to (X, X) with the
++identity morphism on X. -/
++@[simps]
++def diag : TopCat ⥤ TopPair where
++  obj := fun X ↦ ⟨_, _, 𝟙 X, by rw [hom_id]; exact Topology.IsInducing.id⟩
++  map := fun f ↦ { first := f, second := f }
++
++@[simps]
++instance : Inhabited TopPair := ⟨incl.obj TopCat.inhabited.default⟩
++
++set_option backward.isDefEq.respectTransparency false in
++/-- The inclusion functor is left adjoint to the projection to the first component. -/
++def inclAdjProj₁ : incl ⊣ proj₁ where
++  unit := { app X := 𝟙 X }
++  counit := {
++    app X := { first := 𝟙 X.first, second := TopCat.isInitialPEmpty.to _ }
++    naturality := by
++      intro X Y f
++      apply Hom.ext
++      · simp
++      · simp only [Functor.comp_obj, proj₁_obj, Functor.id_obj, Functor.comp_map, proj₁_map,
++        comp_second, incl_map_second, Functor.id_map, Limits.IsInitial.to_comp]
++        cat_disch
++  }
++  left_triangle_components X := by
++    simp only [Functor.id_obj, Functor.comp_obj, proj₁_obj, incl_obj_first,
++      CategoryTheory.Functor.map_id, Category.id_comp]
++    apply Hom.ext
++    · simp only [incl_obj_first, id_first]
++    · cat_disch
++
++/-- The projection functor to the first component is left adjoint to the diagonal functor. -/
++def proj₁AdjDiag : proj₁ ⊣ diag where
++  unit := {
++    app X := { first := 𝟙 X.first, second := X.map },
++    naturality := by
++      intro X Y f
++      apply Hom.ext
++      · simp
++      · exact f.comm.w
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.687, past_pr=#4593, file=Mathlib/Topology/Order/Category/FrameAdjunction.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,120 @@
++/-
++Copyright (c) 2023 Anne Baanen, Sam v. Gool, Leo Mayer, Brendan S. Murphy. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Anne Baanen, Sam v. Gool, Leo Mayer, Brendan S. Murphy
++-/
++import Mathlib.Topology.Category.Locale
++
++/-!
++# Adjunction between Locales and Topological Spaces
++
++This file defines functors between the categories of Locales and Topological Spaces
+```
+PAST COMMENT (from reviewer):
+```suggestion
+This file defines functors between the categories of Locales and of Topological Spaces
+```
+
+--- candidate 2 (sim=0.686, past_pr=#4593, file=Mathlib/Topology/Order/Category/FrameAdjunction.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,120 @@
+... [8 lines above hidden]
++/-!
++# Adjunction between Locales and Topological Spaces
++
++This file defines functors between the categories of Locales and Topological Spaces
++and proves that they form an adjunction.
++
++## Main declarations
++
++* `pt`: the *points* functor from the category of locales to the category of topological spaces.
++* `topToLocale`: the forgetful functor from the category of topological spaces to the category of
++  locales.
++
++- `locale_top_adjunction`: the theorem that topToLocale is left adjoint to pt.
+```
+PAST COMMENT (from reviewer):
+As well as fully qualifying the names for docs, I suggest not to use the word "theorem" since there's data here (indeed it's a `def`):
+```suggestion
+- `Locale.adjunctionTopToLocalePT`: the left adjunction between `topToLocale` and `Locale.pt`.
+```
+
+--- candidate 3 (sim=0.684, past_pr=#31943, file=Mathlib/AlgebraicTopology/FundamentalGroupoid/Product.lean) ---
+PAST HUNK:
+```
+@@ -181,7 +181,7 @@ def prodIso : CategoryTheory.Grpd.of (πₓ A × πₓ B) ≅ πₓ (TopCat.of (
+     have : Path.Homotopic.projLeft ((prodToProdTop A B).map (f₀, f₁)) = f₀ ∧
+       Path.Homotopic.projRight ((prodToProdTop A B).map (f₀, f₁)) = f₁ :=
+         And.intro (Path.Homotopic.projLeft_prod f₀ f₁) (Path.Homotopic.projRight_prod f₀ f₁)
+-    simpa
++    aesop_cat
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    cat_disch
+```
+
+--- candidate 4 (sim=0.679, past_pr=#14455, file=Mathlib/Condensed/TopCatAdjunction.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,128 @@
+... [12 lines above hidden]
++left adjoint to `topCatToCondensedSet : TopCat.{u+1} ⥤ CondensedSet.{u}`. We prove that the counit
++is bijective (but not in general an isomorphism) and conclude that the right adjoint is faithful.
++-/
++
++universe u
++
++open Condensed CondensedSet CategoryTheory
++
++attribute [local instance] ConcreteCategory.instFunLike
++
++variable (X : CondensedSet.{u})
++
++/-- Auxiliary defiinition to define the topology on `X(*)` for a condensed set `X`. -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- Auxiliary definition to define the topology on `X(*)` for a condensed set `X`. -/
+```
+
+--- candidate 5 (sim=0.673, past_pr=#37091, file=Mathlib/Topology/Homotopy/TopCat/Basic.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,53 @@
+... [19 lines above hidden]
++@[expose] public section
++
++universe u
++
++open CategoryTheory MonoidalCategory
++
++namespace TopCat
++
++variable {X Y : TopCat.{u}}
++
++/-- An homotopy between morphisms in `TopCat` is a homotopy between
++the corresponding continous maps. -/
++def Homotopy (f g : X ⟶ Y) := ContinuousMap.Homotopy f.hom g.hom
+```
+PAST COMMENT (from reviewer):
+Since it’s a semi-reducible type-valued def, it’s probably better to make this
+an abbrev (or a 1-field structure for good type hygiene, but in this case I think this would be plain overkill).
+```suggestion
+abbrev Homotopy (f g : X ⟶ Y) := ContinuousMap.Homotopy f.hom g.hom
+```
+
+--- candidate 6 (sim=0.671, past_pr=#3802, file=Mathlib/Topology/Category/Top/Limits/Pullbacks.lean) ---
+PAST HUNK:
+```
+@@ -370,43 +390,147 @@ theorem pullback_fst_image_snd_preimage (f : X ⟶ Z) (g : Y ⟶ Z) (U : Set Y)
+... [9 lines above hidden]
+ #align Top.pullback_fst_image_snd_preimage TopCat.pullback_fst_image_snd_preimage
+ 
+ end Pullback
+ 
+-theorem coinduced_of_isColimit {F : J ⥤ TopCat.{max v u}} (c : Cocone F) (hc : IsColimit c) :
+-    c.pt.TopologicalSpace = ⨆ j, (F.obj j).TopologicalSpace.coinduced (c.ι.app j) := by
+-  let homeo := homeo_of_iso (hc.cocone_point_unique_up_to_iso (colimit_cocone_is_colimit F))
++/-- The binary coproduct cofan in `TopCat`. -/
++protected def binaryCofan (X Y : TopCat.{u}) : BinaryCofan X Y :=
++  BinaryCofan.mk (⟨Sum.inl, by continuity⟩ : X ⟶ TopCat.of (Sum X Y)) ⟨Sum.inr, by continuity⟩
++#align Top.binary_cofan TopCat.binaryCofan
++
++/-- The constructed binary coproduct cofan in `TopCat` is the coproduct. -/
+```
+PAST COMMENT (from reviewer):
+Are the next 100 lines new? Or did this move in ml3 during the porting of this file? I don't see it when comparing to the mathport output that this port started from...
+
+--- candidate 7 (sim=0.666, past_pr=#14455, file=Mathlib/Condensed/TopCatAdjunction.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,128 @@
+... [16 lines above hidden]
++universe u
++
++open Condensed CondensedSet CategoryTheory
++
++attribute [local instance] ConcreteCategory.instFunLike
++
++variable (X : CondensedSet.{u})
++
++/-- Auxiliary defiinition to define the topology on `X(*)` for a condensed set `X`. -/
++private def _root_.CompHaus.const (S : CompHaus.{u}) (s : S) : CompHaus.of PUnit.{u+1} ⟶ S :=
++  ContinuousMap.const _ s
++
++/-- Auxiliary defiinition to define the topology on `X(*)` for a condensed set `X`. -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- Auxiliary definition to define the topology on `X(*)` for a condensed set `X`. -/
+```
+
+--- candidate 8 (sim=0.659, past_pr=#36074, file=Mathlib/Topology/Sheaves/Presheaf.lean) ---
+PAST HUNK:
+```
+@@ -269,20 +269,20 @@ def pullback {X Y : TopCat.{v}} (f : X ⟶ Y) : Y.Presheaf C ⥤ X.Presheaf C :=
+   (Opens.map f).op.lan
+ 
+ /-- The pullback and pushforward along a continuous map are adjoint to each other. -/
+-def pushforwardPullbackAdjunction {X Y : TopCat.{v}} (f : X ⟶ Y) :
++def pullbackPushforwardAdjunction {X Y : TopCat.{v}} (f : X ⟶ Y) :
+     pullback C f ⊣ pushforward C f :=
+   Functor.lanAdjunction _ _
+ 
+```
+PAST COMMENT (from reviewer):
+```suggestion
+
+@[deprecated (since := "2026-03-03")]
+alias pushforwardPullbackAdjunction := pullbackPushforwardAdjunction
+
+```
+
+--- candidate 9 (sim=0.657, past_pr=#14506, file=Mathlib/Condensed/Light/TopCatAdjunction.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,129 @@
+... [12 lines above hidden]
++left adjoint to `topCatToLightCondSet : TopCat.{u} ⥤ LightCondSet.{u}`. We prove that the counit
++is bijective (but not in general an isomorphism) and conclude that the right adjoint is faithful.
++-/
++
++universe u
++
++open LightCondensed LightCondSet CategoryTheory
++
++attribute [local instance] ConcreteCategory.instFunLike
++
++variable (X : LightCondSet.{u})
++
++/-- Auxiliary defiinition to define the topology on `X(*)` for a light condensed set `X`. -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- Auxiliary definition to define the topology on `X(*)` for a light condensed set `X`. -/
+```
+
+--- candidate 10 (sim=0.656, past_pr=#14506, file=Mathlib/Condensed/Light/TopCatAdjunction.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,129 @@
+... [94 lines above hidden]
++  (topCatAdjunctionCounitEquiv X).bijective
++
++/-- The unit of the adjunction `lightCondSetToTopCat ⊣ topCatToLightCondSet` -/
++@[simps val_app val_app_apply]
++def topCatAdjunctionUnit (X : LightCondSet.{u}) : X ⟶ X.toTopCat.toLightCondSet where
++  val := {
++    app := fun S x ↦ {
++      toFun := fun s ↦ X.val.map (S.unop.const s).op x
++      continuous_toFun := by
++        suffices ∀ (i : (T : LightProfinite.{u}) × X.val.obj ⟨T⟩),
++          Continuous (fun (a : i.fst) ↦ X.coinducingCoprod ⟨i, a⟩) from this ⟨_, _⟩
++        rw [← continuous_sigma_iff]
++        apply continuous_coinduced_rng }
+```
+PAST COMMENT (from reviewer):
+I think it would be better to extract the `app` field as a separate definition in this case, and the naturality as a lemma. This way we could have better control over the `simps` lemmas that are generated.
+
+--- candidate 11 (sim=0.652, past_pr=#27576, file=Mathlib/AlgebraicTopology/TopologicalSimplex.lean) ---
+PAST HUNK:
+```
+@@ -117,4 +119,10 @@ def toTop : SimplexCategory ⥤ TopCat where
+       · tauto
+     · apply Set.pairwiseDisjoint_filter
+ 
++/-- The functor `SimplexCategory ⥤ TopCat.{u}`
++associating the topological `n`-simplex to `⦋n⦌ : SimplexCategory`. -/
++@[simps! obj map]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+@[simps! obj map, pp_with_univ]
+```
+
+--- candidate 12 (sim=0.650, past_pr=#33445, file=Mathlib/AlgebraicTopology/FundamentalGroupoid/InducedMaps.lean) ---
+PAST HUNK:
+```
+@@ -14,37 +14,96 @@ public import Mathlib.AlgebraicTopology.FundamentalGroupoid.Product
+... [56 lines above hidden]
+ 
+-open FundamentalGroupoid
++namespace FundamentalGroupoidFunctor
+ 
+ open CategoryTheory
++open scoped FundamentalGroupoid ContinuousMap
++
++variable {X Y : Type*} [TopologicalSpace X] [TopologicalSpace Y]
++  {f g : C(X, Y)}
++
++set_option pp.proofs.withType true in
++/-- Given a homotopy H : f ∼ g, we have an associated natural isomorphism between the induced
++functors `f` and `g` -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+functors `map f` and `map g` on fundamental groupoids. -/
+```
+
+--- candidate 13 (sim=0.648, past_pr=#21885, file=Mathlib/AlgebraicTopology/SimplicialSet/NerveAdjunction.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,323 @@
+... [28 lines above hidden]
++`CategoryTheory.Category.Cat.Colimit` that the category of categories has colimits.
++
++-/
++
++namespace CategoryTheory
++
++open Category Functor Limits Opposite SimplexCategory Simplicial SSet Nerve Truncated
++universe v u v' u'
++
++section
++
++set_option quotPrecheck false
++local macro:max (priority := high) "[" n:term "]₂" : term =>
+```
+PAST COMMENT (from reviewer):
+It would probably be better to use `⦋...⦌` (here and below) as this is soon going to be the notation in the general truncated case.
+
+--- candidate 14 (sim=0.647, past_pr=#13663, file=Mathlib/CategoryTheory/Products/Unitor.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,65 @@
++/-
++Copyright (c) 2024 Shanghe Chen. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Shanghe Chen
++-/
++import Mathlib.CategoryTheory.Products.Basic
++import Mathlib.CategoryTheory.DiscreteCategory
++
++/-!  The left/right unitor functors `1 × C ⥤ C`, `C × 1 ⥤ C`, and their inverses form an equivalence respectively.  -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-!
+# The left/right unitor equivalences `1 × C ≌ C` and `C × 1 ≌ C`.
+
+-/
+```
+
+--- candidate 15 (sim=0.647, past_pr=#21885, file=Mathlib/AlgebraicTopology/SimplicialSet/NerveAdjunction.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,323 @@
+... [54 lines above hidden]
++    obtain ⟨φ⟩ := rel
++    simpa [ReflQuiv.adj, Quot.liftOn, Cat.FreeRefl.quotientFunctor, Quotient.functor,
++        Quiv.adj, OneTruncation₂.nerveHomEquiv] using
++      φ.map_comp (X := 0) (Y := 1) (Z := 2) (homOfLE (by decide)) (homOfLE (by decide))
++
++@[simp]
++theorem nerve₂Adj.counit.app_eq (C : Type u) [SmallCategory C] :
++    SSet.Truncated.HomotopyCategory.quotientFunctor (nerveFunctor₂.obj (Cat.of C)) ⋙
++      nerve₂Adj.counit.app.{u} C =
++    (whiskerRight OneTruncation₂.ofNerve₂.natIso.hom _ ≫
++      ReflQuiv.adj.{u}.counit).app (Cat.of C) := rfl
++
++/-- Naturality of `nerve₂Adj.counit.app` is proven using `HomotopyCategory.lift_unique'`. -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- The naturality of `nerve₂Adj.counit.app`. -/
+```
+
+--- candidate 16 (sim=0.646, past_pr=#36071, file=Mathlib/Topology/Sheaves/Functors.lean) ---
+PAST HUNK:
+```
+@@ -110,3 +110,48 @@ instance : (pushforward A f).IsRightAdjoint := (pullbackPushforwardAdjunction A
+ end Sheaf
+ 
+ end TopCat
++
++namespace Topology.IsOpenEmbedding
++
++variable (A : Type*) [Category.{w} A] {FA : A → A → Type*} {CA : A → Type w}
++variable [∀ X Y, FunLike (FA X Y) (CA X) (CA Y)] [ConcreteCategory.{w} A FA] [HasColimits A]
++variable [HasLimits A] [PreservesLimits (CategoryTheory.forget A)]
++variable [PreservesFilteredColimits (CategoryTheory.forget A)]
++variable [(CategoryTheory.forget A).ReflectsIsomorphisms]
+```
+PAST COMMENT (from reviewer):
+Could you please move this just before `sheafPullbackIso`?
+
+--- candidate 17 (sim=0.646, past_pr=#5756, file=Mathlib/AlgebraicTopology/FundamentalGroupoid/InducedMaps.lean) ---
+PAST HUNK:
+```
+@@ -223,24 +223,25 @@ variable {X Y : TopCat.{u}} {f g : C(X, Y)} (H : ContinuousMap.Homotopy f g)
+ 
+ /-- Given a homotopy H : f ∼ g, we have an associated natural isomorphism between the induced
+ functors `f` and `g` -/
+-def homotopicMapsNatIso : πₘ f ⟶ πₘ g where
++def homotopicMapsNatIso : @Quiver.Hom _ Functor.category.toQuiver (πₘ f) (πₘ g) where
+```
+PAST COMMENT (from reviewer):
+```suggestion
+-- Porting note: couldn't use category arrow `\hom` in statement, needed to expand
+def homotopicMapsNatIso : @Quiver.Hom _ Functor.category.toQuiver (πₘ f) (πₘ g) where
+```
+
+--- candidate 18 (sim=0.646, past_pr=#34520, file=Mathlib/CategoryTheory/Adjunction/Mates.lean) ---
+PAST HUNK:
+```
+@@ -31,14 +31,14 @@ other side is as well). This demonstrates that adjoints to a given functor are u
+... [3 lines above hidden]
+ Another example arises from considering the square representing that a functor `H` preserves
+-products, in particular the morphism `HA ⨯ H- ⟶ H(A ⨯ -)`. Then provided `(A ⨯ -)` and `HA ⨯ -`
++products, in particular the morphism `H A ⨯ H- ⟶ H (A ⨯ -)`. Then provided `(A ⨯ -)` and `H A ⨯ -`
+ have left adjoints (for instance if the relevant categories are Cartesian closed), the transferred
+-natural transformation is the exponential comparison morphism: `H(A ^ -) ⟶ HA ^ H-`.
++natural transformation is the exponential comparison morphism: `H (A ^ -) ⟶ H A ^ H-`.
+ Furthermore if `H` has a left adjoint `L`, this morphism is an isomorphism iff its mate
+-`L(HA ⨯ -) ⟶ A ⨯ L-` is an isomorphism, see
++`L (H A ⨯ -) ⟶ A ⨯ L-` is an isomorphism, see
+ https://ncatlab.org/nlab/show/Frobenius+reciprocity#InCategoryTheory.
+ This also relates to Grothendieck's yoga of six operations, though this is not spelled out in
+-mathlib: https://ncatlab.org/nlab/show/six+operations.
++Mathlib: https://ncatlab.org/nlab/show/six+operations.
+```
+PAST COMMENT (from reviewer):
+There is no clear rule about the capitalization of mathlib
+
+--- candidate 19 (sim=0.645, past_pr=#23490, file=Mathlib/Algebra/Category/ModuleCat/Topology/Basic.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,457 @@
+... [322 lines above hidden]
++    [HasLimitsOfShape J (ModuleCat.{v} R)]
++    [PreservesLimitsOfShape J (forget (ModuleCat.{v} R))] :
++    PreservesLimitsOfShape J (forget₂ (TopModuleCat.{v} R) TopCat) where
++
++instance : PreservesLimits (forget₂ (TopModuleCat.{v} R) TopCat.{v}) where
++
++end Limit
++
++section Adjunction
++
++instance (priority := low) {R : Type*} [TopologicalSpace R] {A : Type*} [Add A] [SMul R A] :
++    letI := moduleTopology R A; IsModuleTopology R A :=
++  letI := moduleTopology R A; ⟨rfl⟩
+```
+PAST COMMENT (from reviewer):
+Is this useful? Why is it low prio? Maybe add some comments?
+
+--- candidate 20 (sim=0.645, past_pr=#23490, file=Mathlib/Algebra/Category/ModuleCat/Topology/Basic.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,457 @@
+... [322 lines above hidden]
++    [HasLimitsOfShape J (ModuleCat.{v} R)]
++    [PreservesLimitsOfShape J (forget (ModuleCat.{v} R))] :
++    PreservesLimitsOfShape J (forget₂ (TopModuleCat.{v} R) TopCat) where
++
++instance : PreservesLimits (forget₂ (TopModuleCat.{v} R) TopCat.{v}) where
++
++end Limit
++
++section Adjunction
++
++instance (priority := low) {R : Type*} [TopologicalSpace R] {A : Type*} [Add A] [SMul R A] :
++    letI := moduleTopology R A; IsModuleTopology R A :=
++  letI := moduleTopology R A; ⟨rfl⟩
+```
+PAST COMMENT (from reviewer):
+What do you think about just making it a local instance in `ModuleCat/Topology/Basic` then?
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "new_hunk_plausible_concerns": [],
+  "summary": "No past reviewer feedback clearly applies to this new hunk; the code introduces functors and adjunctions with reasonable docstrings and uses cat_disch already.",
+  "confidence": "none",
+  "strong_matches": [],
+  "weak_observations": []
+}

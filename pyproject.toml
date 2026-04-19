@@ -1,0 +1,35 @@
+[project]
+name = "mathlib4-reviewer-memory"
+version = "0.1.0"
+description = "Retrieval-grounded reviewer-memory tool for leanprover-community/mathlib4."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+  # data pipeline (scrape + normalize)
+  "pandas>=2.2.0",
+  "pyarrow>=15.0.0",
+  "PyYAML>=6.0.0",
+  "requests>=2.32.0",
+  # retrieval + review-assistant runtime (needed by scripts/review_pr.py)
+  "numpy>=1.26.0",
+  "openai>=1.50.0",
+]
+
+[project.optional-dependencies]
+# Use --provider gemini in review_pr.py / sweeps.
+gemini = ["google-genai>=0.3.0"]
+
+[project.scripts]
+scrape-mathlib4 = "scripts.scrape_mathlib4:main"
+validate-mathlib4-dataset = "scripts.validate_dataset:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

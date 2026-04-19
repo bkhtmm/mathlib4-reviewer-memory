@@ -1,0 +1,515 @@
+====================================================================================================
+CASE 3  PR #38109  (open-pr)
+file: Mathlib/GroupTheory/FinitelyPresentedGroup.lean  line: 72.0
+prompt_version: v2
+prompt_tokens: 6317  completion_tokens: 5444  latency: 81.28s
+HUMAN reviewer (ground truth):
+  > If you move the `∅` into the angle brackets, you can make this a one-liner in term mode.
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Compared to a naive matcher you must do TWO extra things, because the answer is often only derivable by combining evidence:
+
+A. STRUCTURAL PATTERN EXTRACTION. Past comments often contain `suggestion` code blocks (```suggestion ... ```) or inline code-shape rewrites. These suggested code snippets ARE concrete advice, not just commentary. Treat them as first-class evidence about preferred Lean/mathlib idioms (e.g.: term-mode constructor `:= ⟨_, _, _⟩` vs `by use _; exact _`, `instance` vs `theorem` for class-membership statements, `refine ⟨..., ?_⟩` vs `use ...; constructor`, `@[simp]` / `@[to_additive]` attributes, naming conventions, docstring phrasing, etc.).
+
+B. CROSS-CANDIDATE SYNTHESIS. The applicable advice for the new hunk may require combining evidence from multiple candidates. Example: candidate X's context tells you that an identifier in the new hunk is a `class`; candidate Y shows the term-mode `instance ... := ⟨...⟩` template for proving class membership. Together they support the conclusion: "the new theorem proving class membership should be rewritten as an `instance` with a term-mode constructor". List supporting PRs for any synthesised finding.
+
+Reasoning protocol (do this internally before producing JSON):
+
+  1. STRUCTURAL FEATURES OF THE NEW HUNK. Identify each: tactic-mode vs term-mode? Uses `by use ...; exact ...`? Uses `use ...; constructor`? Declares an `instance` / a `theorem` / a `lemma` / a `def` / a `class`? Has `@[simp]`, `@[to_additive]`, `@[deprecated]`? Uses anonymous functions `fun x =>` vs `↦`? Has a docstring `/-- ... -/` of any specific shape?
+
+  2. PATTERN INVENTORY FROM CANDIDATES. For each candidate, note any concrete pattern shown in its suggested-code or comment (term-mode template, attribute recommendation, naming convention, idiomatic rewrite, terminology preference, etc.). Also note which candidates' past hunks define or use identifiers that appear in the new hunk (these are clues about whether something is a class, an instance, an alias, etc.).
+
+  3. APPLICABILITY CHECK. For each pattern from step 2, ask: does the new hunk's structure (step 1) instantiate the same shape that this pattern was applied to? If yes, that's a STRONG match. If two patterns combine to support a finding, list both supporting PRs.
+
+  4. STRICT REFUSAL. If after this analysis no candidate (alone or in combination) gives concrete, well-grounded advice for the specific code in the new hunk, output an empty `strong_matches` list. Do not paper over with generic advice. Generic style observations belong in `weak_observations`, clearly marked. Do not invent advice that isn't traceable to specific past PRs in the retrieval pool.
+
+Confidence:
+  - "high"  — at least one strong match is grounded in concrete suggested-code or explicit prose from a candidate, and the new hunk clearly fits the same shape
+  - "medium" — at least one strong match exists but requires synthesis or adaptation; OR a single candidate gives related but not identical advice
+  - "low"   — only loose stylistic patterns; nothing actionable
+  - "none"  — retrieved pool is unrelated; do not press an answer
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Be precise about which PR(s) support each finding via supporting_past_prs.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #38109 (file: Mathlib/GroupTheory/FinitelyPresentedGroup.lean):
+```
+@@ -66,4 +66,17 @@ theorem equiv (iso : G ≃* H) (h : IsFinitelyPresented G) : IsFinitelyPresented
+   refine ⟨n, (iso : G →* H).comp φ, iso.surjective.comp hφsurj, ?_⟩
+   rwa [MonoidHom.ker_mulEquiv_comp φ iso]
+ 
++/-- The trivial group is the normal closure of a finite set of relations. -/
++theorem BotIsNormalClosureFG : Subgroup.IsNormalClosureFG (⊥ : Subgroup G) := by
++  use ∅
++  exact ⟨Finite.of_subsingleton, Subgroup.normalClosure_empty⟩
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.765, past_pr=#34784, file=Mathlib/Algebra/Group/Subgroup/Basic.lean) ---
+PAST HUNK:
+```
+@@ -531,38 +551,46 @@ lemma normalClosure_empty : normalClosure (∅ : Set G) = (⊥ : Subgroup G) :=
+ 
+```
+PAST COMMENT (from reviewer):
+Shouldn't `normalClosure_empty` also get `@[to_additive]`ized? (If it should not, then please add a comment to the code explaining why.)
+
+--- candidate 2 (sim=0.756, past_pr=#35029, file=Mathlib/Algebra/Group/Subgroup/Basic.lean) ---
+PAST HUNK:
+```
+@@ -524,6 +524,11 @@ theorem normalClosure_closure_eq_normalClosure {s : Set G} :
+     normalClosure ↑(closure s) = normalClosure s :=
+   le_antisymm (normalClosure_le_normal closure_le_normalClosure) (normalClosure_mono subset_closure)
+ 
++/-- The normal closure of an empty set is the trivial subgroup. -/
++@[simp]
++lemma normalClosure_empty : normalClosure (∅ : Set G) = (⊥ : Subgroup G) := by
++rw [← normalClosure_closure_eq_normalClosure, closure_empty, normalClosure_eq_self]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  rw [← normalClosure_closure_eq_normalClosure, closure_empty, normalClosure_eq_self]
+```
+
+--- candidate 3 (sim=0.755, past_pr=#36996, file=Mathlib/GroupTheory/FinitelyPresentedGroup.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,86 @@
++/-
++Copyright (c) 2025 Hang Lu Su. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Riccardo Brasca, Fabrizio Barroero, Stefano Francaviglia,
++  Francesco Milizia, Valerio Proietti, Hang Lu Su, Lawrence Wu
++-/
++module
++
++public import Mathlib.Algebra.Group.Subgroup.Basic
++public import Mathlib.Data.Set.Finite.Basic
++public import Mathlib.GroupTheory.FreeGroup.Basic
++
++/-!
++# Finitely Presented Groups
++
++This file defines finitely presented groups.
++
++## Main definitions
++* `Subgroup.IsNormalClosureFG`: defines when a subgroup is the normal closure of a finite set.
++* `IsFinitelyPresented`: defines when a group is finitely presented.
++
++## Main results
++* `Subgroup.IsNormalClosureFG_map`: being the normal closure of a finite set is invariant
++  under surjective homomorphism.
++* `IsFinitelyPresented.of_mulEquiv`: finitely presented groups are closed under isomorphism.
++
++## Tags
++finitely presented group, finitely generated normal closure
++-/
++
++@[expose] public section
++
++variable {G H α β : Type*} [Group G] [Group H]
++
++/-- This is a statement about the following commutative diagram:
++suppose that `G` and `H` are isomorphic via `iso`, and `S` is a set in `G`,
++then the canonical inclusion map from `FreeGroup(iso '' S)` to `H` is given by
++first taking the inverse isomorphism between the `FreeGroup (S)` and `FreeGroup (iso '' S)`, then
++composing with the canonical inclusion map from `FreeGroup(S)` to `G` and then taking `iso`. -/
++lemma FreeGroup.lift_mulEquiv_image (iso : G ≃* H) (S : Set G
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+(or some such thing -- I'm suggesting that you should explicitly say how to use it. Is "normal closure of a finite set" a standard phrase in this area? If so then we can leave it there; I was just a bit worried that it might be interpreted as "smallest subset closed under external conjugation and containing the finite set" as opposed to "smallest subgroup...".
+
+--- candidate 4 (sim=0.755, past_pr=#36996, file=Mathlib/GroupTheory/FinitelyPresentedGroup.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,86 @@
++/-
++Copyright (c) 2025 Hang Lu Su. All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Riccardo Brasca, Fabrizio Barroero, Stefano Francaviglia,
++  Francesco Milizia, Valerio Proietti, Hang Lu Su, Lawrence Wu
++-/
++module
++
++public import Mathlib.Algebra.Group.Subgroup.Basic
++public import Mathlib.Data.Set.Finite.Basic
++public import Mathlib.GroupTheory.FreeGroup.Basic
++
++/-!
++# Finitely Presented Groups
++
++This file defines finitely presented groups.
++
++## Main definitions
++* `Subgroup.IsNormalClosureFG`: defines when a subgroup is the normal closure of a finite set.
++* `IsFinitelyPresented`: defines when a group is finitely presented.
++
++## Main results
++* `Subgroup.IsNormalClosureFG_map`: being the normal closure of a finite set is invariant
++  under surjective homomorphism.
++* `IsFinitelyPresented.of_mulEquiv`: finitely presented groups are closed under isomorphism.
++
++## Tags
++finitely presented group, finitely generated normal closure
++-/
++
++@[expose] public section
++
++variable {G H α β : Type*} [Group G] [Group H]
++
++/-- This is a statement about the following commutative diagram:
++suppose that `G` and `H` are isomorphic via `iso`, and `S` is a set in `G`,
++then the canonical inclusion map from `FreeGroup(iso '' S)` to `H` is given by
++first taking the inverse isomorphism between the `FreeGroup (S)` and `FreeGroup (iso '' S)`, then
++composing with the canonical inclusion map from `FreeGroup(S)` to `G` and then taking `iso`. -/
++lemma FreeGroup.lift_mulEquiv_image (iso : G ≃* H) (S : Set G
+... [truncated]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/--
+`IsNormalClosureFG N` says that the subgroup `N` is the normal closure of a finitely-generated
+subgroup.
+-/
+```
+
+--- candidate 5 (sim=0.753, past_pr=#35029, file=Mathlib/Algebra/Group/Subgroup/Basic.lean) ---
+PAST HUNK:
+```
+@@ -496,6 +496,13 @@ theorem normalClosure_le_normal {N : Subgroup G} [N.Normal] (h : s ⊆ N) : norm
+   · exact mul_mem ihx ihy
+   · exact inv_mem ihx
+ 
++/-- The normal closure of an empty set is the trivial subgroup. -/
++lemma normalClosure_empty :
++  normalClosure (∅ : Set G) = (⊥ : Subgroup G) := by
++apply le_antisymm
++· exact Subgroup.normalClosure_le_normal (N := (⊥ : Subgroup G)) (by simp)
++· exact bot_le
+```
+PAST COMMENT (from reviewer):
+Consider tagging this as a simp lemma (e.g. `@[simp]`) so `simp` can reduce `normalClosure (∅ : Set G)` to `⊥` automatically. The proof can also be simplified by unfolding `normalClosure` and using the existing simp lemma `Subgroup.closure_empty` (after simplifying `conjugatesOfSet ∅`).
+```suggestion
+@[simp] lemma normalClosure_empty :
+  normalClosure (∅ : Set G) = (⊥ : Subgroup G) := by
+  simpa [normalClosure, conjugatesOfSet_empty]
+```
+
+--- candidate 6 (sim=0.715, past_pr=#9185, file=Mathlib/GroupTheory/Subgroup/Basic.lean) ---
+PAST HUNK:
+```
+@@ -3498,6 +3508,19 @@ instance (priority := 100) Subgroup.normal_subgroupOf {H N : Subgroup G} [N.Norm
+ #align subgroup.normal_subgroup_of Subgroup.normal_subgroupOf
+ #align add_subgroup.normal_add_subgroup_of AddSubgroup.normal_addSubgroupOf
+ 
++theorem Subgroup.map_normalClosure {s : Set G} (f : G →* N) (hf : Surjective f) :
+```
+PAST COMMENT (from reviewer):
+```suggestion
+theorem Subgroup.map_normalClosure (s : Set G) (f : G →* N) (hf : Surjective f) :
+```
+and below
+
+--- candidate 7 (sim=0.712, past_pr=#12548, file=Mathlib/GroupTheory/Coxeter/Basic.lean) ---
+PAST HUNK:
+```
+@@ -121,7 +121,8 @@ def reindexGroupEquiv : (M.reindex e).Group ≃* M.Group :=
+   (QuotientGroup.congr (Subgroup.normalClosure M.relationsSet)
+     (Subgroup.normalClosure (M.reindex e).relationsSet)
+     (FreeGroup.freeGroupCongr e) (by
+-      rw [reindex_relationsSet,
++      -- Adaptation note: 2024-04-21, this did not previously require `erw`.
++      erw [reindex_relationsSet,
+         Subgroup.map_normalClosure _ _ (FreeGroup.freeGroupCongr e).surjective,
+         ← MulEquiv.coe_toMonoidHom]
+       rfl)).symm
+```
+PAST COMMENT (from reviewer):
+There's a genuine difference here between `Surjective ⇑(FreeGroup.freeGroupCongr e)` and `Surjective ⇑↑(FreeGroup.freeGroupCongr e)`, so I'm not sure this is a bug. Alternative proof:
+```suggestion
+      rw [reindex_relationsSet,
+        Subgroup.map_normalClosure _ _ (by simpa using (FreeGroup.freeGroupCongr e).surjective),
+        MonoidHom.coe_coe])).symm
+```
+
+--- candidate 8 (sim=0.710, past_pr=#23495, file=Mathlib/Algebra/Module/Presentation/Free.lean) ---
+PAST HUNK:
+```
+@@ -69,7 +69,7 @@ noncomputable def presentationFinsupp (G : Type w₀) :
+   R := PEmpty.{w₁ + 1}
+   relation := by rintro ⟨⟩
+   toSolution := Relations.solutionFinsupp _
+-  toIsPresentation := Relations.solutionFinsupp_isPresentation _
++  toIsPresentation := by exact Relations.solutionFinsupp_isPresentation _
+```
+PAST COMMENT (from reviewer):
+Assigning to parent projections is complicated, and there are some complicated dependent types here. It used to be that only some parent projections could be assigned, and now all of them can be. For uniformity, they're all handled in the same way; the expression is lifted to a `let` and that value is used to fill in fields; as a later step, fields are combined when possible. This code was previously taking advantage of how `toSolution` and `toIsPresentation` were actual fields in the underlying constructor.
+
+This is what this particular expression expands to.
+```
+def Module.presentationFinsupp.{w₀, w₁, u} : (A : Type u) → [inst : Ring A] → (G : Type w₀) → Presentation A (G →₀ A) :=
+fun A [Ring A] G ↦
+  let __Solution :=
+    { G := G, R := PEmpty.{w₁ + 1}, relation :=
+... [truncated]
+
+--- candidate 9 (sim=0.710, past_pr=#23495, file=Mathlib/Algebra/Module/Presentation/Free.lean) ---
+PAST HUNK:
+```
+@@ -69,7 +69,7 @@ noncomputable def presentationFinsupp (G : Type w₀) :
+   R := PEmpty.{w₁ + 1}
+   relation := by rintro ⟨⟩
+   toSolution := Relations.solutionFinsupp _
+-  toIsPresentation := Relations.solutionFinsupp_isPresentation _
++  toIsPresentation := by exact Relations.solutionFinsupp_isPresentation _
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  #adaptation_note /-- 2025-03-29 lean4#7717 Needed to add `by exact` -/
+  toIsPresentation := by exact Relations.solutionFinsupp_isPresentation _
+```
+Or do you understand why this happened and it's expected?
+
+--- candidate 10 (sim=0.709, past_pr=#9185, file=Mathlib/GroupTheory/Subgroup/Basic.lean) ---
+PAST HUNK:
+```
+@@ -3498,6 +3508,29 @@ instance (priority := 100) Subgroup.normal_subgroupOf {H N : Subgroup G} [N.Norm
+ #align subgroup.normal_subgroup_of Subgroup.normal_subgroupOf
+ #align add_subgroup.normal_add_subgroup_of AddSubgroup.normal_addSubgroupOf
+ 
++theorem Subgroup.map_normalClosure_equiv_eq_normalClosure_image {s : Set G} (f : G ≃* N) :
++    (normalClosure s).map f = normalClosure (f '' s) := by
+```
+PAST COMMENT (from reviewer):
+I think this would make more sense as
+```suggestion
+theorem Subgroup.map_normalClosure {s : Set G} (f : G ≃* N) :
+    (normalClosure s).map f = normalClosure (f '' s) := by
+```
+as this matches `map_closure`
+
+--- candidate 11 (sim=0.705, past_pr=#34890, file=Mathlib/Algebra/Group/Subgroup/Basic.lean) ---
+PAST HUNK:
+```
+@@ -271,7 +271,7 @@ instance normal_top : (⊤ : Subgroup G).Normal where
+   conj_mem _ a _ := a
+ 
+ /-- The trivial subgroup `{1}`is normal. -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- The trivial subgroup `{1}` is normal. -/
+```
+Thanks for correcting the typo!  Would you mind fixing this as well?
+
+--- candidate 12 (sim=0.704, past_pr=#11493, file=Mathlib/GroupTheory/PresentedGroup.lean) ---
+PAST HUNK:
+```
+@@ -47,6 +47,15 @@ def of {rels : Set (FreeGroup α)} (x : α) : PresentedGroup rels :=
+   QuotientGroup.mk (FreeGroup.of x)
+ #align presented_group.of PresentedGroup.of
+ 
++/-- The generators of a presented group generate the presented group. That is, the subgroup closure
++of the set of generators equals `⊤`. -/
++theorem closure_range_of (rels : Set (FreeGroup α)) :
+```
+PAST COMMENT (from reviewer):
+```suggestion
+@[simp]
+theorem closure_range_of (rels : Set (FreeGroup α)) :
+```
+
+--- candidate 13 (sim=0.697, past_pr=#11177, file=Mathlib/ModelTheory/FinitelyGenerated.lean) ---
+PAST HUNK:
+```
+@@ -61,6 +61,8 @@ theorem fg_iff_exists_fin_generating_family {N : L.Substructure M} :
+ theorem fg_bot : (⊥ : L.Substructure M).FG :=
+   ⟨∅, by rw [Finset.coe_empty, closure_empty]⟩
+ 
++instance instInhabited_finiteEquiv : Inhabited { S : L.Substructure M // S.FG } := ⟨⊥, fg_bot⟩
+```
+PAST COMMENT (from reviewer):
+There's no `Equiv` anywhere?
+```suggestion
+instance instInhabited_fg : Inhabited { S : L.Substructure M // S.FG } := ⟨⊥, fg_bot⟩
+```
+
+--- candidate 14 (sim=0.697, past_pr=#30056, file=Mathlib/GroupTheory/Finiteness.lean) ---
+PAST HUNK:
+```
+@@ -166,6 +167,18 @@ theorem Monoid.fg_iff :
+     Monoid.FG M ↔ ∃ S : Set M, Submonoid.closure S = (⊤ : Submonoid M) ∧ S.Finite :=
+   ⟨fun _ => (Submonoid.fg_iff ⊤).1 FG.fg_top, fun h => ⟨(Submonoid.fg_iff ⊤).2 h⟩⟩
+ 
++/-- A monoid is finitely generated iff there exists a surjective homomorphism from a `FreeMonoid`
++on finite generators. -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+on finitely many generators. -/
+```
+I think that this is clearer.  If you accept this, then a similar change should be applied to the additive version.
+
+--- candidate 15 (sim=0.693, past_pr=#34621, file=Mathlib/GroupTheory/FreeGroup/Basic.lean) ---
+PAST HUNK:
+```
+@@ -886,6 +888,25 @@ def freeGroupEmptyEquivUnit : FreeGroup Empty ≃ Unit where
+   invFun _ := 1
+   left_inv := by rintro ⟨_ | ⟨⟨⟨⟩, _⟩, _⟩⟩; rfl
+ 
++/-- We define the free group on no generators as isomorphic to the trivial `Unit` group. -/
+```
+PAST COMMENT (from reviewer):
+I think you should just upgrade the def above rather than creating a new one.
+
+--- candidate 16 (sim=0.689, past_pr=#34621, file=Mathlib/GroupTheory/FreeGroup/Basic.lean) ---
+PAST HUNK:
+```
+@@ -886,6 +888,22 @@ def freeGroupEmptyEquivUnit : FreeGroup Empty ≃ Unit where
+   invFun _ := 1
+   left_inv := by rintro ⟨_ | ⟨⟨⟨⟩, _⟩, _⟩⟩; rfl
+ 
++/-- We define the free group on no generators as isomorphic to the trivial `Unit` group. -/
++@[to_additive]
+```
+PAST COMMENT (from reviewer):
+you're getting a failure here because the additivised version doesn't have a docstring! you can fix it by mimicking https://github.com/leanprover-community/mathlib4/blob/2255913443eedeb84ccfc8c2dbf6778adfb4486d/Mathlib/GroupTheory/FreeGroup/Basic.lean#L882
+
+--- candidate 17 (sim=0.683, past_pr=#18620, file=Mathlib/GroupTheory/PresentedGroup.lean) ---
+PAST HUNK:
+```
+@@ -53,6 +61,23 @@ theorem closure_range_of (rels : Set (FreeGroup α)) :
+     FreeGroup.closure_range_of, ← MonoidHom.range_eq_map]
+   exact MonoidHom.range_top_of_surjective _ (QuotientGroup.mk'_surjective _)
+ 
++@[induction_eliminator]
++theorem induction_on {rels : Set (FreeGroup α)}  {C : PresentedGroup rels → Prop}
+```
+PAST COMMENT (from reviewer):
+```suggestion
+theorem induction_on {rels : Set (FreeGroup α)} {C : PresentedGroup rels → Prop}
+```
+
+--- candidate 18 (sim=0.683, past_pr=#21789, file=Mathlib/GroupTheory/SpecificGroups/Alternating.lean) ---
+PAST HUNK:
+```
+@@ -259,7 +258,6 @@ theorem normalClosure_finRotate_five : normalClosure ({⟨finRotate 5,
+           normalClosure _ :=
+         SetLike.mem_coe.1 (subset_normalClosure (Set.mem_singleton _))
+       exact (mul_mem (Subgroup.normalClosure_normal.conj_mem _ h
+-        -- Porting note: added `: _`
+         ⟨Fin.cycleRange 2, Fin.isThreeCycle_cycleRange_two.mem_alternatingGroup⟩) (inv_mem h) :))
+```
+PAST COMMENT (from reviewer):
+Do we still need the `:` here? If so, it seems to me like the porting note still applies.
+
+--- candidate 19 (sim=0.683, past_pr=#9403, file=Mathlib/GroupTheory/PresentedGroup.lean) ---
+PAST HUNK:
+```
+@@ -94,6 +94,14 @@ theorem ext {φ ψ : PresentedGroup rels →* G} (hx : ∀ (x : α), φ (.of x)
+   ext
+   apply hx
+ 
++/-- Presented groups of isomorphic types are isomorphic. -/
++def equivPresentedGroup {β : Type*} (e : α ≃ β) :
++    PresentedGroup rels ≃* PresentedGroup ((FreeGroup.freeGroupCongr e) '' rels) :=
++  QuotientGroup.congr (Subgroup.normalClosure rels)
++    (Subgroup.normalClosure ((FreeGroup.freeGroupCongr e)'' rels)) (FreeGroup.freeGroupCongr e)
++    (Subgroup.map_normalClosure rels (FreeGroup.freeGroupCongr e).toMonoidHom
++      (FreeGroup.freeGroupCongr e).surjective)
+```
+PAST COMMENT (from reviewer):
+I think you want `rels` to be an explicit argument to `equivPresentedGroup`, right? That way you can write `equivPresentedGroup rels e` and specify `rels`.
+
+Definitions should generally come with some minimal API that characterizes them. The main one I can think of is `equivPresentedGroup_apply_of` (if I got the name right). That would be something like `equivPresentedGroup rels e (PresentedGroup.of x) = PresentedGroup.of (e x)`. You could also throw in `equivPresentedGroup_symm_apply_of` for `(equivPresentedGroup rels e).symm (PresentedGroup.of x) = PresentedGroup.of (e.symm x)`, and you probably can deduce it from the previous one.
+
+--- candidate 20 (sim=0.682, past_pr=#20042, file=Mathlib/GroupTheory/Index.lean) ---
+PAST HUNK:
+```
+@@ -373,6 +373,15 @@ theorem relindex_eq_one : H.relindex K = 1 ↔ K ≤ H :=
+ theorem card_eq_one : Nat.card H = 1 ↔ H = ⊥ :=
+   H.relindex_bot_left ▸ relindex_eq_one.trans le_bot_iff
+ 
++@[to_additive]
++lemma inf_eq_bot_of_coprime {G : Type*} [Group G] {H K : Subgroup G}
+```
+PAST COMMENT (from reviewer):
+These variables probably already exist, I think.
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "summary": "You can golf the proof using the `[simp]` lemma `normalClosure_empty`; also consider small docstring/naming improvements.",
+  "confidence": "high",
+  "strong_matches": [
+    {
+      "past_pr": 35029,
+      "past_file": "Mathlib/Algebra/Group/Subgroup/Basic.lean",
+      "past_comment_excerpt": "Consider tagging this as a simp lemma ... The proof can also be simplified ...\n```suggestion\n@[simp] lemma normalClosure_empty :\n  normalClosure (∅ : Set G) = (⊥ : Subgroup G) := by\n  simpa [normalClosure, conjugatesOfSet_empty]\n```",
+      "applies_because": "Your proof finishes by citing `Subgroup.normalClosure_empty`. With it marked as `[simp]`, both finiteness of `∅` and `normalClosure ∅ = ⊥` can be discharged by `simp`.",
+      "suggested_adaptation": "Golf to: `theorem isNormalClosureFG_bot ... := by use ∅; simp` (or `refine ⟨∅, ?_, ?_⟩; simp`).",
+      "supporting_past_prs": [
+        35029
+      ]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "Prefer a conventional lemma name like `isNormalClosureFG_bot` (cf. `fg_bot`).",
+      "supporting_past_prs": [
+        11177
+      ]
+    },
+    {
+      "observation": "Docstring likely should say “trivial subgroup” rather than “trivial group,” since the statement is about a `Subgroup`.",
+      "supporting_past_prs": [
+        34890
+      ]
+    },
+    {
+      "observation": "If you want phrasing tweaks, consider “finitely many relations” instead of “a finite set of relations.”",
+      "supporting_past_prs": [
+        30056
+      ]
+    },
+    {
+      "observation": "Past feedback queried the phrase “normal closure of a finite set”; if relevant, you might clarify it (e.g., as the normal closure of a finitely generated subgroup).",
+      "supporting_past_prs": [
+        36996
+      ]
+    }
+  ]
+}

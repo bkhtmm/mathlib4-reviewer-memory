@@ -1,0 +1,601 @@
+====================================================================================================
+CASE K  PR #33664  (open-pr, v3.1 prompt)
+file: Mathlib/Geometry/Convex/Cone/Pointed/Face/Basic.lean  line: 44.0
+reviewer: @eric-wieser  on 2026-01-06T13:06:18Z
+advice_kind: docstring suggestion
+prompt_tokens: 7683  completion_tokens: 3505
+HUMAN reviewer (ground truth):
+  > ```suggestion
+  > for all `x, y` in `C` and positive scalars `a`, then `x` is also in `F`. -/
+  > ```
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Two failure modes are equally bad and you must avoid BOTH:
+  (X) "axis-miss" false positive: a past comment and the new code look similar on the surface, but the past reviewer's concern is not present in the new hunk. (Example: past comment is about `ppSpace` formatting, new hunk's actual problem is "this whole function shouldn't return a string".)
+  (Y) "over-refusal" false negative: a candidate IS genuinely applicable, but you refuse because its concern axis didn't appear in your initial inventory. (Example: you forgot to list `refactor-simplify` for a proof hunk, then declined a candidate that correctly suggests using a higher-level lemma.)
+
+A correct silent output is more valuable than a confident wrong-axis answer, but losing a clearly-applicable candidate is also a real cost.
+
+Read carefully before producing JSON. Follow the four steps below in order.
+
+STEP 1 — STRUCTURAL + SEMANTIC READING OF THE NEW HUNK.
+  1a. Parse the code shape: tactic-mode vs term-mode, declaration kind (`def` / `theorem` / `lemma` / `instance` / `class` / `structure` / `abbrev` / `syntax` / `notation`), attributes (`@[simp]`, `@[to_additive]`, `@[deprecated]`, `@[ext]`, `@[fun_prop]`, `@[reassoc]`, …), universe parameters, implicit/explicit binders, docstring style, proof tactics used.
+  1b. Inventory what *could* be criticized about THIS specific hunk. Pick as many as apply from this list of "concern axes":
+     - correctness-bug        (code doesn't typecheck / is logically wrong)
+     - naming                  (lemma/def name doesn't follow conventions)
+     - docstring               (missing, unclear, typo, wrong phrasing)
+     - attribute               (missing/wrong `@[simp]` / `@[to_additive]` …)
+     - style-syntax            (`fun x ↦` vs `fun x =>`, `by use _; exact _` vs `⟨_, _⟩`, whitespace/`ppSpace`, notation preference)
+     - proof-golf              (the proof tactics could be shorter/nicer)
+     - refactor-simplify       (same statement provable with less machinery, e.g. use a dedicated higher-level lemma instead of manual rewriting)
+     - generalize-signature    (hypotheses too strong; remove/weaken a typeclass)
+     - design-smell-architectural (this API shape is wrong; returning a string, unnecessary instance, redundant definition, etc.)
+     - imports-module          (superfluous imports, module structure)
+     - namespace-organization  (`_root_`, namespace boundary, file placement)
+     - automation-tactic       (should use / should teach `aesop_cat`, `gcongr`, `positivity`, etc.)
+     - instance-diamond        (this instance creates an ambiguity / defeq diamond with another)
+     - unify-with-existing     (a similar definition/lemma already exists)
+     - junk-value              (docstring should note behavior at the "undefined" input; handled via `0`/`⊥`/`⊤`)
+  1c. DEFAULT-INCLUDE RULE. For ANY non-trivial proof or definition hunk (i.e. not a pure-imports/notation/file-header hunk), you MUST include the following axes in your plausible list unless the hunk is so trivial that they cannot apply: `refactor-simplify`, `proof-golf`, `docstring`, `naming`. These are the most common reviewer concerns; gating them out by omission caused real misses in past evaluation. Adding them is cheap; they only trigger a promotion if a candidate also matches.
+  1d. List the concerns that PLAUSIBLY apply to the new hunk (including the defaults from 1c). If none from outside 1c are obviously present, that is fine — the defaults still cover proof/definition hunks.
+
+STEP 2 — PER-CANDIDATE CONCERN CLASSIFICATION.
+  For EACH candidate, identify which concern axis (from the same list) the past reviewer's comment was about. Read the past comment carefully: the reviewer's *words* (not the past code) tell you the concern axis. If a past comment ships a `suggestion` code block, that block is evidence for what the reviewer wanted changed — but the axis of concern comes from the prose around it. Ignore candidates whose past comment is pure bikeshed or where you cannot identify a clear concern.
+
+STEP 3 — AXIS MATCH + APPLICABILITY CHECK.
+  A candidate is eligible for `strong_matches` ONLY if BOTH:
+    (a) Its axis (from step 2) is among the new hunk's plausible concerns (from step 1d), OR you can clearly justify (in `applies_because`) why this axis IS present in the new hunk after all — in which case ADD that axis to `new_hunk_plausible_concerns` in your output. Late additions are allowed but should be the exception, not the rule.
+    (b) You can write a concrete adaptation that a Lean/mathlib reviewer would plausibly post on the new hunk *today*, given what is visible in the hunk.
+  Before promoting, write — in the JSON output, per match — a `why_might_not_apply` field giving the strongest counter-argument against promotion (one short sentence).
+
+  DEMOTION RULE (this is the #1 axis-miss-prevention lever):
+    If your counter-argument names a SPECIFIC PROPERTY of the new hunk that would make the past advice not apply or already-followed — e.g. "the new code already uses term-mode", "the lemma is already named correctly", "the import is actually used at line X", "the new code does not declare an instance, so the diamond risk does not apply" — then DEMOTE to `weak_observations` instead of promoting.
+    Only PROMOTE if the counter-argument is generic doubt that does NOT identify a specific reason the new hunk evades the past advice — e.g. "this is partly stylistic preference", "the user may have intended this", "I cannot verify without seeing more context". Generic doubt does not block promotion; specific evasion does.
+
+  Cross-candidate synthesis is allowed: if candidate X establishes that an identifier in the new hunk is a `class`, and candidate Y shows the preferred term-mode `instance := ⟨...⟩` template, they jointly support a promotion. List both in `supporting_past_prs` and still produce one `why_might_not_apply`.
+
+STEP 4 — CONFIDENCE AND OUTPUT.
+  Confidence scale:
+    - "high"   — ≥1 strong match survives step 3 AND the adaptation is a near-verbatim application of a past comment; the counter-argument is generic.
+    - "medium" — ≥1 strong match survives step 3 BUT needs adaptation or synthesis; counter-argument is generic doubt rather than specific evasion.
+    - "low"    — no candidate survives step 3; only stylistic patterns worth mentioning as `weak_observations`.
+    - "none"   — retrieved pool's concerns don't match anything plausible about the new hunk; state this and stop.
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "new_hunk_plausible_concerns": [<axis labels from Step 1d, plus any added in Step 3a>],
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_concern_axis": "<axis label from the list>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure AND explaining why the concern axis matches>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "why_might_not_apply": "<one short sentence — strongest counter-argument against this promotion>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "axis": "<axis label>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Do not invent axis labels outside the list.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #33664 (file: Mathlib/Geometry/Convex/Cone/Pointed/Face/Basic.lean):
+```
+@@ -0,0 +1,276 @@
+... [4 lines above hidden]
++Authors: Olivia Röhrig
++-/
++module
++
++public import Mathlib.Analysis.Convex.Extreme
++public import Mathlib.Geometry.Convex.Cone.Pointed.Basic
++
++/-!
++# Faces of pointed cones
++
++This file defines what it means for a pointed cone to be a face of another pointed cone and
++establishes basic properties of this relation.
++A subcone `F` of a cone `C` is a face if any two points in `C` that have a positive combination
++in `F` are also in `F`.
++
++## Main declarations
++
++* `IsFaceOf F C`: States that the pointed cone `F` is a face of the pointed cone `C`.
++
++## Implementation notes
++
++* We prove that every face is an extreme set of its cone. We do not use `IsExtreme` as a
++  definition because this is an affine notion and does not allow the flexibility necessary to
++  deal wth cones over general rings. E.g. the cone of positive integers has no proper subset that
++  are extreme.
++* Most results proven over a field hold more generally over an Archimedean ring. In particular,
++  `iff_mem_of_add_mem` holds whenever for every `x ∈ R` there is a `y ∈ R` with `1 ≤ x * y`.
++
++-/
++
++open Submodule
++
++@[expose] public section
++
++namespace PointedCone
++
++variable {R M N : Type*}
++
++variable [Semiring R] [PartialOrder R] [IsOrderedRing R] [AddCommGroup M] [Module R M] in
++/-- A pointed cone `F` is a face of another pointed cone `C` if `F ≤ C` and if `a • x + y` is in `F`
++for all `x, y` in `C` and positive scalars `a`, then `x` ist also in `F`. -/
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.773, past_pr=#6437, file=Mathlib/Analysis/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,265 @@
+... [2 lines above hidden]
++Copyright (c) 2022 Apurva Nakade All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Apurva Nakade
++-/
++import Mathlib.Analysis.Convex.Cone.Dual
++import Mathlib.Algebra.Order.Nonneg.Ring
++import Mathlib.Algebra.Module.Submodule.Basic
++
++
++/-!
++# Pointed cones
++
++We define pointed cone as a convex cone which contains `0`. This is a bundled version of
+```
+PAST COMMENT (from reviewer):
+```suggestion
+A *pointed cone* is defined to be a convex cone which contains `0`. This is a bundled version of
+```
+
+--- candidate 2 (sim=0.771, past_pr=#6437, file=Mathlib/Analysis/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,260 @@
+... [2 lines above hidden]
++Copyright (c) 2022 Apurva Nakade All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Apurva Nakade
++-/
++import Mathlib.Analysis.Convex.Cone.Dual
++import Mathlib.Algebra.Order.Nonneg.Ring
++import Mathlib.Algebra.Module.Submodule.Basic
++
++
++/-!
++# Pointed cones
++
++We define a pointed cones as convex cones which contain `0`. This is a bundled version of
+```
+PAST COMMENT (from reviewer):
+That still doesn't read right 🤔
+
+--- candidate 3 (sim=0.765, past_pr=#28140, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -34,7 +34,7 @@ open Function
+ section Definitions
+ 
+ variable [Semiring R] [PartialOrder R] [IsOrderedRing R] [AddCommMonoid E] [Module R E]
+-  {C C₁ C₂ : PointedCone R E} {x : E} {r : R}
++  {C C₁ C₂ : PointedCone R E} {S : Set E} {x : E} {r : R}
+```
+PAST COMMENT (from reviewer):
+I think the variable name `S` is quite confusing here because you have `R` as well, which has a very different meaning! What do you think about `s` (as used in Cone/Dual)?
+
+--- candidate 4 (sim=0.741, past_pr=#33780, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -287,6 +290,44 @@ lemma to_isOrderedModule (C : PointedCone R E) (h : ∀ x y : E, x ≤ y ↔ y -
+ 
+ end OrderedAddCommGroup
+ 
++section Lineal
++
++open Pointwise
++
++variable [Ring R] [LinearOrder R] [IsOrderedRing R] [AddCommGroup E] [Module R E]
++
++/-- The lineality space of a cone `C` is the submodule given by `C ⊓ -C`. -/
++def lineal (C : PointedCone R E) : Submodule R E where
++  __ := C.toAddSubmonoid.support
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  __ := C.support
+```
+
+--- candidate 5 (sim=0.741, past_pr=#33780, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -287,6 +290,45 @@ lemma to_isOrderedModule (C : PointedCone R E) (h : ∀ x y : E, x ≤ y ↔ y -
+... [7 lines above hidden]
++
++variable [Ring R] [LinearOrder R] [IsOrderedRing R] [AddCommGroup E] [Module R E]
++
++/-- The lineality space of a cone `C` is the submodule given by `C ⊓ -C`. -/
++@[simps!]
++def lineal (C : PointedCone R E) : Submodule R E where
++  __ := C.support
++  smul_mem' r _ hx := by
++    by_cases hr : 0 ≤ r
++    · simpa using And.intro (C.smul_mem hr hx.1) (C.smul_mem hr hx.2)
++    · have hr := le_of_lt <| neg_pos_of_neg <| lt_of_not_ge hr
++      simpa using And.intro (C.smul_mem hr hx.2) (C.smul_mem hr hx.1)
++@[simp]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+
+@[simp]
+```
+
+--- candidate 6 (sim=0.741, past_pr=#27578, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -105,6 +112,16 @@ abbrev span (s : Set E) : PointedCone R E := Submodule.span R≥0 s
+ 
+ lemma subset_span {s : Set E} : s ⊆ PointedCone.span R s := Submodule.subset_span
+ 
++/-- Elements of PointedCone.span R s are expressible as conical combination of elements from s. -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- Elements of the cone hull are expressible as conical combination of elements from s. -/
+```
+
+
+--- candidate 7 (sim=0.734, past_pr=#25204, file=Mathlib/Analysis/Convex/Cone/Proper.lean) ---
+PAST HUNK:
+```
+@@ -30,77 +32,107 @@ The next steps are:
+... [42 lines above hidden]
+ 
+-instance : Coe (ProperCone 𝕜 E) (PointedCone 𝕜 E) :=
+-  ⟨toPointedCone⟩
++-- TODO: add `ConvexConeClass` that extends `SetLike` and replace the below instance
++instance : SetLike (ProperCone R E) E where
++  coe C := C.carrier
++  coe_injective' _ _ h := ProperCone.toPointedCone_injective <| SetLike.coe_injective h
+ 
+-theorem toPointedCone_injective : Function.Injective ((↑) : ProperCone 𝕜 E → PointedCone 𝕜 E) :=
+-  fun S T h => by cases S; cases T; congr
++@[ext] lemma ext (h : ∀ x, x ∈ C₁ ↔ x ∈ C₂) : C₁ = C₂ := SetLike.ext h
+ 
+--- TODO: add `ConvexConeClass` that extends `SetLike` and replace the below instance
+-instance : SetLike (ProperCone 𝕜 E) E where
+-  coe K := K.carrier
+-  coe_injective' _ _ h := ProperCone.toPointedCone_injective (SetLike.coe_injective h)
++@[simp] lemma mem_toPointedCone : x ∈ C.toPointedCone ↔ x ∈ C := .rfl
+```
+PAST COMMENT (from reviewer):
+`mem_coe` makes more sense as the name for this, since in the infoview it'll get printed as a coercion (this is also consistent with the old way)
+
+--- candidate 8 (sim=0.734, past_pr=#25204, file=Mathlib/Analysis/Convex/Cone/Proper.lean) ---
+PAST HUNK:
+```
+@@ -30,77 +32,107 @@ The next steps are:
+... [42 lines above hidden]
+ 
+-instance : Coe (ProperCone 𝕜 E) (PointedCone 𝕜 E) :=
+-  ⟨toPointedCone⟩
++-- TODO: add `ConvexConeClass` that extends `SetLike` and replace the below instance
++instance : SetLike (ProperCone R E) E where
++  coe C := C.carrier
++  coe_injective' _ _ h := ProperCone.toPointedCone_injective <| SetLike.coe_injective h
+ 
+-theorem toPointedCone_injective : Function.Injective ((↑) : ProperCone 𝕜 E → PointedCone 𝕜 E) :=
+-  fun S T h => by cases S; cases T; congr
++@[ext] lemma ext (h : ∀ x, x ∈ C₁ ↔ x ∈ C₂) : C₁ = C₂ := SetLike.ext h
+ 
+--- TODO: add `ConvexConeClass` that extends `SetLike` and replace the below instance
+-instance : SetLike (ProperCone 𝕜 E) E where
+-  coe K := K.carrier
+-  coe_injective' _ _ h := ProperCone.toPointedCone_injective (SetLike.coe_injective h)
++@[simp] lemma mem_toPointedCone : x ∈ C.toPointedCone ↔ x ∈ C := .rfl
+```
+PAST COMMENT (from reviewer):
+that's a good enough reason. don't forget to deprecate though
+
+--- candidate 9 (sim=0.733, past_pr=#29950, file=Mathlib/Analysis/Convex/Extreme.lean) ---
+PAST HUNK:
+```
+@@ -49,32 +49,37 @@ variable (𝕜) [Semiring 𝕜] [PartialOrder 𝕜] [AddCommMonoid E] [SMul 𝕜
+ 
+ /-- A set `B` is an extreme subset of `A` if `B ⊆ A` and all points of `B` only belong to open
+ segments whose ends are in `B`. -/
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- A set `B` is an extreme subset of `A` if `B ⊆ A` and all points of `B` only belong to open
+segments whose ends are in `B`.
+
+Our definition only requires that the left endpoint of the segment lies in `B`,
+but by symmetry of open segments, the right endpoint must also lie in `B`.
+See `IsExtreme.right_mem_of_mem_openSegment`. -/
+```
+
+--- candidate 10 (sim=0.728, past_pr=#31648, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -221,4 +222,22 @@ lemma to_isOrderedModule (C : PointedCone R E) (h : ∀ x y : E, x ≤ y ↔ y -
+     IsOrderedModule R E := .of_smul_nonneg <| by simp +contextual [h, C.smul_mem]
+ 
+ end OrderedAddCommGroup
++
++section Salient
++variable [Semiring R] [PartialOrder R] [IsOrderedRing R] [AddCommGroup E] [Module R E]
++open Pointwise
++
++/-- A pointed cone is salient iff an element `x` being a member of both the cone and its negative
++is equivalent to `x = 0`. -/
++lemma salient_iff_mem_neg_eq_zero (C : PointedCone R E) :
++    (C : ConvexCone R E).Salient ↔ ∀ x, (x ∈ C ∧ x ∈ -C) ↔ x = 0 := by
+```
+PAST COMMENT (from reviewer):
+Okay, sure, remove the version I suggested.
+
+--- candidate 11 (sim=0.728, past_pr=#31648, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -221,4 +222,22 @@ lemma to_isOrderedModule (C : PointedCone R E) (h : ∀ x y : E, x ≤ y ↔ y -
+     IsOrderedModule R E := .of_smul_nonneg <| by simp +contextual [h, C.smul_mem]
+ 
+ end OrderedAddCommGroup
++
++section Salient
++variable [Semiring R] [PartialOrder R] [IsOrderedRing R] [AddCommGroup E] [Module R E]
++open Pointwise
++
++/-- A pointed cone is salient iff an element `x` being a member of both the cone and its negative
++is equivalent to `x = 0`. -/
++lemma salient_iff_mem_neg_eq_zero (C : PointedCone R E) :
++    (C : ConvexCone R E).Salient ↔ ∀ x, (x ∈ C ∧ x ∈ -C) ↔ x = 0 := by
+```
+PAST COMMENT (from reviewer):
+Probably this is more useful in practice, no? As otherwise you end up constantly needing to prove the trivial fact that `0 ∈ C ∧ 0 ∈ -C`.
+```suggestion
+    (C : ConvexCone R E).Salient ↔ ∀ x, (x ∈ C ∧ x ∈ -C) → x = 0 := by
+```
+Do you also want to have an `alias` for the reverse direction?
+
+--- candidate 12 (sim=0.725, past_pr=#29241, file=Mathlib/Analysis/Convex/Cone/Basic.lean) ---
+PAST HUNK:
+```
+@@ -80,8 +80,6 @@ instance : SetLike (ProperCone R E) E where
+ 
+ @[ext] lemma ext (h : ∀ x, x ∈ C₁ ↔ x ∈ C₂) : C₁ = C₂ := SetLike.ext h
+ 
+-@[simp] lemma mem_toPointedCone : x ∈ C.toPointedCone ↔ x ∈ C := .rfl
+```
+PAST COMMENT (from reviewer):
+I'd keep the lemma (because it's more easily discoverable than something on closed submodules) but remove the simp attribute.
+
+--- candidate 13 (sim=0.725, past_pr=#29241, file=Mathlib/Analysis/Convex/Cone/Basic.lean) ---
+PAST HUNK:
+```
+@@ -80,8 +80,6 @@ instance : SetLike (ProperCone R E) E where
+ 
+ @[ext] lemma ext (h : ∀ x, x ∈ C₁ ↔ x ∈ C₂) : C₁ = C₂ := SetLike.ext h
+ 
+-@[simp] lemma mem_toPointedCone : x ∈ C.toPointedCone ↔ x ∈ C := .rfl
+```
+PAST COMMENT (from reviewer):
+I'm not sure it is the role of this PR to do this change and the next one. Remove the changes?
+
+--- candidate 14 (sim=0.719, past_pr=#27578, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -105,6 +112,15 @@ abbrev span (s : Set E) : PointedCone R E := Submodule.span R≥0 s
+ 
+ lemma subset_span {s : Set E} : s ⊆ PointedCone.span R s := Submodule.subset_span
+ 
++/-- Elements of PointedCone.span R s are expressible as conical combination of elements from s. -/
++lemma mem_span_set {s : Set E} : x ∈ span R s ↔
++      ∃ c : E →₀ R, ↑c.support ⊆ s ∧ (∀ y, 0 ≤ c y) ∧ c.sum (fun m r => r • m) = x := by
++  rw [Submodule.mem_span_set]
++  constructor
++  · rintro ⟨c, hc, rfl⟩
++    exact ⟨⟨c.support, Subtype.val ∘ c, by simp [← Subtype.val_inj]⟩, hc, fun y ↦ (c y).2, rfl⟩
++  · rintro ⟨c, hc, hc₀, rfl⟩
++    exact ⟨⟨c.support, fun y ↦ ⟨c y, hc₀ _⟩, by simp⟩, hc, rfl⟩
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    exact ⟨⟨c.support, fun y ↦ ⟨c y, hc₀ _⟩, by simp⟩, hc, rfl⟩
+
+```
+
+--- candidate 15 (sim=0.718, past_pr=#20595, file=Mathlib/Analysis/Convex/Cone/Basic.lean) ---
+PAST HUNK:
+```
+@@ -48,11 +48,12 @@ variable {𝕜 E F G : Type*}
+ section Definitions
+ 
+ variable (𝕜 E)
+-variable [OrderedSemiring 𝕜]
++variable [Semiring 𝕜] [PartialOrder 𝕜]
+ 
+ /-- A convex cone is a subset `s` of a `𝕜`-module such that `a • x + b • y ∈ s` whenever `a, b > 0`
+ and `x, y ∈ s`. -/
+-structure ConvexCone [AddCommMonoid E] [SMul 𝕜 E] where
++@[nolint unusedArguments]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+I don't think this is needed?
+
+--- candidate 16 (sim=0.715, past_pr=#35308, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -35,10 +35,55 @@ namespace PointedCone
+... [4 lines above hidden]
+-section Definitions
++section Submodule
+ 
+ variable [Semiring R] [PartialOrder R] [IsOrderedRing R] [AddCommMonoid E] [Module R E]
+-  {C C₁ C₂ : PointedCone R E} {x : E} {r : R}
++variable {C : PointedCone R E}
++
++/-- A submodule is a pointed cone. -/
++@[coe] abbrev ofSubmodule (S : Submodule R E) : PointedCone R E := S.restrictScalars _
++
++instance : Coe (Submodule R E) (PointedCone R E) := ⟨ofSubmodule⟩
++
++@[simp] lemma ofSubmodule_coe (S : Submodule R E) : (ofSubmodule S : Set E) = S := by rfl
+```
+PAST COMMENT (from reviewer):
+```suggestion
+@[simp] lemma coe_ofSubmodule (S : Submodule R E) : (ofSubmodule S : Set E) = S := rfl
+```
+
+--- candidate 17 (sim=0.712, past_pr=#36953, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -170,18 +170,18 @@ def ofConeComb (C : Set E) (nonempty : C.Nonempty)
+... [3 lines above hidden]
+ variable (R) in
+-/-- The span of a set `s` is the smallest pointed cone that contains `s`.
++/-- The cone hull of a set `s` is the smallest pointed cone that contains `s`.
+ 
+-Pointed cones being defined as submodules over nonnegative scalars, this is exactly the
+-submodule span of `s` w.r.t. nonnegative scalars. -/
+-abbrev span (s : Set E) : PointedCone R E := Submodule.span R≥0 s
++Pointed cones being defined as submodules over nonnegative scalars, this is implemented as
++the submodule span of `s` w.r.t. nonnegative scalars. -/
++abbrev hull (s : Set E) : PointedCone R E := span R≥0 s
+ 
+-lemma subset_span {s : Set E} : s ⊆ PointedCone.span R s := Submodule.subset_span
++lemma subset_hull {s : Set E} : s ⊆ PointedCone.hull R s := subset_span
+```
+PAST COMMENT (from reviewer):
+It's OK to not deprecated `span`.
+
+--- candidate 18 (sim=0.712, past_pr=#36953, file=Mathlib/Geometry/Convex/Cone/Pointed.lean) ---
+PAST HUNK:
+```
+@@ -170,18 +170,18 @@ def ofConeComb (C : Set E) (nonempty : C.Nonempty)
+... [3 lines above hidden]
+ variable (R) in
+-/-- The span of a set `s` is the smallest pointed cone that contains `s`.
++/-- The cone hull of a set `s` is the smallest pointed cone that contains `s`.
+ 
+-Pointed cones being defined as submodules over nonnegative scalars, this is exactly the
+-submodule span of `s` w.r.t. nonnegative scalars. -/
+-abbrev span (s : Set E) : PointedCone R E := Submodule.span R≥0 s
++Pointed cones being defined as submodules over nonnegative scalars, this is implemented as
++the submodule span of `s` w.r.t. nonnegative scalars. -/
++abbrev hull (s : Set E) : PointedCone R E := span R≥0 s
+ 
+-lemma subset_span {s : Set E} : s ⊆ PointedCone.span R s := Submodule.subset_span
++lemma subset_hull {s : Set E} : s ⊆ PointedCone.hull R s := subset_span
+```
+PAST COMMENT (from reviewer):
+Same here. We want deprecations for all declarations that changed the name
+
+--- candidate 19 (sim=0.710, past_pr=#32355, file=Mathlib/Geometry/Convex/Cone/Simplicial.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,117 @@
+... [41 lines above hidden]
++## References
++
++* [de Bruyn *Tensor products of convex cones*][https://arxiv.org/abs/2009.11843v2]
++
++-/
++
++@[expose] public section
++
++variable {R M : Type*}
++variable [Semiring R] [PartialOrder R] [IsOrderedRing R]
++variable [AddCommMonoid M] [Module R M]
++
++local notation3 "R≥0" => {c : R // 0 ≤ c}
+```
+PAST COMMENT (from reviewer):
+hmm yeah not sure what to do either but the current approach doesn't scale
+I suppose we can leave it for a future PR
+
+--- candidate 20 (sim=0.710, past_pr=#32355, file=Mathlib/Geometry/Convex/Cone/Simplicial.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,117 @@
+... [41 lines above hidden]
++## References
++
++* [de Bruyn *Tensor products of convex cones*][https://arxiv.org/abs/2009.11843v2]
++
++-/
++
++@[expose] public section
++
++variable {R M : Type*}
++variable [Semiring R] [PartialOrder R] [IsOrderedRing R]
++variable [AddCommMonoid M] [Module R M]
++
++local notation3 "R≥0" => {c : R // 0 ≤ c}
+```
+PAST COMMENT (from reviewer):
+This notation line appears already in several files - could you consider refactoring it into scoped notation in the `PointedCone` namespace?
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "new_hunk_plausible_concerns": [
+    "docstring",
+    "naming",
+    "proof-golf",
+    "refactor-simplify",
+    "style-syntax"
+  ],
+  "summary": "Docstring wording/grammar improvements apply; prior feedback about clearer English phrasing for cone documentation fits this new file’s docstrings/comments.",
+  "confidence": "medium",
+  "strong_matches": [
+    {
+      "past_pr": 6437,
+      "past_file": "Mathlib/Analysis/Convex/Cone/Pointed.lean",
+      "past_concern_axis": "docstring",
+      "past_comment_excerpt": "A *pointed cone* is defined to be a convex cone which contains `0`.",
+      "applies_because": "Both PRs introduce core notions about cones and include English explanations; the new hunk’s docstrings have awkward phrasing/typos and would benefit from the same kind of careful rewording for clarity.",
+      "suggested_adaptation": "Tighten the docstrings: fix typos (“with”, “is”), and rephrase the face description to “whenever a > 0, x,y ∈ C and a • x + y ∈ F, then x ∈ F (and hence y ∈ F)” or similar.",
+      "why_might_not_apply": "The current wording may be considered acceptable, and the content differs (faces vs pointed cones), so the exact sentence from the past comment cannot be copied verbatim.",
+      "supporting_past_prs": [
+        29950
+      ]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "Fix typos in docstrings/comments: “wth” → “with”, “ist” → “is”, and consider clarifying “positive combination” with explicit quantifiers.",
+      "axis": "docstring",
+      "supporting_past_prs": [
+        6437
+      ]
+    }
+  ]
+}

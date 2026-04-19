@@ -1,0 +1,540 @@
+====================================================================================================
+CASE S  PR #22919  (open-pr, v2 prompt, sweep2)
+file: Mathlib/Data/Fintype/Pi.lean  line: 235.0
+reviewer: @eric-wieser  on 2025-04-26T20:15:50Z
+advice_kind: refactor (unnecessary transport)
+prompt_tokens: 7577  completion_tokens: 6963
+HUMAN reviewer (ground truth):
+  > I'm a little confused by what's going on with this; it looks like you're somehow transporting `β` to `Fin n` to avoid needing a decidability argument? Note that due to my refactor above, there is now no other reason to do this transport!
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Compared to a naive matcher you must do TWO extra things, because the answer is often only derivable by combining evidence:
+
+A. STRUCTURAL PATTERN EXTRACTION. Past comments often contain `suggestion` code blocks (```suggestion ... ```) or inline code-shape rewrites. These suggested code snippets ARE concrete advice, not just commentary. Treat them as first-class evidence about preferred Lean/mathlib idioms (e.g.: term-mode constructor `:= ⟨_, _, _⟩` vs `by use _; exact _`, `instance` vs `theorem` for class-membership statements, `refine ⟨..., ?_⟩` vs `use ...; constructor`, `@[simp]` / `@[to_additive]` attributes, naming conventions, docstring phrasing, etc.).
+
+B. CROSS-CANDIDATE SYNTHESIS. The applicable advice for the new hunk may require combining evidence from multiple candidates. Example: candidate X's context tells you that an identifier in the new hunk is a `class`; candidate Y shows the term-mode `instance ... := ⟨...⟩` template for proving class membership. Together they support the conclusion: "the new theorem proving class membership should be rewritten as an `instance` with a term-mode constructor". List supporting PRs for any synthesised finding.
+
+Reasoning protocol (do this internally before producing JSON):
+
+  1. STRUCTURAL FEATURES OF THE NEW HUNK. Identify each: tactic-mode vs term-mode? Uses `by use ...; exact ...`? Uses `use ...; constructor`? Declares an `instance` / a `theorem` / a `lemma` / a `def` / a `class`? Has `@[simp]`, `@[to_additive]`, `@[deprecated]`? Uses anonymous functions `fun x =>` vs `↦`? Has a docstring `/-- ... -/` of any specific shape?
+
+  2. PATTERN INVENTORY FROM CANDIDATES. For each candidate, note any concrete pattern shown in its suggested-code or comment (term-mode template, attribute recommendation, naming convention, idiomatic rewrite, terminology preference, etc.). Also note which candidates' past hunks define or use identifiers that appear in the new hunk (these are clues about whether something is a class, an instance, an alias, etc.).
+
+  3. APPLICABILITY CHECK. For each pattern from step 2, ask: does the new hunk's structure (step 1) instantiate the same shape that this pattern was applied to? If yes, that's a STRONG match. If two patterns combine to support a finding, list both supporting PRs.
+
+  4. STRICT REFUSAL. If after this analysis no candidate (alone or in combination) gives concrete, well-grounded advice for the specific code in the new hunk, output an empty `strong_matches` list. Do not paper over with generic advice. Generic style observations belong in `weak_observations`, clearly marked. Do not invent advice that isn't traceable to specific past PRs in the retrieval pool.
+
+Confidence:
+  - "high"  — at least one strong match is grounded in concrete suggested-code or explicit prose from a candidate, and the new hunk clearly fits the same shape
+  - "medium" — at least one strong match exists but requires synthesis or adaptation; OR a single candidate gives related but not identical advice
+  - "low"   — only loose stylistic patterns; nothing actionable
+  - "none"  — retrieved pool is unrelated; do not press an answer
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Be precise about which PR(s) support each finding via supporting_past_prs.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #22919 (file: Mathlib/Data/Fintype/Pi.lean):
+```
+@@ -154,10 +154,97 @@ noncomputable instance _root_.Function.Embedding.fintype {α β} [Fintype α] [F
+... [46 lines above hidden]
++-- Note: `inst` is not a typeclass argument because `match` does not generalize these correctly.
++private def finHomFintype {n m} [Fintype m] {r : Fin n → Fin n → Prop} {s : m → m → Prop}
++    (inst : DecidableRel r := by infer_instance) [DecidableRel s] : Fintype (r →r s) :=
++  -- induct on the number of vertices
++  match n with
++  | 0 =>
++    -- empty rel hom
++    ⟨{(RelEmbedding.ofIsEmpty r s).toRelHom}, by simp [RelHom.ext_iff]⟩
++  | n + 1 =>
++    letI : Fintype (castSucc ⁻¹'o r →r s) := finHomFintype
++    -- pair the valid homs previously obtained with all possible choices for the new target
++    { elems := univ.filterMap
++        (fun p : (castSucc ⁻¹'o r →r s) × m ↦
++          if h : (r (Fin.last n) (Fin.last n) → s p.snd p.snd) ∧
++              ∀ a, (r a.castSucc (Fin.last n) → s (p.fst a) p.snd) ∧
++                   (r (Fin.last n) a.castSucc → s p.snd (p.fst a)) then
++            some (p.fst.snoc p.snd h.1 h.2)
++          else
++            none)
++        fun v w _ hbv hbw => by
++          simp_rw [Option.mem_def, dite_none_right_eq_some] at hbv hbw
++          obtain ⟨_, hv⟩ := hbv
++          obtain ⟨_, hw⟩ := hbw
++          have hvw := hv.trans hw.symm
++          rwa [some_inj, RelHom.snoc_inj, ← Prod.eq_iff_fst_eq_snd_eq] at hvw,
++      complete C := by
++        -- show this map is surjective
++        rw [mem_filterMap]
++        use (C.comp (.preimage castSucc r), C (last n)), @mem_univ ..
++        rw [dif_pos ⟨C.map_rel, fun _ => ⟨C.map_rel, C.map_rel⟩⟩, some_inj]
++        ext i
++        cases i using Fin.lastCases <;> simp }
++
++instance RelHom.instFintype {α β} {r : α → α → Prop} {s : β → β → Prop}
++    [Fintype α] [Fintype β] [DecidableEq α] [DecidableRel r]
++    [∀ a b [Decidable (a = b)], Decidable (s a b)] :
++    Fintype (r →r s) :=
++  (truncFinBijection β).recOnSubsingleton fun ⟨b, hb⟩ ↦
++    (truncEquivFin α).recOnSubsingleton fun a ↦
++      haveI (x y) : Decidable (b x = b y) := decidable_of_iff (x = y) hb.injective.eq_iff.symm
++      haveI : DecidableRel (b ⁻¹'o s) := fun x y => inferInstanceAs (Decidable (s (b x) (b y)))
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.806, past_pr=#12273, file=Mathlib/Data/Fintype/Pi.lean) ---
+PAST HUNK:
+```
+@@ -157,6 +157,10 @@ noncomputable instance _root_.Function.Embedding.fintype {α β} [Fintype α] [F
+   classical exact Fintype.ofEquiv _ (Equiv.subtypeInjectiveEquivEmbedding α β)
+ #align function.embedding.fintype Function.Embedding.fintype
+ 
++noncomputable instance _root_.RelEmbedding.instFintype {α β} [Fintype α] [Fintype β]
++    {r : α → α → Prop} {s : β → β → Prop} : Fintype (r ↪r s) :=
++  Fintype.ofInjective _ RelEmbedding.toEmbedding_injective
+```
+PAST COMMENT (from reviewer):
+This is a bad instance since it causes a non-defeq diamond with the existing `SimpleGraph.Hom.instFintype`. Can you generalise `SimpleGraph.Hom.instFintype` to arbitrary `RelHom` instead?
+
+--- candidate 2 (sim=0.772, past_pr=#12273, file=Mathlib/Data/Fintype/Pi.lean) ---
+PAST HUNK:
+```
+@@ -128,6 +128,10 @@ noncomputable instance _root_.Function.Embedding.fintype {α β} [Fintype α] [F
+   by classical. exact Fintype.ofEquiv _ (Equiv.subtypeInjectiveEquivEmbedding α β)
+ #align function.embedding.fintype Function.Embedding.fintype
+ 
++noncomputable instance _root_.RelEmbedding.fintype {α β} [Fintype α] [Fintype β]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+noncomputable instance _root_.RelEmbedding.instFintype {α β} [Fintype α] [Fintype β]
+```
+
+--- candidate 3 (sim=0.725, past_pr=#21272, file=Mathlib/ModelTheory/FinitelyGenerated.lean) ---
+PAST HUNK:
+```
+@@ -248,6 +250,27 @@ theorem FG.finite [L.IsRelational] (h : FG L M) : Finite M :=
+... [7 lines above hidden]
++  let g : (M →[L] N) → (S → N) :=
++    fun f ↦ f ∘ (↑)
++  have g_inj : Function.Injective g := by
++    intro f f' h
++    apply Hom.eq_of_eqOn_dense closure_S
++    intro x x_in_S
++    exact congr_fun h ⟨x, x_in_S⟩
++  have : Finite ↑S := (S.finite_coe_iff).2 finite_S
++  exact Function.Embedding.countable ⟨g, g_inj⟩
++
++instance FG.instCountable_embedding_to_countable (N : Type*) [L.Structure N]
++    [Countable N] [h : FG L M] : Countable (M ↪[L] N) :=
++ Function.Embedding.countable ⟨Embedding.toHom, Embedding.toHom_injective⟩
+```
+PAST COMMENT (from reviewer):
+This seems to be an exact duplicate of `FG.instCountable_embedding`
+
+--- candidate 4 (sim=0.720, past_pr=#21272, file=Mathlib/ModelTheory/FinitelyGenerated.lean) ---
+PAST HUNK:
+```
+@@ -248,6 +250,27 @@ theorem FG.finite [L.IsRelational] (h : FG L M) : Finite M :=
+... [3 lines above hidden]
+ 
++instance FG.instCountable_hom_to_countable (N : Type*) [L.Structure N] [Countable N] [h : FG L M] :
++    Countable (M →[L] N) := by
++  let ⟨S, finite_S, closure_S⟩ := fg_iff.1 h
++  let g : (M →[L] N) → (S → N) :=
++    fun f ↦ f ∘ (↑)
++  have g_inj : Function.Injective g := by
++    intro f f' h
++    apply Hom.eq_of_eqOn_dense closure_S
++    intro x x_in_S
++    exact congr_fun h ⟨x, x_in_S⟩
++  have : Finite ↑S := (S.finite_coe_iff).2 finite_S
++  exact Function.Embedding.countable ⟨g, g_inj⟩
+```
+PAST COMMENT (from reviewer):
+This seems to be an exact duplicate of `FG.instCountable_hom`
+
+--- candidate 5 (sim=0.717, past_pr=#11817, file=Mathlib/Combinatorics/SimpleGraph/Maps.lean) ---
+PAST HUNK:
+```
+@@ -275,8 +273,6 @@ instance instFintype [DecidableEq V] [Fintype V] [Fintype W] [DecidableRel G.Adj
+     { toFun := fun f ↦ ⟨f.1, f.2⟩, invFun := fun f ↦ ⟨f.1, f.2⟩,
+       left_inv := fun _ ↦ rfl, right_inv := fun _ ↦ rfl }
+ 
+-instance [Finite V] [Finite W] : Finite (G →g H) := DFunLike.finite _
+```
+PAST COMMENT (from reviewer):
+Where is this gone?
+
+--- candidate 6 (sim=0.706, past_pr=#12417, file=Mathlib/Data/Fintype/Pi.lean) ---
+PAST HUNK:
+```
+@@ -125,7 +125,7 @@ theorem Fintype.piFinset_univ {α : Type*} {β : α → Type*} [DecidableEq α]
+ -- but those don't work with subsingletons in lean4 as-is so we cannot do this here.
+ noncomputable instance _root_.Function.Embedding.fintype {α β} [Fintype α] [Fintype β] :
+   Fintype (α ↪ β) :=
+-  by classical. exact Fintype.ofEquiv _ (Equiv.subtypeInjectiveEquivEmbedding α β)
++  by classical exact Fintype.ofEquiv _ (Equiv.subtypeInjectiveEquivEmbedding α β)
+```
+PAST COMMENT (from reviewer):
+That's a nice "c"dot :-)
+
+--- candidate 7 (sim=0.696, past_pr=#32267, file=Mathlib/Order/RelIso/Basic.lean) ---
+PAST HUNK:
+```
+@@ -204,15 +220,13 @@ def toRelHom (f : r ↪r s) : r →r s where
+ instance : Coe (r ↪r s) (r →r s) :=
+   ⟨toRelHom⟩
+ 
+--- TODO: define and instantiate a `RelEmbeddingClass` when `EmbeddingLike` is defined
+ instance : FunLike (r ↪r s) α β where
+   coe x := x.toFun
+   coe_injective' f g h := by
+     rcases f with ⟨⟨⟩⟩
+     rcases g with ⟨⟨⟩⟩
+     congr
+ 
+--- TODO: define and instantiate a `RelEmbeddingClass` when `EmbeddingLike` is defined
+ instance : RelHomClass (r ↪r s) r s where
+   map_rel f _ _ := Iff.mpr (map_rel_iff' f)
+```
+PAST COMMENT (from reviewer):
+> This means there's no way to go from a RelEmbeddingClass to a RelHomClass though (and this causes a build failure in Mathlib/Order/Hom/Basic.lean:577)
+
+You should add that instance (with `(priority := 100)`)
+
+--- candidate 8 (sim=0.696, past_pr=#32267, file=Mathlib/Order/RelIso/Basic.lean) ---
+PAST HUNK:
+```
+@@ -204,15 +220,13 @@ def toRelHom (f : r ↪r s) : r →r s where
+ instance : Coe (r ↪r s) (r →r s) :=
+   ⟨toRelHom⟩
+ 
+--- TODO: define and instantiate a `RelEmbeddingClass` when `EmbeddingLike` is defined
+ instance : FunLike (r ↪r s) α β where
+   coe x := x.toFun
+   coe_injective' f g h := by
+     rcases f with ⟨⟨⟩⟩
+     rcases g with ⟨⟨⟩⟩
+     congr
+ 
+--- TODO: define and instantiate a `RelEmbeddingClass` when `EmbeddingLike` is defined
+ instance : RelHomClass (r ↪r s) r s where
+   map_rel f _ _ := Iff.mpr (map_rel_iff' f)
+```
+PAST COMMENT (from reviewer):
+```suggestion
+instance : RelEmbeddingClass (r ↪r s) r s where
+  map_rel_iff f _ _ := map_rel_iff' f |>.symm
+```
+then you can get rid of your other instance lower down
+
+--- candidate 9 (sim=0.692, past_pr=#12773, file=Mathlib/Data/Finset/Sort.lean) ---
+PAST HUNK:
+```
+@@ -335,3 +337,60 @@ lemma nonempty_orderEmbedding_of_finite_infinite
+... [9 lines above hidden]
++/-- For a linearly ordered type, `Fin t ↪o α` is equivalent to the type of `t`-sets. -/
++@[simps] def tupleEquivFinset : (Fin t ↪o α) ≃ {s : Finset α // s.card = t} where
++  toFun f := ⟨Finset.univ.map f.toEmbedding, by simp⟩
++  invFun s := Finset.orderEmbOfFin s.1 s.2
++  left_inv _ := Eq.symm <| Finset.orderEmbOfFin_unique' _ (by simp)
++  right_inv s := by
++    obtain ⟨s,rfl⟩ := s
++    simp only [Finset.map_eq_image, RelEmbedding.coe_toEmbedding, Subtype.mk.injEq]
++    rw [← Finset.coe_inj, ← Finset.range_orderEmbOfFin s rfl]
++    simp
++
++/-- Add a new element greater than all existing elements to the end of a tuple. -/
++def appendRight (f : Fin t ↪o α) (a : α) (ha : ∀ i, f i < a) : Fin (t+1) ↪o α :=
+```
+PAST COMMENT (from reviewer):
+```suggestion
+def appendRight (f : Fin t ↪o α) (a : α) (ha : ∀ i, f i < a) : Fin (t + 1) ↪o α :=
+```
+
+--- candidate 10 (sim=0.692, past_pr=#27233, file=Mathlib/Data/Finset/Sort.lean) ---
+PAST HUNK:
+```
+@@ -335,3 +335,60 @@ lemma nonempty_orderEmbedding_of_finite_infinite
+... [9 lines above hidden]
++/-- For a linearly ordered type α, `Fin t ↪o α` is equivalent to the type of `t`-sets. -/
++@[simps] def tupleEquivFinset : (Fin t ↪o α) ≃ {s : Finset α // s.card = t} where
++  toFun f := ⟨Finset.univ.map f.toEmbedding, by simp⟩
++  invFun s := Finset.orderEmbOfFin s.1 s.2
++  left_inv _ := Eq.symm <| Finset.orderEmbOfFin_unique' _ (by simp)
++  right_inv := by
++    rintro ⟨s, rfl⟩
++    simp only [Finset.map_eq_image, RelEmbedding.coe_toEmbedding, Subtype.mk.injEq]
++    rw [← Finset.coe_inj, ← Finset.range_orderEmbOfFin s rfl]
++    simp
++
++/-- Add a new element greater than all existing elements to the end of a tuple. -/
++def appendRight (f : Fin t ↪o α) (a : α) (ha : ∀ i, f i < a) : Fin (t + 1) ↪o α :=
+```
+PAST COMMENT (from reviewer):
+```suggestion
+def snoc (f : Fin t ↪o α) (a : α) (ha : ∀ i, f i < a) : Fin (t + 1) ↪o α :=
+```
+or
+```suggestion
+def snocOrderEmb (f : Fin t ↪o α) (a : α) (ha : ∀ i, f i < a) : Fin (t + 1) ↪o α :=
+```
+to match `Fin.snoc`
+
+--- candidate 11 (sim=0.690, past_pr=#27233, file=Mathlib/Data/Finset/Sort.lean) ---
+PAST HUNK:
+```
+@@ -335,3 +335,60 @@ lemma nonempty_orderEmbedding_of_finite_infinite
+... [17 lines above hidden]
++    rw [← Finset.coe_inj, ← Finset.range_orderEmbOfFin s rfl]
++    simp
++
++/-- Add a new element greater than all existing elements to the end of a tuple. -/
++def appendRight (f : Fin t ↪o α) (a : α) (ha : ∀ i, f i < a) : Fin (t + 1) ↪o α :=
++  OrderEmbedding.ofStrictMono (Fin.lastCases a f) (
++    Fin.lastCases (fun b h ↦ (h.not_ge <| Fin.le_last b).elim)
++      (fun i ↦ Fin.lastCases (by simp [ha]) fun _ hij ↦ by simpa using hij))
++
++/-- Add a new element greater than the maximum to the end of a nonempty tuple. -/
++@[reducible] def appendRight' (f : Fin (t + 1) ↪o α) (a : α) (ha : f (Fin.last t) < a) :
++    Fin (t+2) ↪o α :=
++  appendRight f a (fun i ↦ (f.monotone (Fin.le_last i)).trans_lt ha)
+```
+PAST COMMENT (from reviewer):
+This duplication is quite unfortunate. What about
+```suggestion
+/-- Add a new element greater than all existing elements to the end of a tuple. -/
+def appendRight (f : Fin t ↪o α) (a : α) (ha : ∀ i, IsMax i → f i < a) : Fin (t + 1) ↪o α :=
+  OrderEmbedding.ofStrictMono (Fin.lastCases a f) (
+    Fin.lastCases (fun b h ↦ (h.not_ge <| Fin.le_last b).elim)
+      (fun i ↦ Fin.lastCases (by simp [ha]) fun _ hij ↦ by simpa using hij))
+```
+
+--- candidate 12 (sim=0.688, past_pr=#12773, file=Mathlib/Data/Finset/Sort.lean) ---
+PAST HUNK:
+```
+@@ -335,3 +337,60 @@ lemma nonempty_orderEmbedding_of_finite_infinite
+... [20 lines above hidden]
++/-- Add a new element greater than all existing elements to the end of a tuple. -/
++def appendRight (f : Fin t ↪o α) (a : α) (ha : ∀ i, f i < a) : Fin (t+1) ↪o α :=
++  OrderEmbedding.ofStrictMono (Fin.lastCases a f) (
++    Fin.lastCases (fun b h ↦ (h.not_ge <| Fin.le_last b).elim)
++      (fun i ↦ Fin.lastCases (by simp [ha]) fun _ hij ↦ by simpa using hij))
++
++/-- Add a new element greater than the maximum to the end of a nonempty tuple. -/
++@[reducible] def appendRight' (f : Fin (t + 1) ↪o α) (a : α) (ha : f (Fin.last t) < a) :
++    Fin (t+2) ↪o α :=
++  appendRight f a (fun i ↦ (f.monotone (Fin.le_last i)).trans_lt ha)
++
++@[simp] theorem appendRight_last (f : Fin t ↪o α) (a : α) (ha : ∀ i, f i < a) :
++    (appendRight f a ha) (Fin.last t) = a := by
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    appendRight f a ha (.last t) = a := by
+```
+Same below
+
+--- candidate 13 (sim=0.682, past_pr=#11732, file=Mathlib/Data/Set/Finite.lean) ---
+PAST HUNK:
+```
+@@ -484,7 +485,7 @@ instance fintypeMap {α β} [DecidableEq β] :
+ #align set.fintype_map Set.fintypeMap
+ 
+ instance fintypeLTNat (n : ℕ) : Fintype { i | i < n } :=
+-  Fintype.ofFinset (Finset.range n) <| by simp
++  Fintype.ofFinset ⟨_, Multiset.nodup_range n⟩ <| by simp
+```
+PAST COMMENT (from reviewer):
+Why was this changed?
+
+--- candidate 14 (sim=0.676, past_pr=#1593, file=Mathlib/Data/Fintype/Basic.lean) ---
+PAST HUNK:
+```
+@@ -13,37 +17,1345 @@ This file defines a typeclass to state that a type is finite.
+... [963 lines above hidden]
++  ext x
++  simp
++#align fintype.coe_image_univ Fintype.coe_image_univ
++
++instance List.Subtype.fintype [DecidableEq α] (l : List α) : Fintype { x // x ∈ l } :=
++  Fintype.ofList l.attach l.mem_attach
++#align list.subtype.fintype List.Subtype.fintype
++
++instance Multiset.Subtype.fintype [DecidableEq α] (s : Multiset α) : Fintype { x // x ∈ s } :=
++  Fintype.ofMultiset s.attach s.mem_attach
++#align multiset.subtype.fintype Multiset.Subtype.fintype
++
++instance Finset.subtype.fintype (s : Finset α) : Fintype { x // x ∈ s } :=
+```
+PAST COMMENT (from reviewer):
+```suggestion
+instance Finset.Subtype.fintype (s : Finset α) : Fintype { x // x ∈ s } :=
+```
+
+--- candidate 15 (sim=0.675, past_pr=#22630, file=Mathlib/Combinatorics/SimpleGraph/Subgraph.lean) ---
+PAST HUNK:
+```
+@@ -675,6 +688,16 @@ theorem map_le_iff_le_comap {G' : SimpleGraph W} (f : G →g G') (H : G.Subgraph
+     rintro u u' hu rfl rfl
+     exact (h.2 hu).2
+ 
++open scoped Classical in
++noncomputable instance [Finite V] : Fintype G.Subgraph := by
++  have := (nonempty_fintype V).some
+```
+PAST COMMENT (from reviewer):
+Let's also have the function Fintype V -> Fintype G.Subgraph
+
+--- candidate 16 (sim=0.674, past_pr=#37315, file=Mathlib/Combinatorics/SimpleGraph/Walks/Counting.lean) ---
+PAST HUNK:
+```
+@@ -125,7 +125,7 @@ instance fintypeSetWalkLength (u v : V) (n : ℕ) : Fintype {p : G.Walk u v | p.
+     rw [← Finset.mem_coe, coe_finsetWalkLength_eq]
+ 
+ instance fintypeSubtypeWalkLength (u v : V) (n : ℕ) : Fintype {p : G.Walk u v // p.length = n} :=
+-  fintypeSetWalkLength G u v n
++  inferInstanceAs <| Fintype {p : G.Walk u v | p.length = n}
+```
+PAST COMMENT (from reviewer):
+Is this not just `inferInstance`?
+
+--- candidate 17 (sim=0.670, past_pr=#1722, file=Mathlib/Data/Finite/Basic.lean) ---
+PAST HUNK:
+```
+@@ -140,10 +135,11 @@ instance Quotient.finite {α : Sort _} [Finite α] (s : Setoid α) : Finite (Quo
+   Quot.finite _
+ #align quotient.finite Quotient.finite
+ 
+-instance Function.Embedding.finite {α β : Sort _} [Finite β] : Finite (α ↪ β) :=
+-  by
++instance Function.Embedding.finite {α β : Sort _} [Finite β] : Finite (α ↪ β) := by
+   cases' isEmpty_or_nonempty (α ↪ β) with _ h
+-  · infer_instance
++  · -- Porting note: inferInstance fails because it applies `Finite.of_fintype`.
+```
+PAST COMMENT (from reviewer):
+Why does this make it fail?
+
+--- candidate 18 (sim=0.670, past_pr=#1722, file=Mathlib/Data/Finite/Basic.lean) ---
+PAST HUNK:
+```
+@@ -140,10 +135,11 @@ instance Quotient.finite {α : Sort _} [Finite α] (s : Setoid α) : Finite (Quo
+   Quot.finite _
+ #align quotient.finite Quotient.finite
+ 
+-instance Function.Embedding.finite {α β : Sort _} [Finite β] : Finite (α ↪ β) :=
+-  by
++instance Function.Embedding.finite {α β : Sort _} [Finite β] : Finite (α ↪ β) := by
+   cases' isEmpty_or_nonempty (α ↪ β) with _ h
+-  · infer_instance
++  · -- Porting note: inferInstance fails because it applies `Finite.of_fintype`.
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  · -- Porting note: infer_instance fails because it applies `Finite.of_fintype` and produces a
+    -- "stuck at solving universe constraint" error.
+```
+
+--- candidate 19 (sim=0.669, past_pr=#8007, file=Mathlib/Combinatorics/SimpleGraph/Basic.lean) ---
+PAST HUNK:
+```
+@@ -1745,13 +1863,27 @@ infixl:50 " ≃g " => Iso
+... [11 lines above hidden]
+ #align simple_graph.hom.id SimpleGraph.Hom.id
+ 
++@[simp, norm_cast] lemma coe_id : ⇑(Hom.id : G →g G) = id := rfl
++#align simple_graph.hom.coe_id SimpleGraph.Hom.coe_id
++
++instance [Subsingleton (V → W)] : Subsingleton (G →g H) := FunLike.coe_injective.subsingleton
++
++instance [IsEmpty V] : Unique (G →g H) where
++  default := ⟨isEmptyElim, fun {a} ↦ isEmptyElim a⟩
++  uniq _ := Subsingleton.elim _ _
++
++noncomputable instance [Fintype V] [Fintype W] : Fintype (G →g H) := by
++  classical exact FunLike.fintype _
+```
+PAST COMMENT (from reviewer):
+I don't like the look of this instance, but that's out of scope for a forward-port PR.
+
+--- candidate 20 (sim=0.666, past_pr=#17598, file=Mathlib/Order/InitialSeg.lean) ---
+PAST HUNK:
+```
+@@ -265,6 +268,24 @@ instance : CoeOut (r ≺i s) (r ↪r s) :=
+... [5 lines above hidden]
++    Function.Injective (@toRelEmbedding α β r s) := by
++  rintro ⟨f, a, hf⟩ ⟨g, b, hg⟩ rfl
++  congr
++  refine extensional_of_trichotomous_of_irrefl s fun x ↦ ?_
++  rw [← hf, hg]
++
++@[simp]
++theorem toRelEmbedding_inj [IsIrrefl β s] [IsTrichotomous β s] {f g : r ≺i s} :
++    f.toRelEmbedding = g.toRelEmbedding ↔ f = g :=
++  toRelEmbedding_injective.eq_iff
++
++@[ext]
++theorem ext [IsIrrefl β s] [IsTrichotomous β s] {f g : r ≺i s} (h : ∀ x, f x = g x) : f = g := by
+```
+PAST COMMENT (from reviewer):
+Could add `ext_iff` too for good measure
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "summary": "The new global instance Fintype (r →r s) should be coordinated with existing SimpleGraph.Hom Fintype instances to avoid the non-defeq diamond previously flagged for a similar addition.",
+  "confidence": "medium",
+  "strong_matches": [
+    {
+      "past_pr": 12273,
+      "past_file": "Mathlib/Data/Fintype/Pi.lean",
+      "past_comment_excerpt": "bad instance since it causes a non-defeq diamond ... generalise `SimpleGraph.Hom.instFintype` to arbitrary `RelHom` instead?",
+      "applies_because": "This PR adds a global instance `RelHom.instFintype`. A prior review warned that overlapping Fintype instances (e.g. for graph homs) can create a non-defeq diamond and recommended centralising on `RelHom`.",
+      "suggested_adaptation": "Ensure any existing `SimpleGraph.Hom.instFintype` is removed or made to derive from this `RelHom` instance so there’s a single source and no instance diamond.",
+      "supporting_past_prs": [
+        12273
+      ]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "The instance is named `instFintype`, matching the earlier naming guidance for instance identifiers.",
+      "supporting_past_prs": [
+        12273
+      ]
+    }
+  ]
+}

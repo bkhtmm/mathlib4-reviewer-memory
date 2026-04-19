@@ -1,0 +1,623 @@
+====================================================================================================
+CASE V  PR #21624  (open-pr, v3 prompt)
+file: Mathlib/CategoryTheory/Pi/Monoidal.lean  line: 50.0
+reviewer: @b-mehta  on 2025-02-14T03:02:00Z
+advice_kind: signature / automation suggestion
+prompt_tokens: 8511  completion_tokens: 4484
+HUMAN reviewer (ground truth):
+  > I'm guessing that these are all explicitly written because aesop_cat can't do them? If that's correct, perhaps this is a sign that we should add ext to the set of things aesop_cat tries.
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Your single most important task is to AVOID "axis-miss" false positives: cases where a past comment and the new code LOOK similar on the surface, but the past reviewer was raising a different KIND of concern than anything the new hunk actually has. A correct silent output is far more valuable than a confident wrong-axis answer.
+
+Read carefully before producing JSON. Follow the four steps below in order.
+
+STEP 1 — STRUCTURAL + SEMANTIC READING OF THE NEW HUNK.
+  1a. Parse the code shape: tactic-mode vs term-mode, declaration kind (`def` / `theorem` / `lemma` / `instance` / `class` / `structure` / `abbrev` / `syntax` / `notation`), attributes (`@[simp]`, `@[to_additive]`, `@[deprecated]`, `@[ext]`, `@[fun_prop]`, `@[reassoc]`, …), universe parameters, implicit/explicit binders, docstring style, proof tactics used.
+  1b. Inventory what *could* be criticized about THIS specific hunk. Pick as many as apply from this list of "concern axes":
+     - correctness-bug        (code doesn't typecheck / is logically wrong)
+     - naming                  (lemma/def name doesn't follow conventions)
+     - docstring               (missing, unclear, typo, wrong phrasing)
+     - attribute               (missing/wrong `@[simp]` / `@[to_additive]` …)
+     - style-syntax            (`fun x ↦` vs `fun x =>`, `by use _; exact _` vs `⟨_, _⟩`, whitespace/`ppSpace`, notation preference)
+     - proof-golf              (the proof tactics could be shorter/nicer)
+     - refactor-simplify       (same statement provable with less machinery)
+     - generalize-signature    (hypotheses too strong; remove/weaken a typeclass)
+     - design-smell-architectural (this API shape is wrong; returning a string, unnecessary instance, redundant definition, etc.)
+     - imports-module          (superfluous imports, module structure)
+     - namespace-organization  (`_root_`, namespace boundary, file placement)
+     - automation-tactic       (should use / should teach `aesop_cat`, `gcongr`, `positivity`, etc.)
+     - instance-diamond        (this instance creates an ambiguity / defeq diamond with another)
+     - unify-with-existing     (a similar definition/lemma already exists)
+     - junk-value              (docstring should note behavior at the "undefined" input; handled via `0`/`⊥`/`⊤`)
+  List the concerns that PLAUSIBLY apply to the new hunk. If none are obviously present, say so — don't invent them.
+
+STEP 2 — PER-CANDIDATE CONCERN CLASSIFICATION.
+  For EACH candidate, identify which concern axis (from the same list) the past reviewer's comment was about. Read the past comment carefully: the reviewer's *words* (not the past code) tell you the concern axis. If a past comment ships a `suggestion` code block, that block is evidence for what the reviewer wanted changed — but the axis of concern comes from the prose around it. Ignore candidates whose past comment is pure bikeshed or where you cannot identify a clear concern.
+
+STEP 3 — AXIS MATCH + APPLICABILITY CHECK.
+  A candidate is eligible for `strong_matches` ONLY if BOTH:
+    (a) Its axis (from step 2) is among the new hunk's plausible concerns (from step 1b).
+    (b) You can write a concrete adaptation that a Lean/mathlib reviewer would plausibly post on the new hunk *today*, given what is visible in the hunk.
+  Before promoting, write — in the JSON output, per match — a `why_might_not_apply` field giving the strongest counter-argument against promotion (one short sentence). If this counter-argument is actually compelling (e.g. "the new code does not have that pattern", "the new code *does* have an ext lemma, so this doesn't apply"), DO NOT promote; demote to `weak_observations` or drop.
+  Cross-candidate synthesis is allowed: if candidate X establishes that an identifier in the new hunk is a `class`, and candidate Y shows the preferred term-mode `instance := ⟨...⟩` template, they jointly support a promotion. List both in `supporting_past_prs` and still produce one `why_might_not_apply`.
+
+STEP 4 — CONFIDENCE AND OUTPUT.
+  Confidence scale:
+    - "high"   — ≥1 strong match survives step 3 AND the adaptation is a near-verbatim application of a past comment; the counter-argument is weak.
+    - "medium" — ≥1 strong match survives step 3 BUT needs adaptation or synthesis; counter-argument is plausible but not decisive.
+    - "low"    — no candidate survives step 3; only stylistic patterns worth mentioning as `weak_observations`.
+    - "none"   — retrieved pool's axes don't match anything plausible about the new hunk; state this and stop.
+  When in doubt between "medium" and "low" on a single uncertain candidate, prefer "low" and put that candidate in `weak_observations`. "Confident but wrong-axis" is the #1 failure we are trying to eliminate.
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "new_hunk_plausible_concerns": [<one or more axis labels from Step 1b, or []>],
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_concern_axis": "<axis label from the list>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure AND explaining why the concern axis matches>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "why_might_not_apply": "<one short sentence — strongest counter-argument against this promotion>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "axis": "<axis label>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Do not invent axis labels outside the list. Do not promote a candidate whose axis is not in `new_hunk_plausible_concerns`.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #21624 (file: Mathlib/CategoryTheory/Pi/Monoidal.lean):
+```
+@@ -0,0 +1,54 @@
+... [10 lines above hidden]
++/-!
++# The pointwise monoidal strucutre on the product of families of monoidal categories
++
++Given a family of monoidal categories `C i`, we define a monoidal structure on
++`Π i, C i` where the tensor product is defined pointwise.
++
++-/
++
++namespace CategoryTheory
++
++namespace Pi
++
++open Category MonoidalCategory
++
++universe w₁ v₁ u₁
++
++variable {I : Type w₁} (C : I → Type u₁) [∀ i, Category.{v₁} (C i)]
++[∀ i, MonoidalCategory (C i)]
++
++/-- `Pi.monoidal C` equipps the product of an indexed family of categories with
++a pointwise monoidal structure. -/
++@[simps]
++instance monoidal : MonoidalCategory.{max w₁ v₁} (∀ i, C i) where
++  tensorObj X Y := fun i ↦ X i ⊗ Y i
++  whiskerLeft X _ _ f := fun i ↦ X i ◁ f i
++  whiskerRight f Z := fun i ↦ f i ▷ Z i
++  tensorHom f g := fun i ↦ f i ⊗ g i
++  tensorUnit := fun i ↦ 𝟙_ (C i)
++  associator X Y Z := isoMk (fun i ↦ α_ (X i) (Y i) (Z i))
++  leftUnitor X := isoMk (fun i ↦ λ_ (X i))
++  rightUnitor X := isoMk (fun i ↦ ρ_ (X i))
++  tensorHom_def _ _ := by ext i; simp only [tensorHom, tensorHom_def, comp_apply]
++  tensor_id _ _ := by ext i; aesop
++  tensor_comp _ _ _ _ := by ext i; aesop
++  whiskerLeft_id _ _ := by ext i; aesop
++  id_whiskerRight _ _ := by ext i; aesop
++  associator_naturality _ _ _ := by ext i; aesop
++  leftUnitor_naturality _ := by ext i; aesop
++  rightUnitor_naturality _ := by ext i; aesop
++  pentagon _ _ _ _ := by ext i; aesop
++  triangle _ _ := by ext i; aesop
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.933, past_pr=#33183, file=Mathlib/CategoryTheory/Pi/Monoidal.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,167 @@
+... [69 lines above hidden]
++@[simp]
++theorem right_unitor_hom_apply {X : ∀ i, C i} {i : I} :
++    (ρ_ X).hom i = (ρ_ (X i)).hom := rfl
++
++@[simp]
++theorem right_unitor_inv_apply {X : ∀ i, C i} {i : I} :
++    (ρ_ X).inv i = (ρ_ (X i)).inv := rfl
++
++@[simp]
++theorem isoApp_right_unitor {X : ∀ i, C i} {i : I} :
++    isoApp (ρ_ X) i = ρ_ (X i) := rfl
++
++/-- `Pi.monoidal C` equips the product of an indexed family of categories with
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-- `Pi.monoidalCategory C` equips the product of an indexed family of categories with
+```
+
+--- candidate 2 (sim=0.913, past_pr=#33183, file=Mathlib/CategoryTheory/Pi/Monoidal.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,167 @@
+... [28 lines above hidden]
++
++open Category MonoidalCategory
++
++variable {I : Type w₁} {C : I → Type u₁} [∀ i, Category.{v₁} (C i)]
++[∀ i, MonoidalCategory (C i)]
++
++@[simps tensorObj tensorHom whiskerLeft whiskerRight tensorUnit]
++instance monoidalCategoryStruct : MonoidalCategoryStruct (∀ i, C i) where
++  tensorObj := fun X Y i ↦ X i ⊗ Y i
++  tensorHom f g := fun i ↦ f i ⊗ₘ g i
++  whiskerLeft X _ _ f := fun i ↦ X i ◁ f i
++  whiskerRight f Y := fun i ↦ f i ▷ Y i
++  tensorUnit := fun i ↦ 𝟙_ (C i)
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  tensorObj X Y i := X i ⊗ Y i
+  tensorHom f g i := f i ⊗ₘ g i
+  whiskerLeft X _ _ f i := X i ◁ f i
+  whiskerRight f Y i := f i ▷ Y i
+  tensorUnit i := 𝟙_ (C i)
+```
+
+--- candidate 3 (sim=0.762, past_pr=#33412, file=Mathlib/CategoryTheory/Pi/Monoidal.lean) ---
+PAST HUNK:
+```
+@@ -161,6 +161,96 @@ instance monoidalClosed : MonoidalClosed (∀ i, C i) where
+... [10 lines above hidden]
++
++instance [∀ i, BraidedCategory (C i)] (i : I) : (Pi.eval C i).Braided where
++
++@[simps]
++instance laxMonoidalPi' {D : Type*} [Category* D] [MonoidalCategory D] (F : ∀ i : I, D ⥤ C i)
++    [∀ i, (F i).LaxMonoidal] : (Functor.pi' F).LaxMonoidal where
++  ε := fun i ↦ Functor.LaxMonoidal.ε (F i)
++  μ X Y := fun i ↦ Functor.LaxMonoidal.μ (F i) X Y
++
++@[simps]
++instance opLaxMonoidalPi' {D : Type*} [Category* D] [MonoidalCategory D]
++    (F : ∀ i : I, D ⥤ C i)
++    [∀ i, (F i).OplaxMonoidal] : (Functor.pi' F).OplaxMonoidal where
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    [∀ i, (F i).OplaxMonoidal] :
+    (Functor.pi' F).OplaxMonoidal where
+```
+
+--- candidate 4 (sim=0.762, past_pr=#33412, file=Mathlib/CategoryTheory/Pi/Monoidal.lean) ---
+PAST HUNK:
+```
+@@ -161,6 +161,96 @@ instance monoidalClosed : MonoidalClosed (∀ i, C i) where
+... [3 lines above hidden]
+ 
++@[simps!]
++instance (i : I) : (Pi.eval C i).Monoidal where
++  ε := 𝟙 _
++  μ X Y := 𝟙 _
++  η := 𝟙 _
++  δ X Y := 𝟙 _
++
++instance [∀ i, BraidedCategory (C i)] (i : I) : (Pi.eval C i).Braided where
++
++@[simps]
++instance laxMonoidalPi' {D : Type*} [Category* D] [MonoidalCategory D] (F : ∀ i : I, D ⥤ C i)
++    [∀ i, (F i).LaxMonoidal] : (Functor.pi' F).LaxMonoidal where
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    [∀ i, (F i).LaxMonoidal] :
+    (Functor.pi' F).LaxMonoidal where
+```
+
+--- candidate 5 (sim=0.748, past_pr=#10905, file=Mathlib/CategoryTheory/Monoidal/Mon_.lean) ---
+PAST HUNK:
+```
+@@ -497,14 +498,39 @@ instance monMonoidalStruct : MonoidalCategoryStruct (Mon_ C) :=
+... [14 lines above hidden]
++
++@[simp]
++theorem whiskerLeft_hom {X Y : Mon_ C} (f : X ⟶ Y) (Z : Mon_ C) :
++    (f ▷ Z).hom = f.hom ▷ Z.X := by
++  rw [← tensorHom_id]; rfl
++
++@[simp]
++theorem whiskerRight_hom (X : Mon_ C) {Y Z : Mon_ C} (f : Y ⟶ Z) :
++    (X ◁ f).hom = X.X ◁ f.hom := by
++  rw [← id_tensorHom]; rfl
++
++@[simp]
++theorem left_unitor_hom_hom (X : Mon_ C) : (λ_ X).hom.hom = (λ_ X.X).hom := rfl
+```
+PAST COMMENT (from reviewer):
+I would suggest this name change here (and below):
+```suggestion
+theorem leftUnitor_hom_hom (X : Mon_ C) : (λ_ X).hom.hom = (λ_ X.X).hom := rfl
+```
+(Similarly, in the bicategory setting, I believe `left_unitor` should be renamed `leftUnitor`, etc.)
+
+--- candidate 6 (sim=0.720, past_pr=#2230, file=Mathlib/CategoryTheory/Pi/Basic.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,326 @@
+... [157 lines above hidden]
++[_inst_2 : forall (j : J), CategoryTheory.Category.{u2, u1} (D j)] (s :
++Sum.{u3, u3} I J), CategoryTheory.Category.{u2, u1} (Sum.elim.{u3, u3, succ
++(succ u1)} I J Type.{u1} C D s) Case conversion may be inaccurate. Consider
++using '#align category_theory.pi.sum_elim_category
++CategoryTheory.Pi.sumElimCategoryₓ'. -/
++instance sumElimCategory : ∀ s : Sum I J, Category.{v₁} (Sum.elim C D s)
++  | Sum.inl i => by
++    dsimp
++    infer_instance
++  | Sum.inr j => by
++    dsimp
++    infer_instance
++#align category_theory.pi.sum_elim_category CategoryTheory.Pi.sumElimCategory
+```
+PAST COMMENT (from reviewer):
+I agree. But note that my suggestion adds the little `ₓ` to the align statement, as the comment instructs. And please leave a porting note.
+
+--- candidate 7 (sim=0.720, past_pr=#2230, file=Mathlib/CategoryTheory/Pi/Basic.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,326 @@
+... [157 lines above hidden]
++[_inst_2 : forall (j : J), CategoryTheory.Category.{u2, u1} (D j)] (s :
++Sum.{u3, u3} I J), CategoryTheory.Category.{u2, u1} (Sum.elim.{u3, u3, succ
++(succ u1)} I J Type.{u1} C D s) Case conversion may be inaccurate. Consider
++using '#align category_theory.pi.sum_elim_category
++CategoryTheory.Pi.sumElimCategoryₓ'. -/
++instance sumElimCategory : ∀ s : Sum I J, Category.{v₁} (Sum.elim C D s)
++  | Sum.inl i => by
++    dsimp
++    infer_instance
++  | Sum.inr j => by
++    dsimp
++    infer_instance
++#align category_theory.pi.sum_elim_category CategoryTheory.Pi.sumElimCategory
+```
+PAST COMMENT (from reviewer):
+```suggestion
+instance sumElimCategory : ∀ s : Sum I J, Category.{v₁} (Sum.elim C D s)
+  | Sum.inl i => by
+    dsimp
+    infer_instance
+  | Sum.inr j => by
+    dsimp
+    infer_instance
+#align category_theory.pi.sum_elim_category CategoryTheory.Pi.sumElimCategoryₓ -- Porting note: reordered universes
+```
+
+--- candidate 8 (sim=0.706, past_pr=#33201, file=Mathlib/CategoryTheory/Monoidal/Cartesian/FunctorCategory.lean) ---
+PAST HUNK:
+```
+@@ -192,6 +192,28 @@ protected def RepresentableBy.tensorObj {F : Cᵒᵖ ⥤ Type v} {G : Cᵒᵖ 
+... [12 lines above hidden]
++        ext
++        · simp only [comp_id, id_comp, whiskerRight_app_fst]
++          apply whiskerRight_app_fst
++        · simp only [comp_id, id_comp, whiskerRight_app_snd]
++          apply whiskerRight_app_snd
++      μIso_hom_natural_right G f := by
++        ext
++        dsimp
++        ext
++        · simp only [comp_id, id_comp, whiskerLeft_app_fst]
++          apply whiskerLeft_app_fst
++        · simp only [comp_id, id_comp, whiskerLeft_app_snd]
++          apply whiskerLeft_app_snd }
+```
+PAST COMMENT (from reviewer):
+This seems to be a (less general) duplicate of [CategoryTheory.Functor.Monoidal.whiskeringLeft](https://leanprover-community.github.io/mathlib4_docs/Mathlib/CategoryTheory/Monoidal/FunctorCategory.html#CategoryTheory.Functor.Monoidal.whiskeringLeft)
+
+--- candidate 9 (sim=0.705, past_pr=#24679, file=Mathlib/CategoryTheory/ChosenFiniteProducts.lean) ---
+PAST HUNK:
+```
+@@ -68,6 +67,127 @@ class ChosenFiniteProducts (C : Type u) [Category.{v} C] extends MonoidalCategor
+ 
+ namespace ChosenFiniteProducts
+ 
++variable {C : Type u} [Category.{v} C]
++
++section OfChosenFiniteProducts
++variable (𝒯 : LimitCone (Functor.empty.{0} C)) (ℬ : ∀ X Y : C, LimitCone (pair X Y))
++  {X₁ X₂ X₃ Y₁ Y₂ Y₃ Z₁ Z₂ : C}
++
++namespace ofChosenFiniteProducts
++
++/-- Implementation of the tensor product for `ChosenFiniteProducts.ofCartesianMonoidalCategory`. -/
++abbrev tensorObj (X Y : C) : C := (ℬ X Y).cone.pt
++
++/-- Implementation of the tensor product of morphisms for
++`ChosenFiniteProducts.ofCartesianMonoidalCategory`. -/
++abbrev tensorHom (f : X₁ ⟶ Y₁) (g : X₂ ⟶ Y₂) : tensorObj ℬ X₁ X₂ ⟶ tensorObj ℬ Y₁ Y₂ :=
++  (BinaryFan.IsLimit.lift' (ℬ Y₁ Y₂).isLimit ((ℬ X₁ X₂).cone.π.app ⟨.left⟩ ≫ f)
++      (((ℬ X₁ X₂).cone.π.app ⟨.right⟩ : (ℬ X₁ X₂).cone.pt ⟶ X₂) ≫ g)).val
++
++lemma tensor_id (X Y : C) : tensorHom ℬ (𝟙 X) (𝟙 Y) = 𝟙 (tensorObj ℬ X Y) :=
++  (ℬ _ _).isLimit.hom_ext <| by rintro ⟨_ | _⟩ <;> simp [tensorHom]
++
+... [71 more lines hidden]
+```
+PAST COMMENT (from reviewer):
+Is there a reason why we want to keep this instead of inlining it?
+
+--- candidate 10 (sim=0.701, past_pr=#26448, file=Mathlib/CategoryTheory/Monoidal/Category.lean) ---
+PAST HUNK:
+```
+@@ -160,12 +160,12 @@ class MonoidalCategory (C : Type u) [𝒞 : Category.{v} C] extends MonoidalCate
+   /-- Tensor product of identity maps is the identity: `𝟙 X₁ ⊗ₘ 𝟙 X₂ = 𝟙 (X₁ ⊗ X₂)` -/
+   tensor_id : ∀ X₁ X₂ : C, 𝟙 X₁ ⊗ₘ 𝟙 X₂ = 𝟙 (X₁ ⊗ X₂) := by aesop_cat
+   /--
+-  Tensor product of compositions is composition of tensor products:
+-  `(f₁ ≫ g₁) ⊗ₘ (f₂ ≫ g₂) = (f₁ ⊗ₘ f₂) ≫ (g₁ ⊗ₘ g₂)`
++  Composition of tensor products is tensor product of compositions:
++  `(f₁ ⊗ₘ f₂) ≫ (g₁ ⊗ₘ g₂) = (f₁ ≫ g₁) ⊗ₘ (f₂ ≫ g₂)`
+   -/
+-  tensor_comp :
++  tensorHom_comp_tensorHom :
+```
+PAST COMMENT (from reviewer):
+What was the rational for flipping this around vs adding the simp tag backwards?
+
+--- candidate 11 (sim=0.700, past_pr=#19511, file=Mathlib/Algebra/Category/ModuleCat/Monoidal/Basic.lean) ---
+PAST HUNK:
+```
+@@ -95,63 +97,36 @@ instance instMonoidalCategoryStruct : MonoidalCategoryStruct (ModuleCat.{u} R) w
+   tensorObj := tensorObj
+   whiskerLeft := whiskerLeft
+   whiskerRight := whiskerRight
+-  tensorHom f g := TensorProduct.map f g
++  tensorHom f g := asHom <| TensorProduct.map f.hom g.hom
+   tensorUnit := ModuleCat.of R R
+   associator := associator
+   leftUnitor := leftUnitor
+   rightUnitor := rightUnitor
+ 
+-section
+-
+-/-! The `associator_naturality` and `pentagon` lemmas below are very slow to elaborate.
+-
+-We give them some help by expressing the lemmas first non-categorically, then using
+-`convert _aux using 1` to have the elaborator work as little as possible. -/
+-
+-
+-open TensorProduct (assoc map)
+-
+-private theorem associator_naturality_aux {X₁ X₂ X₃ : Type*} [AddCommMonoid X₁] [AddCommMonoid X₂]
+-    [AddCommMonoid X₃] [Module R X₁] [Module R X₂] [Module R X₃] {Y₁ Y₂ Y₃ : Type*}
+-    [AddCommMonoid Y₁] [AddCommMonoid Y₂] [AddCommMonoid Y₃] [Module R Y₁] [Module R Y₂]
+... [7 more lines hidden]
+```
+PAST COMMENT (from reviewer):
+This makes me happy :)
+
+--- candidate 12 (sim=0.697, past_pr=#7389, file=Mathlib/CategoryTheory/GradedObject/Monoidal.lean) ---
+PAST HUNK:
+```
+@@ -271,10 +296,351 @@ lemma associator_naturality (f₁ : X₁ ⟶ Y₁) (f₂ : X₂ ⟶ Y₂) (f₃
+... [311 lines above hidden]
++  Cofan.IsColimit.desc (isColimitCofanTensor X₁ X₂ j) (fun ⟨⟨i₁, i₂⟩, hi⟩ => f i₁ i₂ hi)
++
++@[reassoc (attr := simp)]
++lemma ι_descTensor (j : I) (f : ∀ (i₁ i₂ : I) (_ : i₁ + i₂ = j), X₁ i₁ ⊗ X₂ i₂ ⟶ A)
++    (i₁ i₂ : I) (hi : i₁ + i₂ = j) :
++    ιTensorObj X₁ X₂ i₁ i₂ j hi ≫ descTensor f = f i₁ i₂ hi := by
++  apply Cofan.IsColimit.fac
++
++@[ext]
++lemma tensorObj_ext {j : I} (f g : (X₁ ⊗ X₂) j ⟶ A)
++    (h : ∀ (i₁ i₂ : I) (hi : i₁ + i₂ = j),
++      ιTensorObj X₁ X₂ i₁ i₂ j hi ≫ f = ιTensorObj X₁ X₂ i₁ i₂ j hi ≫ g) : f = g :=
++  Monoidal.tensorObj_ext f g h-/
+```
+PAST COMMENT (from reviewer):
+Do you intend to keep this in the PR? Should it be un-commented?
+
+--- candidate 13 (sim=0.695, past_pr=#14457, file=Mathlib/CategoryTheory/GradedObject/Monoidal.lean) ---
+PAST HUNK:
+```
+@@ -376,6 +528,61 @@ end Triangle
+... [39 lines above hidden]
++  rintro ⟨⟨_, _⟩, _⟩ ⟨⟨_, _⟩, _⟩ h
++  simpa using h
++
++instance (n : ℕ) : Finite ({ i : (ℕ × ℕ × ℕ) | i.1 + i.2.1 + i.2.2 = n }) := by
++  refine Finite.of_injective (fun ⟨⟨i₁, i₂, i₃⟩, (hi : i₁ + i₂ + i₃ = n)⟩ =>
++    (⟨⟨i₁, by omega⟩, ⟨i₂, by omega⟩, ⟨i₃, by omega⟩⟩ :
++      Fin (n + 1) × Fin (n + 1) × Fin (n + 1))) ?_
++  rintro ⟨⟨_, _, _⟩, _⟩ ⟨⟨_, _, _⟩, _⟩ h
++  simpa using h
++
++-- Note: this is stated as a lemma instead of an example, because otherwise
++-- CI would complain that importing `Mathlib.CategoryTheory.Limits.Preserves.Finite`
++-- is unnecessary.
+```
+PAST COMMENT (from reviewer):
+So it is unnecessary, then.
+
+I'm not going to object, but this section could become a file `GradedObject/Monoidal/Finite.lean`?
+
+--- candidate 14 (sim=0.694, past_pr=#7277, file=Mathlib/CategoryTheory/Bicategory/End.lean) ---
+PAST HUNK:
+```
+@@ -41,6 +41,7 @@ instance (X : C) : MonoidalCategory (EndMonoidal X) where
+   tensorObj f g := f ≫ g
+   whiskerLeft {f g h} η := f ◁ η
+   whiskerRight {f g} η h := η ▷ h
++  tensorHom {X₁ Y₁ X₂ Y₂} f g := (f ▷ X₂) ≫ (Y₁ ◁ g)
+```
+PAST COMMENT (from reviewer):
+With the previous API, there was not even a chance to use the old constructor! I would suggest not merging this PR, as it goes in the other direction as @yuma-mizuno's planned refactor.
+
+--- candidate 15 (sim=0.685, past_pr=#36613, file=Mathlib/CategoryTheory/Monoidal/Types/Basic.lean) ---
+PAST HUNK:
+```
+@@ -120,7 +125,8 @@ theorem CartesianMonoidalCategory.lift_apply {X Y Z : Type u} {f : X ⟶ Y} {g :
+ of a type to the image of that type, tensored with the image of the nth Cartesian power. -/
+ noncomputable def MonoidalFunctor.mapPi {C : Type*} [Category* C] [MonoidalCategory C]
+     (F : Type _ ⥤ C) [F.Monoidal] (n : ℕ) (β : Type*) :
+-    F.obj (Fin (n + 1) → β) ≅ F.obj β ⊗ F.obj (Fin n → β) :=
+-  Functor.mapIso _ (Fin.consEquiv _).symm.toIso ≪≫ (Functor.Monoidal.μIso F β (Fin n → β)).symm
++    F.obj ((Fin (n + 1) → β)) ≅ F.obj (β) ⊗ F.obj ((Fin n → β)) :=
++  Functor.mapIso _ (Fin.consEquiv _).symm.toIso ≪≫
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  Functor.mapIso _ (Fin.consEquiv _).symm.toIso ≪≫ (Functor.Monoidal.μIso F β (Fin n → β)).symm
+```
+
+--- candidate 16 (sim=0.679, past_pr=#10061, file=Mathlib/CategoryTheory/Monoidal/Category.lean) ---
+PAST HUNK:
+```
+@@ -557,8 +739,111 @@ abbrev ofTensorHom [MonoidalCategoryStruct C]
+... [71 lines above hidden]
++
++@[reassoc (attr := simp)]
++theorem triangle_assoc_comp_left_inv (X Y : C) :
++    (𝟙 X ⊗ (λ_ Y).inv) ≫ (α_ X (𝟙_ C) Y).inv = (ρ_ X).inv ⊗ 𝟙 Y := by
++  simp
++#align category_theory.monoidal_category.triangle_assoc_comp_left_inv CategoryTheory.MonoidalCategory.triangle_assoc_comp_left_inv
++
++theorem rightUnitor_conjugation {X Y : C} (f : X ⟶ Y) :
++    f ⊗ 𝟙 (𝟙_ C) = (ρ_ X).hom ≫ f ≫ (ρ_ Y).inv := by
++  simp
++#align category_theory.monoidal_category.right_unitor_conjugation CategoryTheory.MonoidalCategory.rightUnitor_conjugation
++
++theorem leftUnitor_conjugation {X Y : C} (f : X ⟶ Y) :
+```
+PAST COMMENT (from reviewer):
+These two lemmas could have the `reassoc` attribute. Otherwise, the PR looks great to me!
+
+
+--- candidate 17 (sim=0.678, past_pr=#11248, file=Mathlib/CategoryTheory/ChosenFiniteProducts.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,126 @@
++/-
++Copyright (c) 2024 Adam Topaz All rights reserved.
++Released under Apache 2.0 license as described in the file LICENSE.
++Authors: Adam Topaz
++-/
++
++import Mathlib.CategoryTheory.Monoidal.OfChosenFiniteProducts.Symmetric
++import Mathlib.CategoryTheory.Limits.Constructions.FiniteProductsOfBinaryProducts
++
++/-!
++
+```
+PAST COMMENT (from reviewer):
+```suggestion
+```
+
+--- candidate 18 (sim=0.674, past_pr=#31346, file=Mathlib/CategoryTheory/Monoidal/FunctorCategory.lean) ---
+PAST HUNK:
+```
+@@ -191,14 +191,16 @@ instance functorCategorySymmetric : SymmetricCategory (C ⥤ D) where
+ end SymmetricCategory
+ 
+ @[simps]
+-instance {C D E : Type*} [Category C] [Category D] [Category E] [MonoidalCategory D]
++instance whiskeringRightLaxMonoidal
+```
+PAST COMMENT (from reviewer):
+This could be in the `Functor.LaxMonoidal` namespace as `Functor.LaxMonoidal.whiskeringRight`.
+
+--- candidate 19 (sim=0.674, past_pr=#10195, file=Mathlib/CategoryTheory/Monoidal/Mon_.lean) ---
+PAST HUNK:
+```
+@@ -412,7 +412,7 @@ theorem Mon_tensor_mul_one (M N : Mon_ C) :
+     (M.X ⊗ N.X) ◁ ((λ_ (𝟙_ C)).inv ≫ (M.one ⊗ N.one)) ≫
+         tensor_μ C (M.X, N.X) (M.X, N.X) ≫ (M.mul ⊗ N.mul) =
+       (ρ_ (M.X ⊗ N.X)).hom := by
+-  simp only [whiskerLeft_comp_assoc]
++  simp only [MonoidalCategory.whiskerLeft_comp_assoc]
+```
+PAST COMMENT (from reviewer):
+Although this comment is not directly related to this PR, what do you think about renaming `CategoryTheory.whiskerLeft_comp` to `CategoryTheory.NatTrans.whiskerLeft_comp` or `CategoryTheory.Functor.whiskerLeft_comp` in another PR to avoid this kind of fixes?
+
+--- candidate 20 (sim=0.672, past_pr=#30684, file=Mathlib/CategoryTheory/Monoidal/OfHasFiniteProducts.lean) ---
+PAST HUNK:
+```
+@@ -65,76 +55,72 @@ attribute [local instance] monoidalOfHasFiniteProducts
+... [24 lines above hidden]
+-theorem tensorHom {W X Y Z : C} (f : W ⟶ X) (g : Y ⟶ Z) : f ⊗ₘ g = Limits.prod.map f g :=
+-  rfl
+-
+-@[simp]
+-theorem whiskerLeft (X : C) {Y Z : C} (f : Y ⟶ Z) : X ◁ f = Limits.prod.map (𝟙 X) f :=
+-  rfl
+-
+-@[simp]
+-theorem whiskerRight {X Y : C} (f : X ⟶ Y) (Z : C) : f ▷ Z = Limits.prod.map f (𝟙 Z) :=
+-  rfl
+-
+-@[simp]
++@[deprecated CartesianMonoidalCategory.leftUnitor_hom (since := "2025-10-19"), simp, reassoc]
+```
+PAST COMMENT (from reviewer):
+```suggestion
+@[deprecated CartesianMonoidalCategory.leftUnitor_hom (since := "2025-10-19"), simp]
+```
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "new_hunk_plausible_concerns": [
+    "docstring",
+    "style-syntax"
+  ],
+  "summary": "One past style-syntax suggestion about writing instance field lambdas more explicitly likely applies; also there are minor docstring typos.",
+  "confidence": "low",
+  "strong_matches": [
+    {
+      "past_pr": 33183,
+      "past_file": "Mathlib/CategoryTheory/Pi/Monoidal.lean",
+      "past_concern_axis": "style-syntax",
+      "past_comment_excerpt": "tensorObj X Y i := X i ⊗ Y i",
+      "applies_because": "The new instance defines fields like tensorObj, tensorHom, whiskerLeft/Right using `fun i ↦ …`; the past review preferred giving the final argument `i` explicitly in the field definition.",
+      "suggested_adaptation": "Write the fields as `tensorObj X Y i := X i ⊗ Y i`, `tensorHom f g i := f i ⊗ g i`, `whiskerLeft X _ _ f i := …`, `whiskerRight f Z i := …`, and `tensorUnit i := …`.",
+      "why_might_not_apply": "Both styles are generally accepted in mathlib, so this may be personal preference rather than a rule.",
+      "supporting_past_prs": []
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "There are typos in comments/docstrings: “strucutre” and “equipps” should be “structure” and “equips”.",
+      "axis": "docstring",
+      "supporting_past_prs": [
+        33183
+      ]
+    }
+  ]
+}

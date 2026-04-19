@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtualenvs
+.venv/
+venv/
+env/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Secrets — never commit anything matching these
+.env
+.env.*
+*.secret
+*credentials*
+*.pem
+
+# ---------------------------------------------------------------------------
+# Data — the heavy stuff is regenerable; keep the repo small.
+#
+#   data/raw/        ~3.7 GB — raw GitHub API payloads (regenerate via scrape)
+#   data/curated/    ~470 MB — normalized parquets    (regenerate via build)
+#   data/index/      ~470 MB — RAG embeddings         (regenerate via embed)
+#   data/exports/    ~320 MB — derived ML views       (regenerate via export)
+#   data/state/              — scrape checkpoints, internal
+# ---------------------------------------------------------------------------
+data/raw/
+data/curated/
+data/index/
+data/exports/
+data/state/
+
+# Eval folder
+# What we publish:   the polished .md reports, the transcripts/, and the
+#                    current-version (v3.x) sweep jsonls (gallery sources).
+# What we drop:      large raw query dumps, internal lexical-F1 oracles
+#                    (misleading without the LLM-judge context), older
+#                    superseded prompt-version sweeps, raw rows behind
+#                    rendered reports, and stdout logs.
+data/eval/heldout_retrieval.jsonl
+data/eval/heldout_analysis.json
+data/eval/heldout_retrieval_stats.json
+data/eval/oracle_coverage*.json
+data/eval/oracle_per_query*.csv
+data/eval/openpr_v2_*.jsonl
+data/eval/openpr_v2_*.stdout.log
+data/eval/openpr_v2_results.jsonl
+data/eval/prompt_ablation.jsonl
+data/eval/*.stdout.log
+
+# Scrape and run logs at the repo root (large, regenerable)
+*.log
+
+# Build artifacts
+build/
+dist/

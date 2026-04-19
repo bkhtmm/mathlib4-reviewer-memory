@@ -1,0 +1,588 @@
+====================================================================================================
+CASE Q  PR #25218  (open-pr, v3 prompt)
+file: Mathlib/AlgebraicGeometry/EllipticCurve/Modular/TateNormalForm.lean  line: 70.0
+reviewer: @MichaelStollBayreuth  on 2025-06-01T20:07:09Z
+advice_kind: docstring rewording
+prompt_tokens: 9375  completion_tokens: 3704
+HUMAN reviewer (ground truth):
+  > ```suggestion
+  > /-- The `Y` coordinate of a given point. For the point at infinity, this returns `0`
+  > ```
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Your single most important task is to AVOID "axis-miss" false positives: cases where a past comment and the new code LOOK similar on the surface, but the past reviewer was raising a different KIND of concern than anything the new hunk actually has. A correct silent output is far more valuable than a confident wrong-axis answer.
+
+Read carefully before producing JSON. Follow the four steps below in order.
+
+STEP 1 — STRUCTURAL + SEMANTIC READING OF THE NEW HUNK.
+  1a. Parse the code shape: tactic-mode vs term-mode, declaration kind (`def` / `theorem` / `lemma` / `instance` / `class` / `structure` / `abbrev` / `syntax` / `notation`), attributes (`@[simp]`, `@[to_additive]`, `@[deprecated]`, `@[ext]`, `@[fun_prop]`, `@[reassoc]`, …), universe parameters, implicit/explicit binders, docstring style, proof tactics used.
+  1b. Inventory what *could* be criticized about THIS specific hunk. Pick as many as apply from this list of "concern axes":
+     - correctness-bug        (code doesn't typecheck / is logically wrong)
+     - naming                  (lemma/def name doesn't follow conventions)
+     - docstring               (missing, unclear, typo, wrong phrasing)
+     - attribute               (missing/wrong `@[simp]` / `@[to_additive]` …)
+     - style-syntax            (`fun x ↦` vs `fun x =>`, `by use _; exact _` vs `⟨_, _⟩`, whitespace/`ppSpace`, notation preference)
+     - proof-golf              (the proof tactics could be shorter/nicer)
+     - refactor-simplify       (same statement provable with less machinery)
+     - generalize-signature    (hypotheses too strong; remove/weaken a typeclass)
+     - design-smell-architectural (this API shape is wrong; returning a string, unnecessary instance, redundant definition, etc.)
+     - imports-module          (superfluous imports, module structure)
+     - namespace-organization  (`_root_`, namespace boundary, file placement)
+     - automation-tactic       (should use / should teach `aesop_cat`, `gcongr`, `positivity`, etc.)
+     - instance-diamond        (this instance creates an ambiguity / defeq diamond with another)
+     - unify-with-existing     (a similar definition/lemma already exists)
+     - junk-value              (docstring should note behavior at the "undefined" input; handled via `0`/`⊥`/`⊤`)
+  List the concerns that PLAUSIBLY apply to the new hunk. If none are obviously present, say so — don't invent them.
+
+STEP 2 — PER-CANDIDATE CONCERN CLASSIFICATION.
+  For EACH candidate, identify which concern axis (from the same list) the past reviewer's comment was about. Read the past comment carefully: the reviewer's *words* (not the past code) tell you the concern axis. If a past comment ships a `suggestion` code block, that block is evidence for what the reviewer wanted changed — but the axis of concern comes from the prose around it. Ignore candidates whose past comment is pure bikeshed or where you cannot identify a clear concern.
+
+STEP 3 — AXIS MATCH + APPLICABILITY CHECK.
+  A candidate is eligible for `strong_matches` ONLY if BOTH:
+    (a) Its axis (from step 2) is among the new hunk's plausible concerns (from step 1b).
+    (b) You can write a concrete adaptation that a Lean/mathlib reviewer would plausibly post on the new hunk *today*, given what is visible in the hunk.
+  Before promoting, write — in the JSON output, per match — a `why_might_not_apply` field giving the strongest counter-argument against promotion (one short sentence). If this counter-argument is actually compelling (e.g. "the new code does not have that pattern", "the new code *does* have an ext lemma, so this doesn't apply"), DO NOT promote; demote to `weak_observations` or drop.
+  Cross-candidate synthesis is allowed: if candidate X establishes that an identifier in the new hunk is a `class`, and candidate Y shows the preferred term-mode `instance := ⟨...⟩` template, they jointly support a promotion. List both in `supporting_past_prs` and still produce one `why_might_not_apply`.
+
+STEP 4 — CONFIDENCE AND OUTPUT.
+  Confidence scale:
+    - "high"   — ≥1 strong match survives step 3 AND the adaptation is a near-verbatim application of a past comment; the counter-argument is weak.
+    - "medium" — ≥1 strong match survives step 3 BUT needs adaptation or synthesis; counter-argument is plausible but not decisive.
+    - "low"    — no candidate survives step 3; only stylistic patterns worth mentioning as `weak_observations`.
+    - "none"   — retrieved pool's axes don't match anything plausible about the new hunk; state this and stop.
+  When in doubt between "medium" and "low" on a single uncertain candidate, prefer "low" and put that candidate in `weak_observations`. "Confident but wrong-axis" is the #1 failure we are trying to eliminate.
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "new_hunk_plausible_concerns": [<one or more axis labels from Step 1b, or []>],
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_concern_axis": "<axis label from the list>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure AND explaining why the concern axis matches>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "why_might_not_apply": "<one short sentence — strongest counter-argument against this promotion>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "axis": "<axis label>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Do not invent axis labels outside the list. Do not promote a candidate whose axis is not in `new_hunk_plausible_concerns`.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #25218 (file: Mathlib/AlgebraicGeometry/EllipticCurve/Modular/TateNormalForm.lean):
+```
+@@ -0,0 +1,267 @@
+... [30 lines above hidden]
++
++* `IsTateNF W`: A typeclass saying that the Weierstrass curve `W` is in Tate normal form.
++* `toTateNF W`: Given a point `P` satisfying the condition `P, 2P, 3P ≠ 0`, this is a variable
++  change that brings the Weierstrass curve `W` to Tate normal form.
++
++## References
++
++* [James Parson, Moduli of Elliptic Curves](https://math.stanford.edu/~conrad/vigregroup/vigre03/moduli.pdf)
++-/
++
++noncomputable section
++
++namespace WeierstrassCurve
++
++/-- The Tate normal form is $$y^2 + (1-c)xy - by = x^3 - bx^2$$. -/
++@[mk_iff]
++class IsTateNF {R : Type*} [Zero R] (W : WeierstrassCurve R) : Prop where
++  a₂₃ : W.a₂ = W.a₃
++  a₄  : W.a₄ = 0
++  a₆  : W.a₆ = 0
++
++namespace Affine.Point
++
++variable {R : Type*} [CommRing R] {W : WeierstrassCurve R} (P : W.toAffine.Point)
++
++/-- Typeclass for a given point not being zero (the point at infinity). -/
++@[mk_iff]
++class NeZero : Prop where
++  neZero : P ≠ 0
++
++instance : DecidablePred (Affine.Point.NeZero (W:=W))
++| zero   => isFalse (fun ⟨h⟩ ↦ h rfl)
++| some _ => isTrue ⟨Point.noConfusion⟩
++
++/-- The `X` coordinate of a given point. For the point of infinity, this returns `0`
++(junk value). -/
++def X : W.toAffine.Point → R
++  | 0 => 0
++  | @some _ _ _ x _ _ => x
++
++/-- The `Y` coordinate of a given point. For the point of infinity, this returns `0`
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.791, past_pr=#16864, file=Mathlib/AlgebraicGeometry/EllipticCurve/NormalForms.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,662 @@
+... [7 lines above hidden]
++import Mathlib.Algebra.CharP.Defs
++
++/-!
++
++# Some normal forms of elliptic curves
++
++This file defines some normal forms of Weierstrass equations of elliptic curves.
++
++## Main definitions and results
++
++The following normal form is in [silverman2009], section III.1, page 42.
++
++- `WeierstrassCurve.IsCharNeTwoNF` is a predicate asserts that a `WeierstrassCurve` is of form
+```
+PAST COMMENT (from reviewer):
+```suggestion
+- `WeierstrassCurve.IsCharNeTwoNF` is a predicate that asserts that a `WeierstrassCurve` is of form
+```
+also elsewhere
+
+--- candidate 2 (sim=0.791, past_pr=#16864, file=Mathlib/AlgebraicGeometry/EllipticCurve/NormalForms.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,662 @@
+... [5 lines above hidden]
++-/
++import Mathlib.AlgebraicGeometry.EllipticCurve.Weierstrass
++import Mathlib.Algebra.CharP.Defs
++
++/-!
++
++# Some normal forms of elliptic curves
++
++This file defines some normal forms of Weierstrass equations of elliptic curves.
++
++## Main definitions and results
++
++The following normal form is in [silverman2009], section III.1, page 42.
+```
+PAST COMMENT (from reviewer):
+```suggestion
+The following normal forms are in [silverman2009], section III.1, page 42.
+```
+
+--- candidate 3 (sim=0.783, past_pr=#9433, file=Mathlib/AlgebraicGeometry/EllipticCurve/Jacobian.lean) ---
+PAST HUNK:
+```
+@@ -86,240 +90,769 @@ local macro "pderiv_simp" : tactic =>
+... [609 lines above hidden]
++
++lemma dblX_of_Z_ne_zero {P Q : Fin 3 → F} (hP : W.Equation P) (hQ : W.Equation Q) (hPz : P z ≠ 0)
++    (hQz : Q z ≠ 0) (hx : P x * Q z ^ 2 = Q x * P z ^ 2) (hy : P y * Q z ^ 3 ≠ W.negY Q * P z ^ 3) :
++    W.dblX P / W.dblZ P ^ 2 = W.toAffine.addX (P x / P z ^ 2) (Q x / Q z ^ 2)
++      (W.toAffine.slope (P x / P z ^ 2) (Q x / Q z ^ 2) (P y / P z ^ 3) (Q y / Q z ^ 3)) := by
++  rw [dblX, toAffine_slope_of_eq hP hQ hPz hQz hx hy, dblZ,
++    ← (div_eq_div_iff (pow_ne_zero 2 hPz) (pow_ne_zero 2 hQz)).mpr hx,
++    toAffine_addX_of_eq hPz <| sub_ne_zero_of_ne <| Y_ne_negY_of_Y_ne' hP hQ hx hy]
++
++variable (V) in
++/-- The $Y$-coordinate of the doubling of a point representative, before applying the final negation
++that maps $Y$ to $-Y - a_1XZ - a_3Z^3$. -/
++def dblY' (P : Fin 3 → R) : R :=
+```
+PAST COMMENT (from reviewer):
+What about `negDblY`?
+
+--- candidate 4 (sim=0.783, past_pr=#9433, file=Mathlib/AlgebraicGeometry/EllipticCurve/Jacobian.lean) ---
+PAST HUNK:
+```
+@@ -86,240 +90,769 @@ local macro "pderiv_simp" : tactic =>
+... [629 lines above hidden]
++lemma dblY'_of_Z_eq_zero {P : Fin 3 → R} (hP : V.Equation P) (hPz : P z = 0) :
++    V.dblY' P = -(P x ^ 2) ^ 3 := by
++  linear_combination
++    (norm := (rw [dblY', dblX_of_Z_eq_zero hP hPz, negY_of_Z_eq_zero hPz, hPz]; ring1))
++    (8 * (equation_of_Z_eq_zero hPz).mp hP - 12 * P x ^ 3) * (equation_of_Z_eq_zero hPz).mp hP
++
++lemma dblY'_of_Y_eq [NoZeroDivisors R] {P Q : Fin 3 → R} (hQz : Q z ≠ 0)
++    (hx : P x * Q z ^ 2 = Q x * P z ^ 2) (hy : P y * Q z ^ 3 = Q y * P z ^ 3)
++    (hy' : P y * Q z ^ 3 = V.negY Q * P z ^ 3) : V.dblY' P = (-eval P V.polynomialX) ^ 3 := by
++  rw [dblY', dblX_of_Y_eq hQz hx hy hy', eval_polynomialX, Y_eq_negY_of_Y_eq hQz hx hy hy']
++  ring1
++
++private lemma toAffine_addY'_of_eq {P : Fin 3 → F} {n d : F} (hPz : P z ≠ 0) (hd : d ≠ 0) :
+```
+PAST COMMENT (from reviewer):
+this could have been `negAddY` . I think I far prefer my suggestions to just "add a ' to indicate a negation" -- usually adding a ' indicates a variant, not a completely different function.
+
+--- candidate 5 (sim=0.781, past_pr=#9744, file=Mathlib/AlgebraicGeometry/EllipticCurve/Group.lean) ---
+PAST HUNK:
+```
+@@ -17,8 +17,8 @@ under the geometric group law defined in `Mathlib.AlgebraicGeometry.EllipticCurv
+ 
+ Let `W` be a Weierstrass curve over a field `F` given by a Weierstrass equation $W(X, Y) = 0$ in
+ affine coordinates. As in `Mathlib.AlgebraicGeometry.EllipticCurve.Affine`, the set of nonsingular
+-rational points $W(F)$ of `W` consist of the unique point at infinity $0$ and nonsingular affine
+-points $(x, y)$. With this description, there is an addition-preserving injection between $W(F)$
++rational points $W⟮F⟯$ of `W` consist of the unique point at infinity $0$ and nonsingular affine
+```
+PAST COMMENT (from reviewer):
+Those are the weird parenthesis used for for `IntermediateField` (or something similar), right? I guess LaTeX will not love them
+
+--- candidate 6 (sim=0.775, past_pr=#8485, file=Mathlib/AlgebraicGeometry/EllipticCurve/Projective.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,967 @@
+... [575 lines above hidden]
++@[simp]
++lemma neg_map_some (X Y : R) : W.neg_map ⟦![X, Y, 1]⟧ = ⟦![X, -Y - W.a₁ * X - W.a₃, 1]⟧ := by
++  rw [neg_map_eq, neg_some]
++
++open scoped Classical
++
++/-- The addition of two point representatives. -/
++@[pp_dot]
++noncomputable def add (P Q : Fin 3 → R) : Fin 3 → R :=
++  if P z = 0 then Q else if Q z = 0 then P else if P x * Q z = P z * Q x then
++    if P y * Q z = P z * W.negY Q then ![0, 1, 0] else
++      ![W.addX_of_Yne P, W.addY_of_Yne P, W.addZ_of_Yne P]
++  else ![W.addX_of_Xne P Q, W.addY_of_Xne P Q, addZ_of_Xne P Q]
+```
+PAST COMMENT (from reviewer):
+I think these could be called `![W.dblX P, W.dblY P, W.dblZ P]` and `![W.addX P, W.addY P, addZ P]` just like the Jacobian case. In fact, I've found that you can remove a `P z ^ 2` factor from the projective doubling formula to make it valid in all cases (O+O or P+P for P 2-torsion); the resulting formula is homogeneous of degree 4 rather than 6. From the projective addition formula, you can also remove a factor of `P z * Q z`, and the resulting formula is homogeneous of degree 6 rather than 8, and applies in the case P=-Q≠Q, but not in the cases P=O or Q=O (gives (0,0,0)). I don't think this simplifies the proof that the reduction map is a homomorphism though.
+
+I think this is the best you can do in projective coordinates, which is not as nice as the Jacobian formulas, wh
+... [truncated]
+
+--- candidate 7 (sim=0.775, past_pr=#8485, file=Mathlib/AlgebraicGeometry/EllipticCurve/Projective.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,967 @@
+... [575 lines above hidden]
++@[simp]
++lemma neg_map_some (X Y : R) : W.neg_map ⟦![X, Y, 1]⟧ = ⟦![X, -Y - W.a₁ * X - W.a₃, 1]⟧ := by
++  rw [neg_map_eq, neg_some]
++
++open scoped Classical
++
++/-- The addition of two point representatives. -/
++@[pp_dot]
++noncomputable def add (P Q : Fin 3 → R) : Fin 3 → R :=
++  if P z = 0 then Q else if Q z = 0 then P else if P x * Q z = P z * Q x then
++    if P y * Q z = P z * W.negY Q then ![0, 1, 0] else
++      ![W.addX_of_Yne P, W.addY_of_Yne P, W.addZ_of_Yne P]
++  else ![W.addX_of_Xne P Q, W.addY_of_Xne P Q, addZ_of_Xne P Q]
+```
+PAST COMMENT (from reviewer):
+Hmm thanks! I can reproduce ... so this should give rise to multiplication-by-n formula in projective coordinates, and I wonder how it compares with $(\phi\psi:\omega:\psi^3)$ ...
+
+--- candidate 8 (sim=0.774, past_pr=#9405, file=Mathlib/AlgebraicGeometry/EllipticCurve/Jacobian.lean) ---
+PAST HUNK:
+```
+@@ -86,240 +107,1237 @@ local macro "pderiv_simp" : tactic =>
+... [575 lines above hidden]
++  have hPy : P y - W.negY P ≠ 0 := sub_ne_zero_of_ne <| Y_ne_negY_of_Y_ne' hP hQ hx hy
++  simp only [mul_comm <| P z ^ _, ne_eq, ← div_eq_div_iff (pow_ne_zero _ hPz) (pow_ne_zero _ hQz)]
++    at hx hy
++  rw [Affine.slope_of_Yne hx <| negY_of_Z_ne_zero hQz ▸ hy, ← negY_of_Z_ne_zero hPz, dblZ]
++  field_simp [pow_ne_zero 2 hPz]
++  ring1
++
++variable (V) in
++/-- The $X$-coordinate of the doubling of a point representative. -/
++def dblX (P : Fin 3 → R) : R :=
++  (3 * P x ^ 2 + 2 * V.a₂ * P x * P z ^ 2 + V.a₄ * P z ^ 4 - V.a₁ * P y * P z) ^ 2
++    + V.a₁ * (3 * P x ^ 2 + 2 * V.a₂ * P x * P z ^ 2 + V.a₄ * P z ^ 4 - V.a₁ * P y * P z) * P z
++      * (P y - V.negY P) - V.a₂ * P z ^ 2 * (P y - V.negY P) ^ 2 - 2 * P x * (P y - V.negY P) ^ 2
+```
+PAST COMMENT (from reviewer):
+What do you think about replacing the appearances of the RHS of [WeierstrassCurve.Jacobian.eval_polynomialX](https://leanprover-community.github.io/mathlib4_docs/Mathlib/AlgebraicGeometry/EllipticCurve/Jacobian.html#WeierstrassCurve.Jacobian.eval_polynomialX) by the LHS in this definition and in `dblY` below? We could replace `P y - V.negY P` with the evaluation of `polynomialY` too, but that wouldn't be shorter.
+
+--- candidate 9 (sim=0.774, past_pr=#9436, file=Mathlib/AlgebraicGeometry/EllipticCurve/Jacobian.lean) ---
+PAST HUNK:
+```
+@@ -86,240 +106,1237 @@ local macro "pderiv_simp" : tactic =>
+... [1155 lines above hidden]
++lemma nonsingularLift_addMap {P Q : PointClass F} (hP : W.NonsingularLift P)
++    (hQ : W.NonsingularLift Q) : W.NonsingularLift <| W.addMap P Q := by
++  rcases P, Q with ⟨⟨_⟩, ⟨_⟩⟩
++  exact nonsingular_add hP hQ
++
++end Addition
++
++section Point
++
++/-! ### Nonsingular rational points -/
++
++/-- A nonsingular rational point on `W`. -/
++structure Point where
+```
+PAST COMMENT (from reviewer):
+`W'` would be fine, ~~or you could introduce `(W : Jacobian R)` globally and `(W : Jacobian F)` only in sections that deal with fields, and it will shadow the global W within the section. However, beware that you might be unable to change explicitness of W within the sections, see [lean4#3227](https://github.com/leanprover/lean4/issues/3227).~~ (given that the lemmas for the ring case and for the field case are interspersed, this probably isn't an option)
+
+--- candidate 10 (sim=0.774, past_pr=#9436, file=Mathlib/AlgebraicGeometry/EllipticCurve/Jacobian.lean) ---
+PAST HUNK:
+```
+@@ -86,240 +106,1237 @@ local macro "pderiv_simp" : tactic =>
+... [1155 lines above hidden]
++lemma nonsingularLift_addMap {P Q : PointClass F} (hP : W.NonsingularLift P)
++    (hQ : W.NonsingularLift Q) : W.NonsingularLift <| W.addMap P Q := by
++  rcases P, Q with ⟨⟨_⟩, ⟨_⟩⟩
++  exact nonsingular_add hP hQ
++
++end Addition
++
++section Point
++
++/-! ### Nonsingular rational points -/
++
++/-- A nonsingular rational point on `W`. -/
++structure Point where
+```
+PAST COMMENT (from reviewer):
+```suggestion
+variable (V) in
+/-- A nonsingular rational point on `V`. -/
+@[ext] structure Point where
+```
+Please correct references to `W` in the docstrings that should actually be `V`.
+
+--- candidate 11 (sim=0.772, past_pr=#9417, file=Mathlib/AlgebraicGeometry/EllipticCurve/Projective.lean) ---
+PAST HUNK:
+```
+@@ -446,4 +450,711 @@ alias nonsingular_of_affine_of_Z_ne_zero := nonsingular_of_Z_ne_zero
+... [609 lines above hidden]
++  field_simp [mul_ne_zero (pow_ne_zero 2 <| mul_ne_zero hPz hQz) <| pow_ne_zero 3 hd]
++  ring1
++
++lemma negAddY_of_Z_ne_zero {P Q : Fin 3 → F} (hP : W.Equation P) (hQ : W.Equation Q) (hPz : P z ≠ 0)
++    (hQz : Q z ≠ 0) (hx : P x * Q z ≠ Q x * P z) : W.negAddY P Q / W.addZ P Q =
++      W.toAffine.negAddY (P x / P z) (Q x / Q z) (P y / P z)
++        (W.toAffine.slope (P x / P z) (Q x / Q z) (P y / P z) (Q y / Q z)) := by
++  rw [negAddY_eq hP hQ hPz hQz, addZ_eq hP hQ hPz hQz, toAffine_slope_of_ne hPz hQz hx,
++    toAffine_negAddY_of_ne hPz hQz <| sub_ne_zero.mpr hx]
++
++variable (W') in
++/-- The $Y$-coordinate of the addition of two distinct point representatives. -/
++def addY (P Q : Fin 3 → R) : R :=
+```
+PAST COMMENT (from reviewer):
+In all of these definitions I would add "returns a junk value if P=Q" just to be clear that this is what's happening (I was confused at first when reviewing this PR, so maybe others will be confused when reading it). My confusion stems from the fact that I was incorrectly assuming that in projective coordinates you can get away with one formula for addition, but apparently this is not correct. I guess that in affine coordinates there are many formulae (P+0, P+P, 0+P, P+(-P) etc) so presumably there are still gains to be had with two formulae.
+
+--- candidate 12 (sim=0.772, past_pr=#9417, file=Mathlib/AlgebraicGeometry/EllipticCurve/Projective.lean) ---
+PAST HUNK:
+```
+@@ -446,4 +450,711 @@ alias nonsingular_of_affine_of_Z_ne_zero := nonsingular_of_Z_ne_zero
+... [648 lines above hidden]
++    addZ_of_X_eq hP hQ hPz hQz hx]; ring1)) -(P z * Q z) * negAddY_of_X_eq' hP hQ hx
++
++lemma addY_of_X_eq {P Q : Fin 3 → F} (hP : W.Equation P) (hQ : W.Equation Q) (hPz : P z ≠ 0)
++    (hQz : Q z ≠ 0) (hx : P x * Q z = Q x * P z) : W.addY P Q = addU P Q := by
++  rw [addU, ← mul_div_mul_right _ _ <| pow_ne_zero 2 <| mul_ne_zero hPz hQz,
++    ← addY_of_X_eq' hP hQ hPz hQz hx, ← pow_succ',
++    mul_div_cancel_right₀ _ <| pow_ne_zero 3 <| mul_ne_zero hPz hQz]
++
++lemma addY_of_Z_ne_zero {P Q : Fin 3 → F} (hP : W.Equation P) (hQ : W.Equation Q) (hPz : P z ≠ 0)
++    (hQz : Q z ≠ 0) (hx : P x * Q z ≠ Q x * P z) :
++    W.addY P Q / W.addZ P Q = W.toAffine.addY (P x / P z) (Q x / Q z) (P y / P z)
++      (W.toAffine.slope (P x / P z) (Q x / Q z) (P y / P z) (Q y / Q z)) := by
++  erw [addY, negY_of_Z_ne_zero <| addZ_ne_zero_of_X_ne hP hQ hx, addX_of_Z_ne_zero hP hQ hPz hQz hx,
+```
+PAST COMMENT (from reviewer):
+Do you understand why you need `erw` here whereas for most of the PR `rw` has been fine?
+
+--- candidate 13 (sim=0.772, past_pr=#18531, file=Mathlib/AlgebraicGeometry/EllipticCurve/Weierstrass.lean) ---
+PAST HUNK:
+```
+@@ -32,23 +32,20 @@ splitting field of `R` are precisely the $X$-coordinates of the non-zero 2-torsi
+... [3 lines above hidden]
+  * `WeierstrassCurve.Δ`: the discriminant of a Weierstrass curve.
+- * `WeierstrassCurve.ofJ0`: a Weierstrass curve whose j-invariant is 0.
+- * `WeierstrassCurve.ofJ1728`: a Weierstrass curve whose j-invariant is 1728.
+- * `WeierstrassCurve.ofJ`: a Weierstrass curve whose j-invariant is neither 0 nor 1728.
+  * `WeierstrassCurve.map`: the Weierstrass curve mapped over a ring homomorphism.
+  * `WeierstrassCurve.twoTorsionPolynomial`: the 2-torsion polynomial of a Weierstrass curve.
+- * `EllipticCurve`: an elliptic curve over a commutative ring.
+- * `EllipticCurve.j`: the j-invariant of an elliptic curve.
+- * `EllipticCurve.ofJ0`: an elliptic curve whose j-invariant is 0.
+- * `EllipticCurve.ofJ1728`: an elliptic curve whose j-invariant is 1728.
+- * `EllipticCurve.ofJ'`: an elliptic curve whose j-invariant is neither 0 nor 1728.
+- * `EllipticCurve.ofJ`: an elliptic curve whose j-invariant equal to j.
++ * `WeierstrassCurve.IsElliptic`: typeclass asserts that a Weierstrass curve is an elliptic curve.
+```
+PAST COMMENT (from reviewer):
+```suggestion
+ * `WeierstrassCurve.IsElliptic`: typeclass asserting that a Weierstrass curve is an elliptic curve.
+```
+
+--- candidate 14 (sim=0.771, past_pr=#5294, file=Mathlib/AlgebraicGeometry/EllipticCurve/Weierstrass.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,995 @@
+... [816 lines above hidden]
++    Finsupp.add_apply, map_smul, Finsupp.smul_apply, ← basis_zero, ← basis_one,
++    Basis.repr_self_apply, if_pos, if_neg, smul_eq_mul]
++  ring1
++#align weierstrass_curve.coordinate_ring.norm_smul_basis WeierstrassCurve.CoordinateRing.norm_smul_basis
++
++lemma coe_norm_smul_basis (p q : R[X]) :
++    ↑(Algebra.norm R[X] <| p • (1 : W.CoordinateRing) + q • mk W Y) =
++      mk W ((C p + C q * X) * (C p + C q * (-Y - C (C W.a₁ * X + C W.a₃)))) :=
++  AdjoinRoot.mk_eq_mk.mpr
++    ⟨C q ^ 2, by simp only [norm_smul_basis, WeierstrassCurve.polynomial]; C_simp; ring1⟩
++#align weierstrass_curve.coordinate_ring.coe_norm_smul_basis WeierstrassCurve.CoordinateRing.coe_norm_smul_basis
++
++-- porting note: BUG `cases` tactic does not modify assumptions
+```
+PAST COMMENT (from reviewer):
+Please move to identify where exactly this is failing, and restore (in comments) the original lines.
+
+--- candidate 15 (sim=0.771, past_pr=#5294, file=Mathlib/AlgebraicGeometry/EllipticCurve/Weierstrass.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,995 @@
+... [854 lines above hidden]
++                      max_lt_iff.mpr ⟨hdp.trans_lt _, hdpq.trans_lt _⟩).trans
++              (max_eq_right_of_lt _).symm <;> rw [hdq] <;>
++              exact WithBot.coe_lt_coe.mpr <| by linarith only [hpq]
++          · rw [sub_sub]
++            convert (degree_sub_eq_left_of_degree_lt <| (degree_add_le _ _).trans_lt <|
++                      max_lt_iff.mpr ⟨hdpq.trans_lt _, hdq.trans_lt _⟩).trans
++              (max_eq_left_of_lt _).symm <;> rw [hdp] <;>
++              exact WithBot.coe_lt_coe.mpr <| by linarith only [hpq]
++#align weierstrass_curve.coordinate_ring.degree_norm_smul_basis WeierstrassCurve.CoordinateRing.degree_norm_smul_basis
++
++variable {W}
++
++-- porting note: replaced `dec_trivial` with explicit lemma
+```
+PAST COMMENT (from reviewer):
+Again, please move to the exact location of the regression, so it's obvious without opening mathlib3 where one should hope to write `dec_trivial`.
+
+--- candidate 16 (sim=0.758, past_pr=#18531, file=Mathlib/AlgebraicGeometry/EllipticCurve/Affine.lean) ---
+PAST HUNK:
+```
+@@ -14,7 +14,7 @@ This file defines the type of points on a Weierstrass curve as an inductive, con
+ at infinity and affine points satisfying a Weierstrass equation with a nonsingular condition. This
+ file also defines the negation and addition operations of the group law for this type, and proves
+ that they respect the Weierstrass equation and the nonsingular condition. The fact that they form an
+-abelian group is proven in `Mathlib.AlgebraicGeometry.EllipticCurve.Group`.
++abelian group is proven in `Mathlib/AlgebraicGeometry/EllipticCurve/Group.lean`.
+```
+PAST COMMENT (from reviewer):
+I think this works?
+```
+under the geometric group law defined in `Mathlib/AlgebraicGeometry/EllipticCurve/Affine.lean` and
+in `Mathlib/AlgebraicGeometry/EllipticCurve/Jacobian.lean`.
+```
+
+--- candidate 17 (sim=0.752, past_pr=#5841, file=Mathlib/AlgebraicGeometry/EllipticCurve/Weierstrass.lean) ---
+PAST HUNK:
+```
+@@ -35,6 +35,7 @@ splitting field of `R` are precisely the $X$-coordinates of the non-zero 2-torsi
+ 
+  * `WeierstrassCurve`: a Weierstrass curve over a commutative ring.
+  * `WeierstrassCurve.Δ`: the discriminant of a Weierstrass curve.
++ * `WeierstrassCurve.VariableChange`: a change of variable of Weierstrass curves.
+```
+PAST COMMENT (from reviewer):
+I see - let's do `changeCurve` and `changeRing` then
+
+--- candidate 18 (sim=0.751, past_pr=#5841, file=Mathlib/AlgebraicGeometry/EllipticCurve/Weierstrass.lean) ---
+PAST HUNK:
+```
+@@ -35,6 +35,7 @@ splitting field of `R` are precisely the $X$-coordinates of the non-zero 2-torsi
+ 
+  * `WeierstrassCurve`: a Weierstrass curve over a commutative ring.
+  * `WeierstrassCurve.Δ`: the discriminant of a Weierstrass curve.
++ * `WeierstrassCurve.VariableChange`: a change of variable of Weierstrass curves.
+```
+PAST COMMENT (from reviewer):
+"change of variable*s*"? I've been using the plural form everywhere below. I'm also unsure if we should call it `VariableChange` since it might be confused with `variableChange`, but I don't have a better name either.
+
+--- candidate 19 (sim=0.745, past_pr=#13448, file=Mathlib/AlgebraicGeometry/EllipticCurve/Affine.lean) ---
+PAST HUNK:
+```
+@@ -634,7 +634,7 @@ inductive Point
+ #align weierstrass_curve.point WeierstrassCurve.Affine.Point
+ 
+ /-- For an algebraic extension `S` of `R`, the type of nonsingular `S`-rational points on `W`. -/
+-scoped[WeierstrassCurve] notation3 W "⟮" S "⟯" => Affine.Point <| baseChange W S
++scoped[WeierstrassCurve] notation3:9000 W "⟮" S "⟯" => Affine.Point <| baseChange W S
+```
+PAST COMMENT (from reviewer):
+I believe `notation3` uses the Lean 3 `notation` delaborator, which happens to be more flexible? I don't know what the arbitrary number `9000` is, but I would just do `notation3:max` like other places in the repo:
+```suggestion
+scoped[WeierstrassCurve] notation3:max W "⟮" S "⟯" => Affine.Point <| baseChange W S
+```
+I did something similar for `R[X][Y]` in #13356 (which is currently stuck in a merge but I've just fixed it).
+
+--- candidate 20 (sim=0.741, past_pr=#24886, file=Mathlib/AlgebraicGeometry/EllipticCurve/Affine/Formula.lean) ---
+PAST HUNK:
+```
+@@ -10,10 +10,10 @@ import Mathlib.AlgebraicGeometry.EllipticCurve.Affine.Basic
+ 
+ Let `W` be a Weierstrass curve over a field `F` with coefficients `aᵢ`. The nonsingular affine
+ points on `W` can be given negation and addition operations defined by a secant-and-tangent process.
+- * Given a nonsingular affine point `P`, its *negation* `-P` is defined to be the unique third
++* Given a nonsingular affine point `P`, its *negation* `-P` is defined to be the unique third
+     nonsingular point of intersection between `W` and the vertical line through `P`.
+     Explicitly, if `P` is `(x, y)`, then `-P` is `(x, -y - a₁x - a₃)`.
+- * Given two nonsingular affine points `P` and `Q`, their *addition* `P + Q` is defined to be the
++* Given two nonsingular affine points `P` and `Q`, their *addition* `P + Q` is defined to be the
+     negation of the unique third nonsingular point of intersection between `W` and the line `L`
+     through `P` and `Q`. Explicitly, let `P` be `(x₁, y₁)` and let `Q` be `(x₂, y₂)`.
+       * If `x₁ = x₂` and `y₁ = -y₂ - a₁x₂ - a₃`, then `L` is vertical.
+```
+PAST COMMENT (from reviewer):
+This one is still odd
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "new_hunk_plausible_concerns": [
+    "docstring"
+  ],
+  "summary": "One past docstring-grammar correction about how to phrase a typeclass description applies to the new bullets; other retrieved comments are on different axes.",
+  "confidence": "medium",
+  "strong_matches": [
+    {
+      "past_pr": 18531,
+      "past_file": "Mathlib/AlgebraicGeometry/EllipticCurve/Weierstrass.lean",
+      "past_concern_axis": "docstring",
+      "past_comment_excerpt": "`WeierstrassCurve.IsElliptic`: typeclass asserting that a Weierstrass curve is an elliptic curve.",
+      "applies_because": "The new docstring bullet says “A typeclass saying that …”. A prior review preferred the phrasing “typeclass asserting that …” for similar bullets about typeclasses.",
+      "suggested_adaptation": "Change “A typeclass saying that the Weierstrass curve W is in Tate normal form.” to “A typeclass asserting that the Weierstrass curve W is in Tate normal form.”",
+      "why_might_not_apply": "The bullet is in a file-level list rather than a declaration docstring, so stricter phrasing may be considered optional.",
+      "supporting_past_prs": [
+        16864
+      ]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "For partial/undefined inputs, docstrings should note the junk value returned; your X-coordinate docstring already follows this practice.",
+      "axis": "junk-value",
+      "supporting_past_prs": [
+        9417
+      ]
+    }
+  ]
+}

@@ -1,0 +1,591 @@
+====================================================================================================
+CASE P  PR #21950  (open-pr, v2 prompt, sweep2)
+file: Mathlib/NumberTheory/Padics/HeightOneSpectrum.lean  line: 98.0
+reviewer: @Ruben-VandeVelde  on 2025-02-17T11:03:48Z
+advice_kind: attribute / suggestion block
+prompt_tokens: 7606  completion_tokens: 4132
+HUMAN reviewer (ground truth):
+  > Rather than punching through the definitions, I would write
+  > ```suggestion
+  >   intro x hx
+  >   rw [Set.mem_setOf, adicValued_apply, WithZero.coe_unitsWithZeroEquiv_symm] at hx
+  > ```
+  > with
+  > ```lean
+  > @[simp]
+  > lemma WithZero.coe_unitsWithZeroEquiv_symm {α : Type*} [Group α] (γ : α) :
+  >     (WithZero.unitsWithZeroEquiv.symm γ : WithZero α) = (γ : WithZero α) := rfl
+  > ```
+  > to be added to `Mathlib/Algebra/GroupWithZero/WithZero.lean` under the definition.
+  > 
+  > (And probably I would merge this `rw` with the one below)
+====================================================================================================
+
+[SYSTEM]
+----------------------------------------------------------------------------------------------------
+You are an expert reviewer for the Lean 4 / mathlib4 mathematical library. Given a NEW code hunk from an open pull request and a set of historically retrieved (past_hunk, past_comment) pairs, your job is to identify which past reviewer feedback would also apply to the new hunk.
+
+Compared to a naive matcher you must do TWO extra things, because the answer is often only derivable by combining evidence:
+
+A. STRUCTURAL PATTERN EXTRACTION. Past comments often contain `suggestion` code blocks (```suggestion ... ```) or inline code-shape rewrites. These suggested code snippets ARE concrete advice, not just commentary. Treat them as first-class evidence about preferred Lean/mathlib idioms (e.g.: term-mode constructor `:= ⟨_, _, _⟩` vs `by use _; exact _`, `instance` vs `theorem` for class-membership statements, `refine ⟨..., ?_⟩` vs `use ...; constructor`, `@[simp]` / `@[to_additive]` attributes, naming conventions, docstring phrasing, etc.).
+
+B. CROSS-CANDIDATE SYNTHESIS. The applicable advice for the new hunk may require combining evidence from multiple candidates. Example: candidate X's context tells you that an identifier in the new hunk is a `class`; candidate Y shows the term-mode `instance ... := ⟨...⟩` template for proving class membership. Together they support the conclusion: "the new theorem proving class membership should be rewritten as an `instance` with a term-mode constructor". List supporting PRs for any synthesised finding.
+
+Reasoning protocol (do this internally before producing JSON):
+
+  1. STRUCTURAL FEATURES OF THE NEW HUNK. Identify each: tactic-mode vs term-mode? Uses `by use ...; exact ...`? Uses `use ...; constructor`? Declares an `instance` / a `theorem` / a `lemma` / a `def` / a `class`? Has `@[simp]`, `@[to_additive]`, `@[deprecated]`? Uses anonymous functions `fun x =>` vs `↦`? Has a docstring `/-- ... -/` of any specific shape?
+
+  2. PATTERN INVENTORY FROM CANDIDATES. For each candidate, note any concrete pattern shown in its suggested-code or comment (term-mode template, attribute recommendation, naming convention, idiomatic rewrite, terminology preference, etc.). Also note which candidates' past hunks define or use identifiers that appear in the new hunk (these are clues about whether something is a class, an instance, an alias, etc.).
+
+  3. APPLICABILITY CHECK. For each pattern from step 2, ask: does the new hunk's structure (step 1) instantiate the same shape that this pattern was applied to? If yes, that's a STRONG match. If two patterns combine to support a finding, list both supporting PRs.
+
+  4. STRICT REFUSAL. If after this analysis no candidate (alone or in combination) gives concrete, well-grounded advice for the specific code in the new hunk, output an empty `strong_matches` list. Do not paper over with generic advice. Generic style observations belong in `weak_observations`, clearly marked. Do not invent advice that isn't traceable to specific past PRs in the retrieval pool.
+
+Confidence:
+  - "high"  — at least one strong match is grounded in concrete suggested-code or explicit prose from a candidate, and the new hunk clearly fits the same shape
+  - "medium" — at least one strong match exists but requires synthesis or adaptation; OR a single candidate gives related but not identical advice
+  - "low"   — only loose stylistic patterns; nothing actionable
+  - "none"  — retrieved pool is unrelated; do not press an answer
+
+Output JSON ONLY, matching this exact schema:
+
+{
+  "summary": "<one sentence describing what we found>",
+  "confidence": "high"|"medium"|"low"|"none",
+  "strong_matches": [
+    {
+      "past_pr": <int>,
+      "past_file": "<string>",
+      "past_comment_excerpt": "<verbatim short quote from the past comment OR the relevant snippet from its suggestion block>",
+      "applies_because": "<one or two sentences linking past code/comment to the new hunk's structure>",
+      "suggested_adaptation": "<one sentence on what the reviewer might say on the new hunk>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "<short string>",
+      "supporting_past_prs": [<int>, ...]
+    }
+  ]
+}
+
+Quote short — under 40 words per excerpt. Be precise about which PR(s) support each finding via supporting_past_prs.
+
+[USER]
+----------------------------------------------------------------------------------------------------
+NEW HUNK from open PR #21950 (file: Mathlib/NumberTheory/Padics/HeightOneSpectrum.lean):
+```
+@@ -0,0 +1,201 @@
+... [58 lines above hidden]
++  Int.heightOneSpectrumEquiv.symm ⟨p, Fact.out⟩
++
++lemma Nat.toHeightOneSpectrum_intValuation (p : ℕ) [Fact p.Prime] (n : ℤ) (hn : n ≠ 0) :
++    p.toHeightOneSpectrum.intValuation n = Multiplicative.ofAdd (-padicValInt p n : ℤ) := by
++  classical
++  rw [intValuation_apply, intValuationDef_if_neg _ hn,
++    count_associates_factors_eq (by simpa) inferInstance p.toHeightOneSpectrum.3,
++    Nat.toHeightOneSpectrum_asIdeal, count_span_normalizedFactors_eq hn
++    (by rw [← Nat.prime_iff_prime_int]; exact Fact.out),
++    padicValInt.of_ne_one_ne_zero ‹Fact p.Prime›.out.ne_one hn]
++  congr 4
++  apply ENat.coe_inj.mp
++  rw [← UniqueFactorizationMonoid.emultiplicity_eq_count_normalizedFactors _ hn,
++    FiniteMultiplicity.emultiplicity_eq_multiplicity]
++  · exact padicValRat.finite_int_prime_iff.mpr hn
++  · rw [UniqueFactorizationMonoid.irreducible_iff_prime, ← Nat.prime_iff_prime_int]; exact Fact.out
++
++lemma Nat.toHeightOneSpectrum_valuation (p : ℕ) [Fact p.Prime] (r : ℚ) (hr : r ≠ 0) :
++    p.toHeightOneSpectrum.valuation r = Multiplicative.ofAdd (-padicValRat p r) := by
++  trans p.toHeightOneSpectrum.valuation (algebraMap ℤ ℚ r.num / algebraMap ℤ ℚ r.den)
++  · simp [Rat.num_div_den]
++  rw [map_div₀, valuation_of_algebraMap, valuation_of_algebraMap,
++    toHeightOneSpectrum_intValuation, toHeightOneSpectrum_intValuation, ← WithZero.coe_div,
++    ← ofAdd_sub, padicValRat_def, padicValInt, padicValInt, Int.natAbs_cast]
++  · ring_nf
++  · simp
++  · simpa
++
++/-- The canonical map from the abstract completion of `ℚ` at `p` to `ℚ_[p]`.
++This is a homeomorphism, see `Padic.isHomeomorph_ofAdicCompletion`. -/
++noncomputable
++def Padic.ofAdicCompletion (p : ℕ) [Fact p.Prime] :
++    p.toHeightOneSpectrum.adicCompletion ℚ →+* ℚ_[p] := by
++  letI := p.toHeightOneSpectrum.adicValued (K := ℚ)
++  refine UniformSpace.Completion.extensionHom (Rat.castHom _) ?_
++  apply continuous_of_continuousAt_zero
++  rw [ContinuousAt, map_zero, (Valued.hasBasis_nhds_zero _ _).tendsto_iff Metric.nhds_basis_ball]
++  intro ε hε
++  obtain ⟨k, hk⟩ := PadicInt.exists_pow_neg_lt p hε
++  refine ⟨WithZero.unitsWithZeroEquiv.symm (Multiplicative.ofAdd (-k)), trivial, ?_⟩
++  rintro x (hx : p.toHeightOneSpectrum.valuation x < (Multiplicative.ofAdd (-k : ℤ)))
+```
+
+RETRIEVED CANDIDATES (top-20 by hunk-embedding similarity, sorted by sim desc):
+
+--- candidate 1 (sim=0.804, past_pr=#30576, file=Mathlib/NumberTheory/Padics/HeightOneSpectrum.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,232 @@
+... [102 lines above hidden]
++`HeightOneSpectrum.valuation ℚ v` and the RHS has uniformity from
++`Rat.padicValuation (natGenerator v)`, for a height-one prime ideal
++`v : HeightOneSpectrum (𝓞 ℚ)`. -/
++noncomputable def withValEquiv (v : HeightOneSpectrum (𝓞 ℚ)) :
++    WithVal (v.valuation ℚ) ≃ᵤ WithVal (padicValuation (primesEquiv v)) :=
++  (valuation_equiv_padicValuation v).uniformEquiv
++    (fun γ ↦ by obtain ⟨r, hr⟩ := v.valuation_surjective ℚ γ; exact ⟨r, 1, by aesop⟩)
++    (fun γ ↦ by obtain ⟨r, hr⟩ := surjective_padicValuation (primesEquiv v) γ
++                exact ⟨r, 1, by aesop⟩)
++
++/-- The continuous `ℚ`-algebra isomorphism between `v.adicCompletion ℚ` and `ℚ_[primesEquiv v]`. -/
++noncomputable def adicCompletion.padicEquiv (v : HeightOneSpectrum (𝓞 ℚ)) :
++    v.adicCompletion ℚ ≃A[ℚ] ℚ_[primesEquiv v] where
+```
+PAST COMMENT (from reviewer):
+I reluctantly agree with this. Maybe there are lots of predicates? "This commutative topological ring equipped with a map from R is the completion of R wrt this `ValuativeRel`" / "...wrt this valuation" / "...wrt this norm" :-/
+
+--- candidate 2 (sim=0.804, past_pr=#30576, file=Mathlib/NumberTheory/Padics/HeightOneSpectrum.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,232 @@
+... [102 lines above hidden]
++`HeightOneSpectrum.valuation ℚ v` and the RHS has uniformity from
++`Rat.padicValuation (natGenerator v)`, for a height-one prime ideal
++`v : HeightOneSpectrum (𝓞 ℚ)`. -/
++noncomputable def withValEquiv (v : HeightOneSpectrum (𝓞 ℚ)) :
++    WithVal (v.valuation ℚ) ≃ᵤ WithVal (padicValuation (primesEquiv v)) :=
++  (valuation_equiv_padicValuation v).uniformEquiv
++    (fun γ ↦ by obtain ⟨r, hr⟩ := v.valuation_surjective ℚ γ; exact ⟨r, 1, by aesop⟩)
++    (fun γ ↦ by obtain ⟨r, hr⟩ := surjective_padicValuation (primesEquiv v) γ
++                exact ⟨r, 1, by aesop⟩)
++
++/-- The continuous `ℚ`-algebra isomorphism between `v.adicCompletion ℚ` and `ℚ_[primesEquiv v]`. -/
++noncomputable def adicCompletion.padicEquiv (v : HeightOneSpectrum (𝓞 ℚ)) :
++    v.adicCompletion ℚ ≃A[ℚ] ℚ_[primesEquiv v] where
+```
+PAST COMMENT (from reviewer):
+I think it would be great if this could be made a bit more flexible. Because users might need an isomorphism between `v.adicCompletion` and `ℚ_[p]` for some user-supplied `p`.
+
+But rewriting with `h : primesEquiv v = p` will lead to DTT headaches. So I'm wondering whether universal properties can be used to make this more general, while keeping good defeqs.
+
+I think we should have a predicate that says: this ring/field is the adic completion of this other ring/field wrt this valuation/uniformity/topology. And then whenever we have two instances of that predicate, we can get a (unique!) iso between the two completions.
+
+I think the uniqueness of the isos is also important. Because if some other API spits out an iso, it should be easy to conclude that it is the same as the one
+... [truncated]
+
+--- candidate 3 (sim=0.715, past_pr=#27105, file=Mathlib/RingTheory/DedekindDomain/Ideal/Lemmas.lean) ---
+PAST HUNK:
+```
+@@ -991,6 +991,27 @@ theorem coe_primesOverFinset : primesOverFinset p B = primesOver p B := by
+     (fun ⟨hPp, h⟩ => ⟨hPp, ⟨hpm.eq_of_le (comap_ne_top _ hPp.ne_top) (le_comap_of_map_le h)⟩⟩)
+     (fun ⟨hPp, h⟩ => ⟨hPp, map_le_of_le_comap h.1.le⟩)
+ 
++namespace IsDedekindDomain.HeightOneSpectrum
++
++/--
++The bijection between the elements of the height one prime spectrum of `B` that divides the lift
+```
+PAST COMMENT (from reviewer):
+```suggestion
+The bijection between the elements of the height one prime spectrum of `B` that divide the lift
+```
+
+--- candidate 4 (sim=0.701, past_pr=#30363, file=Mathlib/NumberTheory/Padics/WithVal.lean) ---
+PAST HUNK:
+```
+@@ -153,4 +153,50 @@ lemma toEquiv_withValUniformEquiv_eq_toEquiv_withValRingEquiv :
+... [21 lines above hidden]
++  induction x using UniformSpace.Completion.induction_on with
++  | hp =>
++    rw [Set.ext fun _ ↦ Iff.comm]
++    apply withValUniformEquiv.toHomeomorph.isClosed_setOf_iff (q := fun x ↦ ‖x‖ ≤ 1)
++      (Valued.isClopen_closedBall _ one_ne_zero)
++    simpa [Metric.closedBall] using IsUltrametricDist.isClopen_closedBall (0 : ℚ_[p]) one_ne_zero
++  | ih a =>
++    rw [Valued.valuedCompletion_apply, ← WithVal.apply_equiv, withValUniformEquiv_cast_apply]
++    exact (norm_rat_le_one_iff_padicValuation_le_one p)
++
+ end Padic
++
++namespace PadicInt
+```
+PAST COMMENT (from reviewer):
+For uniform completions, there is also this notion of completion package: https://leanprover-community.github.io/mathlib4_docs/Mathlib/Topology/UniformSpace/AbstractCompletion.html#AbstractCompletion
+
+Could that be used here, to show that `Z_[p]` has the expected universal properties?
+
+--- candidate 5 (sim=0.692, past_pr=#27696, file=Mathlib/NumberTheory/Padics/WithVal.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,181 @@
+... [11 lines above hidden]
++import Mathlib.Topology.Algebra.Valued.WithVal
++import Mathlib.Topology.GDelta.MetrizableSpace
++
++/-!
++# Equivalence between `ℚ_[p]` and `WithVal v`
++
++-/
++
++variable {p : ℕ} [Fact p.Prime]
++
++open NNReal WithZero UniformSpace
++
++-- TODO: use Rat.padicValuation after #27667
+```
+PAST COMMENT (from reviewer):
+#27667 is merged.
+
+--- candidate 6 (sim=0.692, past_pr=#36492, file=Mathlib/NumberTheory/NumberField/Completion/FinitePlace.lean) ---
+PAST HUNK:
+```
+@@ -83,16 +84,35 @@ instance : IsDiscreteValuationRing (v.adicCompletionIntegers K) where
+... [17 lines above hidden]
++theorem FinitePlace.embedding_apply (x : K) : embedding K v x = ↑x := rfl
+ 
+ section AbsoluteValue
+ 
++noncomputable instance : ((Valued.v : Valuation (v.adicCompletion K) ℤᵐ⁰)).IsRankOneDiscrete where
++  exists_generator_lt_one' := by
++    have h : (v.valuation K).IsRankOneDiscrete := Valuation.IsRankOneDiscrete.mk' (valuation K v)
++    exact ⟨h.generator, by rw [h.generator_zpowers_eq_valueGroup, adicCompletion_valueGroup_eq],
++      h.generator_lt_one⟩
++
++section FiniteFree
++
++/-! In this section we assume we assume further that `Module.Finite ℤ R` and `Module.Free ℤ R`.
+```
+PAST COMMENT (from reviewer):
+```suggestion
+/-! In this section we assume further that `Module.Finite ℤ R` and `Module.Free ℤ R`.
+```
+
+--- candidate 7 (sim=0.691, past_pr=#13064, file=Mathlib/RingTheory/LaurentSeries.lean) ---
+PAST HUNK:
+```
+@@ -429,3 +432,55 @@ instance : IsScalarTower F[X] (RatFunc F) (LaurentSeries F) :=
+... [12 lines above hidden]
++`HeightOneSpectrum`. -/
++def idealX : IsDedekindDomain.HeightOneSpectrum K⟦X⟧ where
++  asIdeal := Ideal.span {X}
++  isPrime := PowerSeries.span_X_isPrime
++  ne_bot  := by rw [ne_eq, Ideal.span_singleton_eq_bot]; exact X_ne_zero
++
++open RatFunc IsDedekindDomain.HeightOneSpectrum
++
++variable {K}
++
++/- The `X`-adic valuation of a polynomial equals the `X`-adic valuation of its coercion to `K⟦X⟧`-/
++theorem intValuation_eq_of_coe (P : K[X]) :
++    (Polynomial.idealX K).intValuation P = (idealX K).intValuation (↑P : K⟦X⟧) := by
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    (idealX K).intValuation P = (idealX K).intValuation (↑P : K⟦X⟧) := by
+```
+
+--- candidate 8 (sim=0.689, past_pr=#35532, file=Mathlib/RingTheory/DedekindDomain/Ideal/Lemmas.lean) ---
+PAST HUNK:
+```
+@@ -521,6 +521,37 @@ theorem iInf_localization_eq_bot [Algebra R K] [hK : IsFractionRing R K] :
+... [17 lines above hidden]
++/-- The isomorphism between `HeightOneSpectrum`s of isomorphic rings. -/
++@[simps]
++def equivOfRingEquiv (e : R ≃+* S) : (HeightOneSpectrum R) ≃ (HeightOneSpectrum S) where
++  toFun := HeightOneSpectrum.comap e.symm e.symm.surjective
++  invFun := HeightOneSpectrum.comap e e.surjective
++  left_inv x := by ext; simp
++  right_inv x := by
++    ext
++    rw [← Ideal.map_comap_eq_self_of_equiv e x.asIdeal]
++    simp only [comap_asIdeal, Ideal.mem_comap, RingHom.coe_coe, Ideal.symm_apply_mem_of_equiv_iff]
++    exact Iff.rfl
++
++theorem RingEquiv.nontrivial_heightOneSpectrum {R S : Type*} [CommRing R] [CommRing S]
+```
+PAST COMMENT (from reviewer):
+OK, no worries.
+
+--- candidate 9 (sim=0.689, past_pr=#35532, file=Mathlib/RingTheory/DedekindDomain/Ideal/Lemmas.lean) ---
+PAST HUNK:
+```
+@@ -521,6 +521,37 @@ theorem iInf_localization_eq_bot [Algebra R K] [hK : IsFractionRing R K] :
+... [17 lines above hidden]
++/-- The isomorphism between `HeightOneSpectrum`s of isomorphic rings. -/
++@[simps]
++def equivOfRingEquiv (e : R ≃+* S) : (HeightOneSpectrum R) ≃ (HeightOneSpectrum S) where
++  toFun := HeightOneSpectrum.comap e.symm e.symm.surjective
++  invFun := HeightOneSpectrum.comap e e.surjective
++  left_inv x := by ext; simp
++  right_inv x := by
++    ext
++    rw [← Ideal.map_comap_eq_self_of_equiv e x.asIdeal]
++    simp only [comap_asIdeal, Ideal.mem_comap, RingHom.coe_coe, Ideal.symm_apply_mem_of_equiv_iff]
++    exact Iff.rfl
++
++theorem RingEquiv.nontrivial_heightOneSpectrum {R S : Type*} [CommRing R] [CommRing S]
+```
+PAST COMMENT (from reviewer):
+Can you use the `R` and `S` already in scope?
+
+--- candidate 10 (sim=0.688, past_pr=#36492, file=Mathlib/NumberTheory/NumberField/Completion/FinitePlace.lean) ---
+PAST HUNK:
+```
+@@ -83,16 +84,35 @@ instance : IsDiscreteValuationRing (v.adicCompletionIntegers K) where
+... [2 lines above hidden]
+ end DVR
+ 
+-variable {K : Type*} [Field K] [NumberField K]
+-
+ namespace NumberField
+ 
+-variable (v : HeightOneSpectrum (𝓞 K))
++variable (K : Type*) [Field K] {R : Type*} [CommRing R] [Algebra R K] [IsDedekindDomain R]
++  [IsFractionRing R K] (v : HeightOneSpectrum R)
+ 
+-namespace RingOfIntegers.HeightOneSpectrum
++/-- The embedding of a field inside its `adicCompletion` with respect to `v`. -/
++noncomputable def FinitePlace.embedding : K →+* adicCompletion K v :=
+```
+PAST COMMENT (from reviewer):
+This has now `K` explicit: I see that this cannot always be guessed now, but it can in the case of `O K`, right? Maybe it is worth to think if we prefer to have it implicit and let Lean do its job and helping it with `(K := K)` when needed.
+
+--- candidate 11 (sim=0.687, past_pr=#27696, file=Mathlib/NumberTheory/Padics/WithVal.lean) ---
+PAST HUNK:
+```
+@@ -0,0 +1,181 @@
+... [12 lines above hidden]
++import Mathlib.Topology.GDelta.MetrizableSpace
++
++/-!
++# Equivalence between `ℚ_[p]` and `WithVal v`
++
++-/
++
++variable {p : ℕ} [Fact p.Prime]
++
++open NNReal WithZero UniformSpace
++
++-- TODO: use Rat.padicValuation after #27667
++lemma Padic.continuous_cast_withVal : Continuous ((Rat.castHom ℚ_[p]).comp
+```
+PAST COMMENT (from reviewer):
+All your lemmas start with Padic and are in _root. Why don't you just set 
+```
+namespace Padic
+```
+at the top?
+
+--- candidate 12 (sim=0.675, past_pr=#24036, file=Mathlib/RingTheory/DedekindDomain/Ideal.lean) ---
+PAST HUNK:
+```
+@@ -970,6 +971,15 @@ instance isMaximal : v.asIdeal.IsMaximal := v.isPrime.isMaximal v.ne_bot
+ 
+ theorem prime : Prime v.asIdeal := Ideal.prime_of_isPrime v.ne_bot v.isPrime
+ 
++/--
++The (nonzero) prime elements of the monoid with zero `Ideal R` correspond
++to an element of type `HeightOneSpectrum R`.
++
++See `prime` for the inverse direction. -/
++@[simps]
++def ofPrime (p : Ideal R) (hp : Prime p) : HeightOneSpectrum R :=
+```
+PAST COMMENT (from reviewer):
+I think
+```suggestion
+def ofPrime {p : Ideal R} (hp : Prime p) : HeightOneSpectrum R :=
+```
+unless you have arguments to the contrary
+
+--- candidate 13 (sim=0.674, past_pr=#36137, file=Mathlib/RingTheory/DedekindDomain/Ideal/Lemmas.lean) ---
+PAST HUNK:
+```
+@@ -1036,6 +1036,13 @@ theorem equivPrimesOver_apply (hp : p ≠ 0)
+     (v : {v : HeightOneSpectrum B // v.asIdeal ∣ map (algebraMap A B) p}) :
+     equivPrimesOver B hp v = v.1.asIdeal := rfl
+ 
++variable (A) {B} in
++/-- The pullback of a height one prime in `B` to `A`. -/
++def under [Algebra.IsIntegral A B] (w : HeightOneSpectrum B) : HeightOneSpectrum A where
+```
+PAST COMMENT (from reviewer):
+```suggestion
+@[simps]
+def under [Algebra.IsIntegral A B] (w : HeightOneSpectrum B) : HeightOneSpectrum A where
+```
+
+--- candidate 14 (sim=0.672, past_pr=#20828, file=Mathlib/RingTheory/Artinian/Module.lean) ---
+PAST HUNK:
+```
+@@ -488,30 +494,64 @@ instance isMaximal_of_isPrime (p : Ideal R) [p.IsPrime] : p.IsMaximal :=
+ lemma isPrime_iff_isMaximal (p : Ideal R) : p.IsPrime ↔ p.IsMaximal :=
+   ⟨fun _ ↦ isMaximal_of_isPrime p, fun h ↦ h.isPrime⟩
+ 
++/-- The prime spectrum is in bijection with the set of prime ideals. -/
++@[simps]
++def primeSpectrum_equiv_maximalSpectrum : PrimeSpectrum R ≃ MaximalSpectrum R where
+```
+PAST COMMENT (from reviewer):
+```suggestion
+def primeSpectrumEquivMaximalSpectrum : PrimeSpectrum R ≃ MaximalSpectrum R where
+```
+Definitions should be in camel case.
+
+--- candidate 15 (sim=0.671, past_pr=#22055, file=Mathlib/NumberTheory/NumberField/FinitePlaces.lean) ---
+PAST HUNK:
+```
+@@ -78,8 +80,10 @@ variable {K : Type*} [Field K] [NumberField K] (v : HeightOneSpectrum (𝓞 K))
+ def embedding : K →+* adicCompletion K v :=
+   @UniformSpace.Completion.coeRingHom K _ v.adicValued.toUniformSpace _ _
+ 
++theorem embedding_apply (x : K) : embedding v x = ↑x := rfl
++
+ noncomputable instance instRankOneValuedAdicCompletion :
+-    Valuation.RankOne (valuedAdicCompletion K v).v where
++    Valuation.RankOne (inferInstanceAs (Valued (v.adicCompletion K) ℤₘ₀)).v where
+```
+PAST COMMENT (from reviewer):
+Why do you need to find this instance manually _in the statement_?
+
+--- candidate 16 (sim=0.670, past_pr=#22055, file=Mathlib/NumberTheory/NumberField/FinitePlaces.lean) ---
+PAST HUNK:
+```
+@@ -78,8 +80,10 @@ variable {K : Type*} [Field K] [NumberField K] (v : HeightOneSpectrum (𝓞 K))
+ def embedding : K →+* adicCompletion K v :=
+   @UniformSpace.Completion.coeRingHom K _ v.adicValued.toUniformSpace _ _
+ 
+```
+PAST COMMENT (from reviewer):
+Thanks, I'll have a look. What's your take on @YaelDillies 's suggestion of opening a new PR for the renaming I suggested? I am asking simply to understand if you're planning to do something *before* this PR gets through, *after*, *meanwhile*, *never*, or any other temporal adverb you might come up with 😄 
+
+--- candidate 17 (sim=0.669, past_pr=#20828, file=Mathlib/RingTheory/Artinian/Module.lean) ---
+PAST HUNK:
+```
+ lemma isPrime_iff_isMaximal (p : Ideal R) : p.IsPrime ↔ p.IsMaximal :=
+   ⟨fun _ ↦ isMaximal_of_isPrime p, fun h ↦ h.isPrime⟩
+ 
++/-- The prime spectrum is in bijection with the set of prime ideals. -/
++@[simps]
++def primeSpectrum_equiv_maximalSpectrum : PrimeSpectrum R ≃ MaximalSpectrum R where
++  toFun I := ⟨I.asIdeal, isPrime_iff_isMaximal I.asIdeal |>.mp I.isPrime⟩
++  invFun I := ⟨I.asIdeal, isPrime_iff_isMaximal I.asIdeal |>.mpr I.isMaximal⟩
++  left_inv _ := rfl
++  right_inv _ := rfl
++
++lemma primeSpectrum_equiv_maximalSpectrum_comp_asIdeal :
++    MaximalSpectrum.asIdeal ∘ primeSpectrum_equiv_maximalSpectrum.toFun =
+```
+PAST COMMENT (from reviewer):
+```suggestion
+    MaximalSpectrum.asIdeal ∘ primeSpectrum_equiv_maximalSpectrum =
+```
+
+--- candidate 18 (sim=0.669, past_pr=#30404, file=Mathlib/RingTheory/DedekindDomain/AdicValuation.lean) ---
+PAST HUNK:
+```
+@@ -386,13 +386,24 @@ theorem mem_integers_of_valuation_le_one (x : K)
+... [2 lines above hidden]
+   simpa using h
+ 
++variable {K}
++
++theorem eq_of_valuation_isEquiv_valuation {p q : HeightOneSpectrum R}
++    (hpq : (valuation K p).IsEquiv (valuation K q)) : p = q := by
++  rw [Valuation.isEquiv_iff_val_lt_one] at hpq
++  rw [HeightOneSpectrum.ext_iff, ← Ring.DimensionLeOne.prime_le_prime_iff_eq p.ne_bot]
++  intro x hx
++  specialize hpq (x := algebraMap R K x)
++  rw [valuation_lt_one_iff_dvd p x, valuation_lt_one_iff_dvd q x, Ideal.dvd_span_singleton,
++    Ideal.dvd_span_singleton] at hpq
++  exact hpq.mp hx
+```
+PAST COMMENT (from reviewer):
+```suggestion
+  simp only [HeightOneSpectrum.ext_iff, Ideal.ext_iff, ← valuation_lt_one_iff_mem (K := K)]
+  rw [Valuation.isEquiv_iff_val_lt_one] at hpq
+  intro x
+  exact hpq
+```
+
+--- candidate 19 (sim=0.669, past_pr=#30404, file=Mathlib/RingTheory/DedekindDomain/AdicValuation.lean) ---
+PAST HUNK:
+```
+@@ -386,13 +386,24 @@ theorem mem_integers_of_valuation_le_one (x : K)
+... [2 lines above hidden]
+   simpa using h
+ 
++variable {K}
++
++theorem eq_of_valuation_isEquiv_valuation {p q : HeightOneSpectrum R}
++    (hpq : (valuation K p).IsEquiv (valuation K q)) : p = q := by
++  rw [Valuation.isEquiv_iff_val_lt_one] at hpq
++  rw [HeightOneSpectrum.ext_iff, ← Ring.DimensionLeOne.prime_le_prime_iff_eq p.ne_bot]
++  intro x hx
++  specialize hpq (x := algebraMap R K x)
++  rw [valuation_lt_one_iff_dvd p x, valuation_lt_one_iff_dvd q x, Ideal.dvd_span_singleton,
++    Ideal.dvd_span_singleton] at hpq
++  exact hpq.mp hx
+```
+PAST COMMENT (from reviewer):
+
+```suggestion
+  contrapose hpq
+  rw [HeightOneSpectrum.ext_iff, Ideal.ext_iff, not_forall] at hpq
+  obtain ⟨x, hx⟩ := hpq
+  rw [Valuation.isEquiv_iff_val_lt_one, not_forall]
+  exact ⟨algebraMap R K x, by simpa [valuation_lt_one_iff_mem]⟩
+```
+
+--- candidate 20 (sim=0.666, past_pr=#25210, file=Mathlib/RingTheory/Localization/AtPrime.lean) ---
+PAST HUNK:
+```
+@@ -291,12 +289,23 @@ lemma Ideal.under_map_of_isLocalizationAtPrime {p : Ideal R} [p.IsPrime] (hpq :
+     simp [Ideal.primeCompl, ← le_compl_iff_disjoint_left, hpq]
+   exact IsLocalization.comap_map_of_isPrime_disjoint _ _ p (by simpa) disj
+ 
++variable (S) in
++/-- The prime spectrum of the localization of a commutative ring at a prime ideal `q` are in
++  order-preserving bijection with the prime ideals contained in `q`. -/
++noncomputable def Ideal.primeSpectrumLocalizationAtPrime :
++    PrimeSpectrum S ≃o { p : PrimeSpectrum R // p.1 ≤ q } :=
+```
+PAST COMMENT (from reviewer):
+Can we have this for arbitrary localization?
+
+
+Decide which candidates' comments genuinely apply to the NEW hunk. If none, say so. Output JSON only.
+
+[ASSISTANT]
+----------------------------------------------------------------------------------------------------
+{
+  "summary": "The new def is declared in _root with a Padic.* prefix; prior feedback suggests moving such declarations under a `namespace Padic` instead of prefixing names.",
+  "confidence": "high",
+  "strong_matches": [
+    {
+      "past_pr": 27696,
+      "past_file": "Mathlib/NumberTheory/Padics/WithVal.lean",
+      "past_comment_excerpt": "All your lemmas start with Padic and are in _root. Why don't you just set\nnamespace Padic",
+      "applies_because": "The new code defines `def Padic.ofAdicCompletion ...` at top level rather than inside `namespace Padic`, matching the pattern previously flagged.",
+      "suggested_adaptation": "Put this definition inside `namespace Padic` and name it `def ofAdicCompletion` (dropping the `Padic.` prefix).",
+      "supporting_past_prs": [
+        27696
+      ]
+    }
+  ],
+  "weak_observations": [
+    {
+      "observation": "Consider leveraging the AbstractCompletion API for the canonical map/universal property rather than working directly with `UniformSpace.Completion.extensionHom`.",
+      "supporting_past_prs": [
+        30363
+      ]
+    },
+    {
+      "observation": "Since the comment claims a homeomorphism, consider stating/providing an (algebra) isomorphism/equivalence rather than just a ring hom, in line with earlier flexibility/universal property discussions.",
+      "supporting_past_prs": [
+        30576
+      ]
+    }
+  ]
+}
