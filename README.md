@@ -37,8 +37,7 @@ apply to the new hunk. I assumed it would mostly invent plausible-sounding
 nonsense. On a sample of currently-open PRs... it didn't, mostly. Some of
 the suggestions it grounded in past comments were genuinely the kind of
 thing a human reviewer would say; some were off-axis; some missed obvious
-things. The [gallery](gallery/README.md) is 10 of those runs graded
-honestly (2 WIN, 4 PARTIAL, 1 CORRECT-SILENT, 3 real failures) so you can
+things. The [gallery](gallery/README.md) is 10 of those runs graded (2 WIN, 4 PARTIAL, 1 CORRECT-SILENT, 3 real failures) so you can
 see the actual shape of it.
 
 My Lean is early and my own WIN/MISS calls in the gallery are best-effort,
