@@ -5,32 +5,45 @@ A retrieval-grounded "reviewer memory" tool for `leanprover-community/mathlib4`.
 Given a hunk from a new mathlib4 PR, it searches an index of **~97k filtered
 reviewer comments from ~15k closed PRs** (drawn from a raw scrape of ~158k
 comments across ~35k closed PRs — bots, self-comments, and trivial comments
-are filtered out before indexing) for the most similar `(past code, past
-comment)` pairs. There are two ways to use the result:
+are filtered out before indexing) for the most similar `(past code, past comment)` pairs. There are two ways to use the result:
 
 - **LLM mode** (default): GPT-5 reads the retrieved pairs and identifies
-  which past comments would also apply to your hunk — grounded in a specific
-  past PR + verbatim quote, allowed to say "none apply." This is what the
-  gallery below is built from.
+which past comments would also apply to your hunk — grounded in a specific
+past PR + verbatim quote, allowed to say "none apply." This is what the
+gallery below is built from.
 - **Search mode** (`--search`): no LLM in the loop, no possibility of
-  hallucination. Returns the retrieved pairs verbatim, each tagged ✓ ACCEPTED
-  / ✗ NOT ACCEPTED depending on whether the past PR was integrated into
-  mathlib. Useful as a transparent index lookup — and as a check against
-  "is my code similar to anything that already got rejected?".
+hallucination. Returns the retrieved pairs verbatim, each tagged ✓ ACCEPTED
+/ ✗ NOT ACCEPTED depending on whether the past PR was integrated into
+mathlib. Useful as a transparent index lookup — and as a check against
+"is my code similar to anything that already got rejected?".
 
-## A note on context
+## Why this exists
 
-I'm an ML engineer with a math background, currently learning Lean and
-following the AI-for-formal-math space. I built this as an experiment, not
-as a mathlib insider — so the gallery of worked examples below is what this
-thing actually produces today, with my own best-effort grading of where it
-works and where it doesn't.
+I'm an ML engineer with a math-olympiad background who recently got pulled
+into Lean and the AI-for-formal-math space — it genuinely fascinates me.
+Very quickly I hit the obvious newcomer question: mathlib4 has ~35k closed
+PRs, so a lot of the mistakes I'm about to make have probably already been
+made — and politely pointed out — by some reviewer in there. Could I
+just... search that?
 
-If you know mathlib well and any of my "WIN" / "MISS" calls in the gallery
-are wrong, I'd genuinely like to hear it: that's the signal that would help
-me decide what to fix, what to throw out, and whether the underlying index
-is useful to anyone besides me — contributors, reviewers, or researchers
-working on AI for formal math.
+So I scraped them, filtered them down, embedded them, and put a search
+index on top. That's the half of this repo I trust most: pure retrieval
+over past `(code, reviewer-comment)` pairs, no LLM in the loop, no
+hallucination surface.
+
+The other half I half-expected to be a disaster: feeding the retrieved
+pairs to GPT-5 and asking it to pick which past comments would *also*
+apply to the new hunk. I assumed it would mostly invent plausible-sounding
+nonsense. On a sample of currently-open PRs... it didn't, mostly. Some of
+the suggestions it grounded in past comments were genuinely the kind of
+thing a human reviewer would say; some were off-axis; some missed obvious
+things. The [gallery](gallery/README.md) is 10 of those runs graded
+honestly (2 WIN, 4 PARTIAL, 1 CORRECT-SILENT, 3 real failures) so you can
+see the actual shape of it.
+
+My Lean is early and my own WIN/MISS calls in the gallery are best-effort,
+so this is half "here's what I built" and half "please tell me where I'm
+wrong" — concrete asks in [Feedback](#feedback) at the bottom.
 
 ---
 
@@ -38,15 +51,11 @@ working on AI for formal math.
 
 ### 1. See what it produces (gallery)
 
-I coupled the search index with an LLM (GPT-5) and tried it on currently-open
-mathlib4 PRs to see if it'd actually help anyone there. Surprisingly it worked
-on some, on others it didn't. The gallery ([gallery/README.md](gallery/README.md))
-is 10 of those runs side-by-side with what the human reviewer actually wrote.
-
-I'd really like your read on how well it worked — I'm early in learning Lean,
-so my own WIN / PARTIAL / MISS calls on each card are best-effort guesses. If
-you know mathlib and any of them feel wrong, that's exactly the feedback I'm
-looking for.
+The [gallery](gallery/README.md) is 10 currently-open mathlib4 PRs run
+through the LLM-mode tool, side-by-side with what the human reviewer
+actually wrote. If you have 5 minutes and know mathlib, the most useful
+thing you can tell me is whether any of my WIN / PARTIAL / MISS calls on
+those cards are wrong — that's the signal I'd actually act on.
 
 ### 2. I want to try it on my own hunk
 
@@ -57,121 +66,101 @@ export VOYAGE_API_KEY=pa-...                     # for query embedding
 cat my_hunk.diff | python scripts/review_pr.py --file Mathlib/Path/To/File.lean
 ```
 
-There are two modes:
-
-**LLM mode (default).** Retrieves the top-K most similar past
-`(code, reviewer-comment)` pairs from the index and asks GPT-5 to identify
-which past comments would also apply to your new hunk — grounded in
-specific past PR + verbatim quote, with explicit refusal allowed.
-
-**Search mode (`--search`).** Pure retrieval, no LLM call, no possibility
-of hallucination. Returns the top-K most similar past
-`(code, reviewer-comment)` pairs verbatim — you decide which apply.
-Each hit is tagged ✓ ACCEPTED or ✗ NOT ACCEPTED based on whether the past
-PR was integrated into mathlib (proxy for "reviewers wanted changes the
-author didn't make"). Add `--not-accepted-only` to filter to just hits from
-PRs that didn't make it — useful for *"is my code similar to anything that
-already got rejected/abandoned?"*. Search mode only needs `VOYAGE_API_KEY`
-(no OpenAI/Gemini key, no API costs except the embedding).
+Two modes (described above):
 
 ```bash
-# LLM judgment on top of retrieval (the gallery is built from this mode):
+# LLM mode — GPT-5 picks which past comments apply (gallery uses this):
 cat my_hunk.diff | python scripts/review_pr.py --file Mathlib/X.lean
 
-# Pure retrieval, no LLM, no hallucination:
+# Search mode — pure retrieval, no LLM, no hallucination:
 cat my_hunk.diff | python scripts/review_pr.py --search --file Mathlib/X.lean
 
-# Only show hits from past PRs that were NOT accepted into mathlib:
+# Search mode + filter to past PRs that didn't make it into mathlib:
 cat my_hunk.diff | python scripts/review_pr.py --search --not-accepted-only \
                                                 --file Mathlib/X.lean
 ```
 
-To use Gemini instead of GPT-5 in LLM mode: `pip install -e '.[gemini]'`,
-set `GEMINI_API_KEY`, and pass `--provider gemini`.
-
-Or `python scripts/review_pr.py --self-test` to run on a held-out query
-without preparing a hunk yourself. Pass `--json` for raw structured output
-in either mode.
+Search mode only needs `VOYAGE_API_KEY` (the query embedding); no OpenAI
+key, no API cost beyond the embedding. To use Gemini instead of GPT-5 in
+LLM mode: `pip install -e '.[gemini]'`, set `GEMINI_API_KEY`, pass
+`--provider gemini`. Pass `--self-test` to run on a held-out query without
+preparing a hunk, or `--json` for structured output.
 
 > **Heads up:** this requires the embedding index
 > (`data/index/rag_vectors.npz` and `data/curated/mathlib4/*.parquet`),
 > which is not committed here due to size (~1 GB). See
-> [Reproducing the index](#reproducing-the-index) below to build it locally,
-> or [Dataset access](#dataset-access) if you'd rather grab a pre-built copy.
+> [Dataset & reproducing the index](#dataset--reproducing-the-index) below
+> to grab a copy or rebuild it locally.
 
 ### 3. I want the methodology, the eval numbers, or the dataset
 
 **Polished reports** (Markdown, ready to skim):
 
 - [data/eval/llm_judge_report.md](data/eval/llm_judge_report.md) — held-out
-  retrieval evaluated by an LLM judge (GPT-5) with a `0` / `1` / `2` rubric:
-  Hit@K table, label distribution, similarity-vs-label breakdown, per-query
-  details. **n = 20 queries × top-10 retrieved = 200 judgments.**
+retrieval evaluated by an LLM judge (GPT-5) with a `0` / `1` / `2` rubric:
+Hit@K table, label distribution, similarity-vs-label breakdown, per-query
+details. **n = 20 queries × top-10 retrieved = 200 judgments.**
 - [data/eval/heldout_inspection_report.md](data/eval/heldout_inspection_report.md)
-  — hand-inspection format of those same 20 held-out queries: each one's
-  full diff hunk, the ground-truth reviewer comment, and the top-10
-  retrieved comments with similarity + lexical-F1 scores. ~85 KB,
-  scrollable; this is the file to read if you want to get a feel for what
-  retrieval is actually doing.
+— hand-inspection format of those same 20 held-out queries: each one's
+full diff hunk, the ground-truth reviewer comment, and the top-10
+retrieved comments with similarity + lexical-F1 scores. ~85 KB,
+scrollable; this is the file to read if you want to get a feel for what
+retrieval is actually doing.
 - [data/eval/prompt_ablation_report.md](data/eval/prompt_ablation_report.md)
-  — comparison of two prompt versions (v1 vs v2) on 6 cases, with token
-  usage, cost numbers, and per-case win/loss notes.
+— comparison of two prompt versions (v1 vs v2) on 6 cases, with token
+usage, cost numbers, and per-case win/loss notes.
 
-> The v3.1 prompt used in the gallery was
-> iterated by observing failures of v3 on the same 20 open PRs the gallery
-> is drawn from, so the gallery is a "best-current-prompt on tuned-for PRs"
-> artifact, not a clean held-out test. The held-out generalization number
-> is `llm_judge_report.md` above (20 closed-PR queries the prompt has never
-> seen). The
-> [gallery's own note on prompt tuning](gallery/README.md#a-note-on-prompt-tuning-please-read-before-grading)
-> has the longer version.
+> The gallery uses the v3.1 prompt, which was tuned on the same 20 open
+> PRs the gallery is drawn from — so the gallery is "best-current-prompt
+> on tuned-for PRs", not a clean held-out test. The clean number is
+> `llm_judge_report.md` above. Longer note on this in the
+> [gallery README](gallery/README.md#a-note-on-prompt-tuning-please-read-before-grading).
 
-**The actual prompts** (4 versions, v1 → v3.1, all in one file):
-[src/product/review_assistant.py](src/product/review_assistant.py).
+**Source:**
 
-**Pipeline source** (scrape → normalize → embed → retrieve):
-[src/pipeline/](src/pipeline/) and the runnable scripts in
-[scripts/](scripts/).
-
-**Per-case prompt + completion transcripts** (raw text dumps for
-inspection): [data/eval/transcripts/](data/eval/transcripts/) — one file
-per (case, prompt-version) combo for the gallery and the held-out runs.
+- Prompts (4 versions, v1 → v3.1): [src/product/review_assistant.py](src/product/review_assistant.py)
+- Pipeline (scrape → normalize → embed → retrieve): [src/pipeline/](src/pipeline/) + [scripts/](scripts/)
+- Per-case prompt + completion transcripts: [data/eval/transcripts/](data/eval/transcripts/)
 
 ---
 
-## Dataset access
+## Dataset & reproducing the index
 
 The curated parquets (~158k review comments + linked code chunks across
-~35k closed PRs) and the OpenAI embedding index are not committed here due
-to size. If you'd like them packaged as a Hugging Face Dataset for your own
-experiments — or just a tarball — open an issue or ping me and I'll
-publish it. Easier to do once than to have everyone re-scrape.
+~35k closed PRs) and the embedding index aren't committed (~1 GB). Two
+options:
 
----
+- **Grab a copy.** Open an issue or ping me and I'll package it as a
+  Hugging Face Dataset (or a tarball). Easier to do once than to have
+  everyone re-scrape.
+- **Rebuild it yourself:**
+  ```bash
+  export GITHUB_TOKEN=ghp_...
+  python scripts/scrape_mathlib4.py --mode backfill   # ~few hours, GitHub-API-bound
+  python scripts/build_rag_index_data.py
+  python scripts/embed_rag_corpus.py                  # ~1 hour, OpenAI embeddings
+  ```
 
-## Reproducing the index
-
-If you'd rather rebuild it yourself, the raw GitHub payloads, the curated
-parquets, and the embedding index can all be regenerated from scratch:
-
-```bash
-export GITHUB_TOKEN=ghp_...
-python scripts/scrape_mathlib4.py --mode backfill   # ~few hours, GitHub-API-bound
-python scripts/build_rag_index_data.py
-python scripts/embed_rag_corpus.py                  # ~1 hour, OpenAI-embeddings
-```
-
-The eval outputs and gallery in this repo were produced from a snapshot
-taken on 2026-04-18.
+The eval outputs and gallery here were produced from a snapshot taken on
+2026-04-18.
 
 ---
 
 ## Feedback
 
-If you read the gallery and have thoughts — which suggestions are useful,
-where the tool is wrong, what would make the index more useful for *your*
-workflow, or whether the dataset itself is worth releasing — open an issue,
-comment on Zulip, or reach out directly. That's the signal I'd use to
-decide where to take this next.
+Three things I'd most like to hear from people who know mathlib:
+
+1. **Are my WIN / PARTIAL / MISS calls in the gallery wrong?** My Lean
+   judgment is the weakest link in this whole pipeline, so corrections
+   here are the most useful.
+2. **Is the LLM-mode output actually useful, or am I being charmed by
+   plausible-sounding text?** "Technically not wrong but a real reviewer
+   would never say this" is exactly what I can't catch myself.
+3. **Is the underlying dataset worth releasing as a Hugging Face Dataset?**
+   Happy to package it once if anyone has a use for it.
+
+Open an issue, ping me on Zulip, or reach out directly. One-line "card #4
+is wrong because X" is great; "this whole framing is off, here's why" is
+also welcome.
 
 License: MIT.
